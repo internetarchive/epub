@@ -48,8 +48,6 @@ def recursive_dict(element):
 abbyyns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 
 
-
-
 def include_page(page):
     add = page.find('addToAccessFormats')
     if add is not None and add.text == 'true':
