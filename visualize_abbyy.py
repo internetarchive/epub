@@ -154,11 +154,14 @@ def scan_pages(context, scandata):
         image = Image.new('RGB',
                           (int(page.get('width')),
                            int(page.get('height'))))
+        if i < 0:
+            i += 1
+            continue
 
         if i > 0:
         # orig page image
 #         imfile = "jp2/littleroadstoryo00hick_" + str(i).zfill(4) + ".png"
-            imfile = "png/birdbookillustra00reedrich_" + str(i).zfill(4) + ".png"
+            imfile = "png/proteusframebuilding_" + str(i).zfill(4) + ".png"
 #         print imfile
             page_image = Image.open(imfile)
 #         image.paste(page_image, None)

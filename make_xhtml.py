@@ -55,6 +55,9 @@ def include_page(page):
     else:
         return False
 
+
+
+
 def build_html(context, scandata, out):
     print etree.tostring(scandata, pretty_print=True)
 
@@ -124,7 +127,3 @@ def make_xhtml(xml, scandata_file, outfile='tmp_tmp_out.txt'):
         
     finally:
         out.close()
-
-if __name__ == '__main__':
-    main(sys.argv[1:])
-
