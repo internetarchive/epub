@@ -35,7 +35,7 @@ def main(argv):
     info.date_time = (2009, 12, 25, 0, 0, 0)
     z.writestr(info, 'application/epub+zip')
 
-    tree = make_meta_inf()
+    tree = make_container_info()
     info = zipfile.ZipInfo('META-INF/container.xml')
     info.compress_type = zipfile.ZIP_STORED
     info.external_attr = 0666 << 16L
@@ -180,7 +180,7 @@ def build_html(context, scandata, metadata):
     htmldoc = etree.ElementTree(html);
     return htmldoc
 
-def make_meta_inf():
+def make_container_info():
     root = etree.Element('container',
                          version='1.0',
                          xmlns='urn:oasis:names:tc:opendocument:xmlns:container')
@@ -210,20 +210,35 @@ spine_items = [
 guide_items = [
 #    { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
 ]
-def make_opf(manifest_items=manifest_items, spine_items=spine_items, guide_items=guide_items):
-    dc = 'http://purl.org/dc/elements/1.1/'
-    dcb = '{http://purl.org/dc/elements/1.1/}'
+dc = 'http://purl.org/dc/elements/1.1/'
+dcb = '{' + dc + '}'
+meta_info_items = [
+    { 'item':dcb+'title', 'text':'book title here' },
+    { 'item':dcb+'creator', 'text':'book creator here' },
+    { 'item':dcb+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
+    { 'item':dcb+'language', 'text':'en-US' },
+    { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
+    ]
+def make_opf(meta_info_items=meta_info_items,
+             manifest_items=manifest_items,
+             spine_items=spine_items,
+             guide_items=guide_items):
     root = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
                            'unique-identifier' : 'bookid',
                            'version' : '2.0' },
                          nsmap={'dc' : dc })
     metadata = etree.SubElement(root, 'metadata')
-    etree.SubElement(metadata, dcb+'title').text = 'test title'
-    etree.SubElement(metadata, dcb+'creator').text = 'test creator'
-    etree.SubElement(metadata, dcb+'identifier', id='bookid').text = 'test id'
-    etree.SubElement(metadata, dcb+'language').text = 'en-US';
-    etree.SubElement(metadata, 'meta', name='cover', content='cover-image')
+    for item in meta_info_items:
+        el = etree.SubElement(metadata, item['item'], item['atts'] if 'atts' in item else None)
+        if 'text' in item:
+            el.text = item['text']
+    
+#     etree.SubElement(metadata, dcb+'title').text = 'test title'
+#     etree.SubElement(metadata, dcb+'creator').text = 'test creator'
+#     etree.SubElement(metadata, dcb+'identifier', id='bookid').text = 'test id'
+#     etree.SubElement(metadata, dcb+'language').text = 'en-US';
+#     etree.SubElement(metadata, 'meta', name='cover', content='cover-image')
 
     manifest = etree.SubElement(root, 'manifest')
     for item in manifest_items:
@@ -233,6 +248,7 @@ def make_opf(manifest_items=manifest_items, spine_items=spine_items, guide_items
         etree.SubElement(spine, 'itemref', item)
     if len(guide_items) > 0:
         guide = etree.SubElement(root, 'guide')
+        guide = etree.SubElement(root, 'donkey')
     for item in guide_items:
         etree.SubElement(guide, 'reference', item)
     return root
