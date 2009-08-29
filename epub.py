@@ -21,39 +21,10 @@ def make_container_info():
                        'media-type' : 'application/oebps-package+xml' } )
     return root
 
-manifest_items = [
-    { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'application/x-dtbncx+xml' },
-#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
-    { 'id' : 'book', 'href' : 'book.html', 'media-type' : 'application/xhtml+xml' },
-
-#     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
-#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'content', 'href' : 'content.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'cover-image', 'href' : 'images/cover.png', 'media-type' : 'image/png' },
-#     { 'id' : 'css', 'href' : 'stylesheet.css', 'media-type' : 'text/css' },
-    ]
-spine_items = [
-   { 'idref' : 'book' }
-
-#    { 'idref' : 'cover', 'linear' : 'no' },
-#    { 'idref' : 'content' }
-]
-guide_items = [
-#    { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
-]
-dc = 'http://purl.org/dc/elements/1.1/'
-dcb = '{' + dc + '}'
-meta_info_items = [
-    { 'item':dcb+'title', 'text':'book title here' },
-    { 'item':dcb+'creator', 'text':'book creator here' },
-    { 'item':dcb+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
-    { 'item':dcb+'language', 'text':'en-US' },
-    { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
-    ]
-def make_opf(meta_info_items=meta_info_items,
-             manifest_items=manifest_items,
-             spine_items=spine_items,
-             guide_items=guide_items):
+def make_opf(meta_info_items,
+             manifest_items,
+             spine_items,
+             guide_items):
     root = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
                            'unique-identifier' : 'bookid',
@@ -64,13 +35,6 @@ def make_opf(meta_info_items=meta_info_items,
         el = etree.SubElement(metadata, item['item'], item['atts'] if 'atts' in item else None)
         if 'text' in item:
             el.text = item['text']
-    
-#     etree.SubElement(metadata, dcb+'title').text = 'test title'
-#     etree.SubElement(metadata, dcb+'creator').text = 'test creator'
-#     etree.SubElement(metadata, dcb+'identifier', id='bookid').text = 'test id'
-#     etree.SubElement(metadata, dcb+'language').text = 'en-US';
-#     etree.SubElement(metadata, 'meta', name='cover', content='cover-image')
-
     manifest = etree.SubElement(root, 'manifest')
     for item in manifest_items:
         etree.SubElement(manifest, 'item', item)
@@ -90,7 +54,7 @@ navpoints = [
 #     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
 #     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
     ]
-def make_ncx(navpoints=navpoints):
+def make_ncx(navpoints):
     import StringIO
     xml = """<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
