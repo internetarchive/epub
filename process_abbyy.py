@@ -24,13 +24,39 @@ else:
         pass
 
 aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
-def generate_epub_content(book_id):
+def generate_epub_items(book_id):
     scandata = objectify.parse(book_id + '_scandata.xml').getroot()
     metadata = objectify.parse(book_id + '_meta.xml').getroot()
     aby_file = gzip.open(book_id + '_abbyy.gz', 'rb')
     context = etree.iterparse(aby_file,  tag=aby_ns+'page', resolve_entities=False)
     tree = build_html(context, scandata, metadata)
-    yield tree
+    yield ('content',
+           { 'id':'book',
+             'href':'book.html',
+             'media-type':'application/xhtml+xml' },
+           tree)
+    yield ('spine', { 'idref':'book' }, None)
+    yield ('navpoint',  { 'id':'navpoint-1',
+                          'playOrder': '1',
+                          'text':'Book',
+                          'content':'book.html' }, None)
+# OPF
+#manifest_items = [
+#     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
+#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
+#     { 'id' : 'content', 'href' : 'content.html', 'media-type' : 'application/xhtml+xml' },
+#     { 'id' : 'cover-image', 'href' : 'images/cover.png', 'media-type' : 'image/png' },
+#     { 'id' : 'css', 'href' : 'stylesheet.css', 'media-type' : 'text/css' },
+# spine_items = [
+#     { 'idref' : 'book' }
+#     { 'idref' : 'cover', 'linear' : 'no' },
+#     { 'idref' : 'content' }
+# guide_items = [
+#     { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
+# NCX navpoints = [
+#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
+#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
+#     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
 
 def include_page(page):
     add = page.find('addToAccessFormats')

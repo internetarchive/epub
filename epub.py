@@ -40,12 +40,12 @@ def make_opf(meta_info_items,
     manifest = etree.SubElement(root, 'manifest')
     for item in manifest_items:
         etree.SubElement(manifest, 'item', item)
-    spine = etree.SubElement(root, 'spine', toc='ncx')
+    if len(spine_items) > 0:    
+        spine = etree.SubElement(root, 'spine', toc='ncx')
     for item in spine_items:
         etree.SubElement(spine, 'itemref', item)
     if len(guide_items) > 0:
         guide = etree.SubElement(root, 'guide')
-        guide = etree.SubElement(root, 'donkey')
     for item in guide_items:
         etree.SubElement(guide, 'reference', item)
     return root

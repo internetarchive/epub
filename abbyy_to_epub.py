@@ -32,9 +32,25 @@ def main(argv):
     tree = epub.make_container_info()
     add_to_zip(z, 'META-INF/container.xml', tree_to_str(tree))
 
-    for content_info in process_abbyy.generate_epub_content(book_id):
-        tree = content_info
-        add_to_zip(z, 'OEBPS/book.html', tree_to_str(tree))
+    manifest_items = [
+        { 'id':'ncx',
+          'href':'toc.ncx',
+          'media-type':'application/x-dtbncx+xml'
+          }
+        ]
+    spine_items = []
+    guide_items = []
+    navpoints = []
+    for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id):
+        if itemtype == 'content':
+            manifest_items.append(info)
+            add_to_zip(z, 'OEBPS/'+info['href'], tree_to_str(item))
+        elif itemtype == 'spine':
+            spine_items.append(info)
+        elif itemtype == 'guide':
+            guide_items.append(info)
+        elif itemtype == 'navpoint':
+            navpoints.append(info)
 
     tree = epub.make_opf(meta_info_items,
                          manifest_items,
@@ -47,44 +63,14 @@ def main(argv):
 
     z.close()
 
-# OPF
-manifest_items = [
-    { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'application/x-dtbncx+xml' },
-#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
-    { 'id' : 'book', 'href' : 'book.html', 'media-type' : 'application/xhtml+xml' },
-
-#     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
-#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'content', 'href' : 'content.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'cover-image', 'href' : 'images/cover.png', 'media-type' : 'image/png' },
-#     { 'id' : 'css', 'href' : 'stylesheet.css', 'media-type' : 'text/css' },
-    ]
-spine_items = [
-   { 'idref' : 'book' }
-#    { 'idref' : 'cover', 'linear' : 'no' },
-#    { 'idref' : 'content' }
-]
-guide_items = [
-#    { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
-]
-dc = 'http://purl.org/dc/elements/1.1/'
-dcb = '{' + dc + '}'
+dc_ns = '{http://purl.org/dc/elements/1.1/}'
 meta_info_items = [
-    { 'item':dcb+'title', 'text':'book title here' },
-    { 'item':dcb+'creator', 'text':'book creator here' },
-    { 'item':dcb+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
-    { 'item':dcb+'language', 'text':'en-US' },
+    { 'item':dc_ns+'title', 'text':'book title here' },
+    { 'item':dc_ns+'creator', 'text':'book creator here' },
+    { 'item':dc_ns+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
+    { 'item':dc_ns+'language', 'text':'en-US' },
     { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
 ]
-
-
-# NCX
-navpoints = [
-    { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
-#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
-#     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
-    ]
-
 
 def get_book_id():
     files=os.listdir(".")
