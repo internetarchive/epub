@@ -52,6 +52,8 @@ def main(argv):
         elif itemtype == 'navpoint':
             navpoints.append(info)
 
+    meta_info_items = process_abbyy.get_meta_items(book_id)
+
     tree = epub.make_opf(meta_info_items,
                          manifest_items,
                          spine_items,
@@ -62,15 +64,6 @@ def main(argv):
     add_to_zip(z, 'OEBPS/toc.ncx', tree_to_str(tree))
 
     z.close()
-
-dc_ns = '{http://purl.org/dc/elements/1.1/}'
-meta_info_items = [
-    { 'item':dc_ns+'title', 'text':'book title here' },
-    { 'item':dc_ns+'creator', 'text':'book creator here' },
-    { 'item':dc_ns+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
-    { 'item':dc_ns+'language', 'text':'en-US' },
-    { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
-]
 
 def get_book_id():
     files=os.listdir(".")
@@ -93,6 +86,7 @@ def add_to_zip(z, path, s, deflate=True):
     info.date_time = (2009, 12, 25, 0, 0, 0)
     z.writestr(info, s)
 
+# xxx move this elsewhere - to encapsulate knowledge of xml?
 def tree_to_str(tree):
     return etree.tostring(tree,
                           pretty_print=True,

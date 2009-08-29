@@ -23,6 +23,29 @@ else:
     def debug():
         pass
 
+lang_map = { 'eng':'en-US' }
+def get_meta_items(book_id):
+    md = objectify.parse(book_id + '_meta.xml').getroot()
+    dc_ns = '{http://purl.org/dc/elements/1.1/}'
+    lang = lang_map[md.language.text] if md.language.text in lang_map else md.language.text
+    result = [{ 'item':dc_ns+'title', 'text':md.title.text },
+              { 'item':dc_ns+'creator', 'text':md.creator.text },
+              { 'item':dc_ns+'identifier', 'text':book_id, 'atts':{ 'id':'bookid' } },
+              { 'item':dc_ns+'language', 'text':lang },
+              { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
+              ]
+    # catch dublin core stragglers
+    for tagname in [ 'subject', 'description', 'publisher', 'contributor', 'date',
+                 'type', 'format', 'source', 'relation', 'coverage', 'rights' ]:
+        try:
+#             debug()
+            for tag in md.findall(tagname):
+                result.append({ 'item':dc_ns+tagname, 'text':tag.text })
+        except AttributeError:
+            continue
+    debug()
+    return result
+
 aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 def generate_epub_items(book_id):
     scandata = objectify.parse(book_id + '_scandata.xml').getroot()
