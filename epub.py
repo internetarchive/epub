@@ -21,6 +21,8 @@ def make_container_info():
                        'media-type' : 'application/oebps-package+xml' } )
     return root
 
+dc = 'http://purl.org/dc/elements/1.1/'
+dcb = '{' + dc + '}'
 def make_opf(meta_info_items,
              manifest_items,
              spine_items,

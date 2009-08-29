@@ -23,6 +23,7 @@ else:
     def debug():
         pass
 
+aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 def generate_epub_content(book_id):
     scandata = objectify.parse(book_id + '_scandata.xml').getroot()
     metadata = objectify.parse(book_id + '_meta.xml').getroot()
