@@ -23,27 +23,31 @@ else:
     def debug():
         pass
 
-lang_map = { 'eng':'en-US' }
 def get_meta_items(book_id):
     md = objectify.parse(book_id + '_meta.xml').getroot()
     dc_ns = '{http://purl.org/dc/elements/1.1/}'
-    lang = lang_map[md.language.text] if md.language.text in lang_map else md.language.text
-    result = [{ 'item':dc_ns+'title', 'text':md.title.text },
-              { 'item':dc_ns+'creator', 'text':md.creator.text },
-              { 'item':dc_ns+'identifier', 'text':book_id, 'atts':{ 'id':'bookid' } },
-              { 'item':dc_ns+'language', 'text':lang },
-              { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
-              ]
+    result = [{ 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }]
+    result = [{ 'item':dc_ns+'type', 'text':'Text' }]
     # catch dublin core stragglers
-    for tagname in [ 'subject', 'description', 'publisher', 'contributor', 'date',
-                 'type', 'format', 'source', 'relation', 'coverage', 'rights' ]:
-        try:
-#             debug()
-            for tag in md.findall(tagname):
+    for tagname in [ 'title', 'creator', 'subject', 'description',
+                     'publisher', 'contributor', 'date', 'type',
+                     'format', 'identifier', 'source', 'language',
+                     'relation','coverage', 'rights' ]:
+        for tag in md.findall(tagname):
+            if tagname == 'identifier':
+                result.append({ 'item':dc_ns+tagname, 'text':tag.text,
+                                'atts':{ 'id':'bookid' } })
+            elif tagname == 'language':
+                # try to translate to standard notation
+#                lang_map = { 'eng':'en-US' }
+                lang_map = { }
+                lang = lang_map[md.language.text] if md.language.text in lang_map else md.language.text
+                result.append({ 'item':dc_ns+tagname, 'text':lang })
+            elif tagname == 'type' and tag.text == 'Text':
+                # already included above
+                continue
+            else:
                 result.append({ 'item':dc_ns+tagname, 'text':tag.text })
-        except AttributeError:
-            continue
-    debug()
     return result
 
 aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
