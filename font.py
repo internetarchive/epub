@@ -5,19 +5,28 @@ font_mapping = { "Times New Roman" : "TimesRoman.ttf",
                  "Courier" : "Courier.ttf",
                  "Courier New" : "Courier.ttf"
                  }
+italic_font_mapping = { "Times New Roman" : "TimesItalic.ttf",
+                 "Arial" : "HelveticaOblique.ttf",
+                 "Tahoma" : "GenevaItalic.ttf",
+                 "Courier" : "CourierOblique.ttf",
+                 "Courier New" : "CourierOblique.ttf"
+                 }
 fonts = {}
 
 import Image
 import ImageDraw
 import ImageFont 
 
-def get_font(name, size):
+def get_font(name, size, italic):
     size *= 400/72
     if not name in fonts:
         fonts[name] = {}
     family = fonts[name];
     if not size in family:
-        mapped = font_mapping[name]
+        if italic:
+            mapped = italic_font_mapping[name]
+        else:
+            mapped = font_mapping[name]
         font = ImageFont.truetype(font_dir + mapped, size)
         family[size] = font
     font = family[size]

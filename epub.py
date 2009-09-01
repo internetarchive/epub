@@ -11,6 +11,7 @@ if debugme:
 else:
     def debug():
         pass
+
 def make_container_info():
     root = etree.Element('container',
                          version='1.0',

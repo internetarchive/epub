@@ -15,6 +15,7 @@ import lxml
 
 import epub
 import process_abbyy
+import common
 
 # remove me for faster execution
 debugme = True
@@ -25,7 +26,7 @@ else:
         pass
 
 def main(argv):
-    book_id = get_book_id()
+    book_id = common.get_book_id()
     z = zipfile.ZipFile(book_id + '.epub', 'w')
     add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
@@ -44,7 +45,7 @@ def main(argv):
     for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id):
         if itemtype == 'content':
             manifest_items.append(info)
-            add_to_zip(z, 'OEBPS/'+info['href'], tree_to_str(item))
+            add_to_zip(z, 'OEBPS/'+info['href'], item)
         elif itemtype == 'spine':
             spine_items.append(info)
         elif itemtype == 'guide':
@@ -64,16 +65,6 @@ def main(argv):
     add_to_zip(z, 'OEBPS/toc.ncx', tree_to_str(tree))
 
     z.close()
-
-def get_book_id():
-    files=os.listdir(".")
-    #ignore files starting with '.' using list comprehension
-    files=[filename for filename in files if filename[0] != '.']
-    for fname in files:
-        if re.match('.*_abbyy.gz$', fname):
-            return re.sub('_abbyy.gz$', '', fname)
-    print 'couldn''t get book id'
-    debug()
 
 def usage():
 #    print 'usage: abbyy_to_epub.py book_id abbyy.xml scandata.xml book_id'

@@ -144,6 +144,16 @@ def box_from_par(par):
     else:
         return None
 
+import os
+
+# get python string with image data - from .jp2 image in zip
+def get_png(zipf, image_path):
+    output = os.popen('unzip -p ' + zipf + ' ' + image_path +
+        ' | kdu_expand ' +
+           ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
+    return output.read()
+
+import StringIO
 import font
 def scan_pages(context, scandata):
     scandata_pages = scandata.getroot().pageData.page
@@ -154,28 +164,36 @@ def scan_pages(context, scandata):
         image = Image.new('RGB',
                           (int(page.get('width')),
                            int(page.get('height'))))
-        if i < 0:
-            i += 1
-            continue
+#         if i = 0:
+#             i += 1
+#             continue
 
-        if i > 0:
-        # orig page image
-#         imfile = "jp2/littleroadstoryo00hick_" + str(i).zfill(4) + ".png"
-            imfile = "png/proteusframebuilding_" + str(i).zfill(4) + ".png"
-#         print imfile
-            page_image = Image.open(imfile)
+        if True:
+            id = 'romanceonthreele00hafnrich'
+            zipf = id + '_jp2.zip'
+            image_path = id + '_jp2/' + id + '_' + str(i).zfill(4) + '.jp2'
+#             png_root = 'romanceonthreele00hafnrich_jp2/romanceonthreele00hafnrich_'
+#             imfile = png_root + str(i).zfill(4) + ".png"
+            page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path)))
 #         image.paste(page_image, None)
-            image = Image.blend(image, page_image, .1)
+            image = Image.blend(image, page_image, .2)
         draw = ImageDraw.Draw(image)
-        
+
+        for block in page:
+            if block.get('blockType') == 'Picture':
+                cropped = page_image.crop(four_coords(block))
+                image.paste(cropped, four_coords(block))
+                
         for block in page:
             if block.get('blockType') == 'Text':
                 render(draw, block, 'block_text')    
-            else:
+            if block.get('blockType') == 'Picture':
                 render(draw, block, 'block_picture')
-                if i > 0:
-                    cropped = page_image.crop(four_coords(block))
-                    image.paste(cropped, four_coords(block))
+#             else:
+#                 render(draw, block, 'block_picture')
+#                 if i > 0:
+#                     cropped = page_image.crop(four_coords(block))
+#                     image.paste(cropped, four_coords(block))
             for el in block:
                 if el.tag == abyns+'region':
                     for rect in el:
@@ -193,8 +211,8 @@ def scan_pages(context, scandata):
                                 font_name = fmt.get('ff')
                                 font_size = fmt.get('fs')
                                 font_size = int(re.sub('\.', '', font_size))
-                                f = font.get_font(font_name, font_size)
-
+                                font_ital = (fmt.get('italic') == 'true')
+                                f = font.get_font(font_name, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
                                     draw.text((int(cp.get('l')),
