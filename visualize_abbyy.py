@@ -3,9 +3,15 @@
 import sys
 import getopt
 import re
+import os
+import gzip
 
 from lxml import etree
 from lxml import objectify
+
+import common
+
+outdir='viz'
 
 # remove me for faster execution
 debugme = True
@@ -23,28 +29,14 @@ else:
 def usage():
     print 'usage: visualize_abbyy.py abbyy.xml scandata.xml'
 
-
 def main(argv):
-    try:
-        opts, args = getopt.getopt(argv, "hf:b",
-                                   ["help", "food="])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif opt == "-b":
-            print "beautiful"
-        elif opt in ("-f", "--food"):
-            print "food: " + arg
+    if not os.path.isdir('./' + outdir+ '/'):
+        os.mkdir('./' + outdir + '/')
 
-    if len(args) != 2:
-        usage()
-        sys.exit(-1)
-
-    visualize(args[0], args[1])
+    id = common.get_book_id()
+    aby_file = gzip.open(id + '_abbyy.gz', 'rb')
+    scandata_file = id + '_scandata.xml'
+    visualize(aby_file, scandata_file)
 
 abbyyns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 abyns = abbyyns
@@ -53,9 +45,9 @@ import ImageDraw
 import ImageFont 
 import color
 from color import color as c
-def visualize(abbyy_xml, scandata_xml):
-    scandata = objectify.parse(scandata_xml)
-    context = etree.iterparse(abbyy_xml, tag=abbyyns+'page')
+def visualize(aby_file, scandata_file):
+    scandata = objectify.parse(scandata_file)
+    context = etree.iterparse(aby_file, tag=abbyyns+'page')
     info = scan_pages(context, scandata)
 
 def draw_rect(draw, el, sty, use_coords=None):
@@ -219,7 +211,7 @@ def scan_pages(context, scandata):
                                                int(cp.get('b'))),
                                               cp.text.encode('utf-8'),
                                               font=f,
-                                              fill=color.white)
+                                              fill=color.yellow)
                 elif (el.tag == abyns+'row'):
                     pass
                 else:
@@ -229,7 +221,7 @@ def scan_pages(context, scandata):
         if not include_page(scandata_pages[i]):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
         
-        image.save('img' + scandata_pages[i].get('leafNum') + '.png')
+        image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
 #         if i > 10:
 #             break
         print i
