@@ -25,8 +25,16 @@ else:
     def debug():
         pass
 
+def usage():
+    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files")
+
 def main(argv):
-    book_id = common.get_book_id()
+    if len(argv) != 2:
+        usage()
+        sys.exit(-1)
+    book_id = argv[0]
+    book_path = argv[1]
+    
     z = zipfile.ZipFile(book_id + '.epub', 'w')
     add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
@@ -42,7 +50,8 @@ def main(argv):
     spine_items = []
     guide_items = []
     navpoints = []
-    for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id):
+    for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id,
+                                                                    book_path):
         nav_number = 0
         if itemtype == 'content':
             manifest_items.append(info)
@@ -57,7 +66,7 @@ def main(argv):
             nav_number += 1
             navpoints.append(info)
 
-    meta_info_items = process_abbyy.get_meta_items(book_id)
+    meta_info_items = process_abbyy.get_meta_items(book_id, book_path)
 
     tree_str = epub.make_opf(meta_info_items,
                          manifest_items,
@@ -69,10 +78,6 @@ def main(argv):
     add_to_zip(z, 'OEBPS/toc.ncx', tree_str)
 
     z.close()
-
-def usage():
-#    print 'usage: abbyy_to_epub.py book_id abbyy.xml scandata.xml book_id'
-    print 'usage: abbyy_to_epub.py'
 
 def add_to_zip(z, path, s, deflate=True):
     info = zipfile.ZipInfo(path)
