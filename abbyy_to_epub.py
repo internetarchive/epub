@@ -15,6 +15,7 @@ import lxml
 
 import epub
 import process_abbyy
+import common
 
 # remove me for faster execution
 debugme = True
@@ -25,12 +26,12 @@ else:
         pass
 
 def main(argv):
-    book_id = get_book_id()
+    book_id = common.get_book_id()
     z = zipfile.ZipFile(book_id + '.epub', 'w')
     add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
-    tree = epub.make_container_info()
-    add_to_zip(z, 'META-INF/container.xml', tree_to_str(tree))
+    tree_str = epub.make_container_info()
+    add_to_zip(z, 'META-INF/container.xml', tree_str)
 
     manifest_items = [
         { 'id':'ncx',
@@ -42,45 +43,32 @@ def main(argv):
     guide_items = []
     navpoints = []
     for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id):
+        nav_number = 0
         if itemtype == 'content':
             manifest_items.append(info)
-            add_to_zip(z, 'OEBPS/'+info['href'], tree_to_str(item))
+            add_to_zip(z, 'OEBPS/'+info['href'], item)
         elif itemtype == 'spine':
             spine_items.append(info)
         elif itemtype == 'guide':
             guide_items.append(info)
         elif itemtype == 'navpoint':
+            info['id'] = 'navpoint-' + str(nav_number)
+            info['playOrder'] = str(nav_number)
+            nav_number += 1
             navpoints.append(info)
 
-    tree = epub.make_opf(meta_info_items,
+    meta_info_items = process_abbyy.get_meta_items(book_id)
+
+    tree_str = epub.make_opf(meta_info_items,
                          manifest_items,
                          spine_items,
                          guide_items);
-    add_to_zip(z, 'OEBPS/content.opf', tree_to_str(tree))
+    add_to_zip(z, 'OEBPS/content.opf', tree_str)
 
-    tree = epub.make_ncx(navpoints);
-    add_to_zip(z, 'OEBPS/toc.ncx', tree_to_str(tree))
+    tree_str = epub.make_ncx(navpoints);
+    add_to_zip(z, 'OEBPS/toc.ncx', tree_str)
 
     z.close()
-
-dc_ns = '{http://purl.org/dc/elements/1.1/}'
-meta_info_items = [
-    { 'item':dc_ns+'title', 'text':'book title here' },
-    { 'item':dc_ns+'creator', 'text':'book creator here' },
-    { 'item':dc_ns+'identifier', 'text':'test id', 'atts':{ 'id':'bookid' } },
-    { 'item':dc_ns+'language', 'text':'en-US' },
-    { 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }
-]
-
-def get_book_id():
-    files=os.listdir(".")
-    #ignore files starting with '.' using list comprehension
-    files=[filename for filename in files if filename[0] != '.']
-    for fname in files:
-        if re.match('.*_abbyy.gz$', fname):
-            return re.sub('_abbyy.gz$', '', fname)
-    print 'couldn''t get book id'
-    debug()
 
 def usage():
 #    print 'usage: abbyy_to_epub.py book_id abbyy.xml scandata.xml book_id'
@@ -92,12 +80,6 @@ def add_to_zip(z, path, s, deflate=True):
     info.external_attr = 0666 << 16L # fix access
     info.date_time = (2009, 12, 25, 0, 0, 0)
     z.writestr(info, s)
-
-def tree_to_str(tree):
-    return etree.tostring(tree,
-                          pretty_print=True,
-                          xml_declaration=True,
-                          encoding='utf-8')
 
 if __name__ == '__main__':
     main(sys.argv[1:])

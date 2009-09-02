@@ -3,9 +3,15 @@
 import sys
 import getopt
 import re
+import os
+import gzip
 
 from lxml import etree
 from lxml import objectify
+
+import common
+
+outdir='viz'
 
 # remove me for faster execution
 debugme = True
@@ -23,28 +29,14 @@ else:
 def usage():
     print 'usage: visualize_abbyy.py abbyy.xml scandata.xml'
 
-
 def main(argv):
-    try:
-        opts, args = getopt.getopt(argv, "hf:b",
-                                   ["help", "food="])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif opt == "-b":
-            print "beautiful"
-        elif opt in ("-f", "--food"):
-            print "food: " + arg
+    if not os.path.isdir('./' + outdir+ '/'):
+        os.mkdir('./' + outdir + '/')
 
-    if len(args) != 2:
-        usage()
-        sys.exit(-1)
-
-    visualize(args[0], args[1])
+    id = common.get_book_id()
+    aby_file = gzip.open(id + '_abbyy.gz', 'rb')
+    scandata_file = id + '_scandata.xml'
+    visualize(aby_file, scandata_file, id)
 
 abbyyns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 abyns = abbyyns
@@ -53,10 +45,10 @@ import ImageDraw
 import ImageFont 
 import color
 from color import color as c
-def visualize(abbyy_xml, scandata_xml):
-    scandata = objectify.parse(scandata_xml)
-    context = etree.iterparse(abbyy_xml, tag=abbyyns+'page')
-    info = scan_pages(context, scandata)
+def visualize(aby_file, scandata_file, id):
+    scandata = objectify.parse(scandata_file)
+    context = etree.iterparse(aby_file, tag=abbyyns+'page')
+    info = scan_pages(context, scandata, id)
 
 def draw_rect(draw, el, sty, use_coords=None):
     if sty['width'] == 0:
@@ -116,6 +108,7 @@ def enclosing_tag(tag):
 styles = {
     'block_text' : { 'col':color.yellow, 'width':1, 'offset':0, 'margin':10 },
     'block_picture' : { 'col':color.red, 'width':1, 'offset':7, 'margin':10 },
+    'block_table' : { 'col':color.purple, 'width':1, 'offset':7, 'margin':10 },
     'rect' : { 'col':color.orange, 'width':0, 'offset':-4, 'margin':10 },
     'par' : { 'col':color.green, 'width':2, 'offset':0, 'margin':10 },
     'line' : { 'col':color.blue, 'width':1, 'offset':0, 'margin':10 },
@@ -125,11 +118,14 @@ def nons(tag):
     return re.sub('{.*}', '', tag)
 
 def render(draw, el, expected, use_coords=None):
+    assert_tag(el, expected)
+    sty = styles[expected]
+    draw_rect(draw, el, sty, use_coords)
+
+def assert_tag(el, expected):
     shorttag = nons(el.tag)
     if (shorttag != 'block'):
         assert_d(shorttag == expected)
-    sty = styles[expected]
-    draw_rect(draw, el, sty, use_coords)
 
 def box_from_par(par):
     if len(par) > 0:
@@ -144,8 +140,18 @@ def box_from_par(par):
     else:
         return None
 
+import os
+
+# get python string with image data - from .jp2 image in zip
+def get_png(zipf, image_path):
+    output = os.popen('unzip -p ' + zipf + ' ' + image_path +
+        ' | kdu_expand ' +
+           ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
+    return output.read()
+
+import StringIO
 import font
-def scan_pages(context, scandata):
+def scan_pages(context, scandata, id):
     scandata_pages = scandata.getroot().pageData.page
     i = 0
     f = ImageFont.load_default()
@@ -154,33 +160,61 @@ def scan_pages(context, scandata):
         image = Image.new('RGB',
                           (int(page.get('width')),
                            int(page.get('height'))))
-        if i < 0:
-            i += 1
-            continue
+#         if i < 5:
+#             i += 1
+#             continue
 
-        if i > 0:
-        # orig page image
-#         imfile = "jp2/littleroadstoryo00hick_" + str(i).zfill(4) + ".png"
-            imfile = "png/proteusframebuilding_" + str(i).zfill(4) + ".png"
-#         print imfile
-            page_image = Image.open(imfile)
+        if True:
+            zipf = id + '_jp2.zip'
+            image_path = id + '_jp2/' + id + '_' + str(i).zfill(4) + '.jp2'
+            page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path)))
 #         image.paste(page_image, None)
-            image = Image.blend(image, page_image, .1)
+            image = Image.blend(image, page_image, .2)
         draw = ImageDraw.Draw(image)
-        
+
+        for block in page:
+            if block.get('blockType') == 'Picture':
+                cropped = page_image.crop(four_coords(block))
+                image.paste(cropped, four_coords(block))
+                
         for block in page:
             if block.get('blockType') == 'Text':
                 render(draw, block, 'block_text')    
-            else:
+            if block.get('blockType') == 'Picture':
                 render(draw, block, 'block_picture')
-                if i > 0:
-                    cropped = page_image.crop(four_coords(block))
-                    image.paste(cropped, four_coords(block))
+            if block.get('blockType') == 'Table':
+                render(draw, block, 'block_table')
+#             else:
+#                 render(draw, block, 'block_picture')
+#                 if i > 0:
+#                     cropped = page_image.crop(four_coords(block))
+#                     image.paste(cropped, four_coords(block))
             for el in block:
                 if el.tag == abyns+'region':
-                    for rect in el:
-#                         debug()
-                        render(draw, rect, 'rect')
+                    pass
+                elif el.tag == abyns+'row':
+                    for cell in el:
+                        for text in cell:
+                            for par in text:
+                                par_coords = box_from_par(par)
+                                if par_coords is not None:
+                                    render(draw, par, 'par', par_coords)
+                                for line in par:
+                                    render(draw, line, 'line');
+                                    for fmt in line:
+                                        assert_d(fmt.tag == abyns+'formatting')
+                                        font_name = fmt.get('ff')
+                                        font_size = fmt.get('fs')
+                                        font_size = int(re.sub('\.', '', font_size))
+                                        font_ital = (fmt.get('italic') == 'true')
+                                        f = font.get_font(font_name, font_size, font_ital)
+                                        for cp in fmt:
+                                            assert_d(cp.tag == abyns+'charParams')
+                                            draw.text((int(cp.get('l')),
+                                                       int(cp.get('b'))),
+                                                      cp.text.encode('utf-8'),
+                                                      font=f,
+                                                      fill=color.yellow)
                 elif el.tag == abyns+'text':
                     for par in el:
                         par_coords = box_from_par(par)
@@ -193,15 +227,15 @@ def scan_pages(context, scandata):
                                 font_name = fmt.get('ff')
                                 font_size = fmt.get('fs')
                                 font_size = int(re.sub('\.', '', font_size))
-                                f = font.get_font(font_name, font_size)
-
+                                font_ital = (fmt.get('italic') == 'true')
+                                f = font.get_font(font_name, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
                                     draw.text((int(cp.get('l')),
                                                int(cp.get('b'))),
                                               cp.text.encode('utf-8'),
                                               font=f,
-                                              fill=color.white)
+                                              fill=color.yellow)
                 elif (el.tag == abyns+'row'):
                     pass
                 else:
@@ -211,7 +245,7 @@ def scan_pages(context, scandata):
         if not include_page(scandata_pages[i]):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
         
-        image.save('img' + scandata_pages[i].get('leafNum') + '.png')
+        image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
 #         if i > 10:
 #             break
         print i
