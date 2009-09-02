@@ -42,8 +42,9 @@ def get_image(zipf, image_path, region,
         ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
 
-def get_meta_items(book_id):
-    md = objectify.parse(book_id + '_meta.xml').getroot()
+def get_meta_items(book_id, book_path):
+    md = objectify.parse(os.path.join(book_path,
+                                      book_id + '_meta.xml')).getroot()
     dc_ns = '{http://purl.org/dc/elements/1.1/}'
     result = [{ 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image1' } },
               { 'item':dc_ns+'type', 'text':'Text' }]
@@ -70,12 +71,19 @@ def get_meta_items(book_id):
     return result
 
 aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
-def generate_epub_items(book_id):
-    scandata = objectify.parse(book_id + '_scandata.xml').getroot()
-    metadata = objectify.parse(book_id + '_meta.xml').getroot()
-    aby_file = gzip.open(book_id + '_abbyy.gz', 'rb')
-    context = etree.iterparse(aby_file,  tag=aby_ns+'page', resolve_entities=False)
-
+def generate_epub_items(book_id, book_path):
+    scandata = objectify.parse(os.path.join(book_path,
+                                            book_id + '_scandata.xml')
+                               ).getroot()
+    metadata = objectify.parse(os.path.join(book_path,
+                                            book_id + '_meta.xml')
+                               ).getroot()
+    aby_file = gzip.open(os.path.join(book_path,
+                                      book_id + '_abbyy.gz'),
+                         'rb')
+    context = etree.iterparse(aby_file,
+                              tag=aby_ns+'page',
+                              resolve_entities=False)
     bookData = scandata.find('bookData')
     scanLog = scandata.find('scanLog')
     scandata_pages = scandata.xpath('/book/pageData/page')
@@ -90,7 +98,8 @@ def generate_epub_items(book_id):
             i += 1
             continue
         if page_scandata.pageType.text == 'Cover':
-            image = get_image(book_id + '_jp2.zip',
+            image = get_image(os.path.join(book_path,
+                                           book_id + '_jp2.zip'),
                               book_id + '_jp2/' + book_id + '_'
                               + str(i).zfill(4) + '.jp2',
                               '{0.0,0.0},{1.0,1.0}',
