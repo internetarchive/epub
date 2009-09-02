@@ -11,7 +11,8 @@ from lxml import etree
 import common
 
 noclose=True
-verbose=True
+# noclose=False
+verbose=False
 
 def main(argv):
 #     if len(argv) != 2:
@@ -54,6 +55,7 @@ class FilterTarget:
         self.depth = 0
         self.leaf = 1
         self.out = out
+        self.current_line = ''
     def pr(self, str):
         p(str, self.out)
     def start(self, tag, attrib):
@@ -70,6 +72,8 @@ class FilterTarget:
             if ntag == 'page':
                 attrib['leaf'] = str(self.leaf)
                 self.leaf += 1
+            if ntag == 'formatting':
+                self.current_line = ''
             if ntag in self.synonyms:
                 ntag = self.synonyms[ntag];
             self.pr('<' + ntag)
@@ -108,9 +112,13 @@ class FilterTarget:
             if verbose or 'indent' in hints:
                 self.depth -= 1
                 self.pr(self.istr * self.depth)
-            ntag = nons(tag)
+            ntag = stag = nons(tag)
             if ntag in synonyms:
                 ntag = synonyms[ntag];
+            if stag == 'formatting' and verbose:
+                self.pr(self.current_line)
+            if stag == 'formatting' and not verbose:
+                self.pr('\n')
             if not noclose:
                 self.pr('</' + ntag + '>')
                 if verbose or not 'inside' in hints:
@@ -121,6 +129,7 @@ class FilterTarget:
                 data = "''"
             elif data == '"':
                 data = '""'
+            self.current_line += data
             if verbose:
                 self.pr(data + '\n')
             else:
@@ -132,19 +141,34 @@ class FilterTarget:
 #        print('close')
 #        return 'closed!'
 
+# to_keep = {
+#     ns+'document':(['indent'], [ 'pagesCount', 'xmlns' ]),
+#     ns+'page':(['indent'], [ 'width', 'leaf' ]),
+#     ns+'block':(['indent'], [ 'blockType', 'l', 'r', 't', 'b' ]),
+#     ns+'region':(['indent'], [ ]),
+#     ns+'rect':([ ], [ ]),
+#     ns+'text':(['indent'], [ ]),
+#     ns+'line':([ ], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
+#     ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing']),
+#     ns+'formatting':(['inside'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
+#     ns+'cell':(['indent', 'showall'], [ ]),
+#     ns+'row':(['indent', 'showall'], [ ]),
+#     ns+'charParams':(['indent', 'ifverbose', 'nonl'], [ 'wordStart', 'wordFromDictionary', 'wordNormal', 'wordNumeric', 'wordIdentifier', 'l', 'r', 't', 'b']),
+# }
+
 to_keep = {
     ns+'document':(['indent'], [ 'pagesCount', 'xmlns' ]),
     ns+'page':(['indent'], [ 'width', 'leaf' ]),
     ns+'block':(['indent'], [ 'blockType', 'l', 'r', 't', 'b' ]),
     ns+'region':(['indent'], [ ]),
-    ns+'rect':([ ], [ ]),
+    ns+'rect':([ 'indent' ], [ ]),
     ns+'text':(['indent'], [ ]),
-    ns+'line':([ ], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
+    ns+'line':(['indent'], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
     ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing']),
-    ns+'formatting':(['inside'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
+    ns+'formatting':(['indent'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
     ns+'cell':(['indent', 'showall'], [ ]),
     ns+'row':(['indent', 'showall'], [ ]),
-    ns+'charParams':(['indent', 'ifverbose', 'nonl'], [ 'wordStart', 'wordFromDictionary', 'wordNormal', 'wordNumeric', 'wordIdentifier']),
+    ns+'charParams':(['indent', 'ifverbose', 'nonl'], [ 'wordStart', 'wordFromDictionary', 'wordNormal', 'wordNumeric', 'wordIdentifier', 'l', 'r', 't', 'b']),
 }
 
 synonyms = {

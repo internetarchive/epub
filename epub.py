@@ -4,6 +4,8 @@
 from lxml import etree
 from lxml import objectify
 
+import common
+
 # remove me for faster execution
 debugme = True
 if debugme:
@@ -20,7 +22,7 @@ def make_container_info():
     etree.SubElement(rootfiles, 'rootfile',
                      { 'full-path' : 'OEBPS/content.opf',
                        'media-type' : 'application/oebps-package+xml' } )
-    return root
+    return common.tree_to_str(root)
 
 dc = 'http://purl.org/dc/elements/1.1/'
 dcb = '{' + dc + '}'
@@ -49,7 +51,7 @@ def make_opf(meta_info_items,
         guide = etree.SubElement(root, 'guide')
     for item in guide_items:
         etree.SubElement(guide, 'reference', item)
-    return root
+    return common.tree_to_str(root)
 
 navpoints = [
     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
@@ -84,4 +86,4 @@ def make_ncx(navpoints):
         etree.SubElement(navlabel, 'text').text = item['text']
         etree.SubElement(navpoint, 'content', src=item['content'])
     tree = etree.ElementTree(root)
-    return tree
+    return common.tree_to_str(tree)

@@ -12,8 +12,10 @@ from lxml import etree
 from lxml import objectify
 from lxml import html
 import lxml
+from lxml.builder import E
 
 import epub
+import common
 
 # remove me for faster execution
 debugme = True
@@ -31,19 +33,20 @@ else:
 # }
  
 # get python string with image data - from .jp2 image in zip
-def get_image(zipf, image_path, region, height, quality):
+def get_image(zipf, image_path, region,
+              height=600, width=780, quality=90):
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
         ' | kdu_expand -region "' + region + '" ' +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm' +
-        ' | pamscale -height ' + height +
-        ' | pnmtojpeg -quality ' + quality)
+        ' | pamscale -xyfit ' + str(width) + ' ' + str(height) +
+        ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
 
 def get_meta_items(book_id):
     md = objectify.parse(book_id + '_meta.xml').getroot()
     dc_ns = '{http://purl.org/dc/elements/1.1/}'
-    result = [{ 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image' } }]
-    result = [{ 'item':dc_ns+'type', 'text':'Text' }]
+    result = [{ 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image1' } },
+              { 'item':dc_ns+'type', 'text':'Text' }]
     # catch dublin core stragglers
     for tagname in [ 'title', 'creator', 'subject', 'description',
                      'publisher', 'contributor', 'date', 'type',
@@ -78,48 +81,100 @@ def generate_epub_items(book_id):
     scandata_pages = scandata.xpath('/book/pageData/page')
     paragraphs = []
     i = 0
+    cover_number = 0
+    nav_number = 0
     for event, page in context:
-        page_data = scandata_pages(i)
-        if not include_page(scandata_pages(i)):
+        page_scandata = scandata_pages[i]
+#        debug()
+        if not include_page(page_scandata):
+            i += 1
             continue
-        if page_data
-        for block in page:
-            if block.get('blockType') == 'Text':
-                pass
+        if page_scandata.pageType.text == 'Cover':
+            image = get_image(book_id + '_jp2.zip',
+                              book_id + '_jp2/' + book_id + '_'
+                              + str(i).zfill(4) + '.jp2',
+                              '{0.0,0.0},{1.0,1.0}',
+                              width=600, height=780, quality=90)
+            if cover_number == 0:
+                cover_title = 'Front Cover'
             else:
-                pass
-            for el in block:
-                if el.tag == aby_ns+'region':
-                    for rect in el:
-                        pass
-                elif el.tag == aby_ns+'text':
-                    for par in el:
-                        lines = []
-                        for line in par:
-                            lines.append(etree.tostring(line, method='text', encoding=unicode))
-                        paragraph.append(E.p(' '.join(lines)))
-                   
-                elif (el.tag == aby_ns+'row'):
+                cover_title = 'Back Cover' ## xxx detect back page?
+            cnstr = str(cover_number)
+            yield('content',
+                  { 'id':'cover-image' + cnstr,
+                    'href':'images/cover' + cnstr + '.png',
+                    'media-type':'image/png' },
+                  image);
+            img_tag = E.img({'src':'images/cover' + cnstr + '.png',
+                             'alt':cover_title})
+            tree = make_html(cover_title, 'css/stylesheet.css', [ img_tag ])
+            cover_file = 'cover' + cnstr + '.html'
+            yield('content',
+                  { 'id':'cover' + cnstr,
+                    'href':cover_file,
+                    'media-type':'application/xhtml+xml' },
+                  common.tree_to_str(tree, xml_declaration=False))
+            yield('spine',
+                  { 'idref':'cover' + cnstr, 'linear':'no' },
+                  None)
+            yield('navpoint',
+                  { 'text':cover_title,
+                    'content':cover_file },
+                  None)
+            if cover_number == 0:
+                yield('guide',
+                      { 'href':cover_file,
+                        'type':'cover',
+                        'title':cover_title },
+                      None)
+            cover_number += 1
+
+# Cover
+# Normal
+# Title
+# Copyright
+# Contents
+# Normal
+# Cover
+        else:    
+            for block in page:
+                if block.get('blockType') == 'Text':
                     pass
                 else:
-                    print('unexpected tag type' + el.tag)
-                    sys.exit(-1)
+                    pass
+                for el in block:
+                    if el.tag == aby_ns+'region':
+                        for rect in el:
+                            pass
+                    elif el.tag == aby_ns+'text':
+                        for par in el:
+                            lines = []
+                            for line in par:
+                                lines.append(etree.tostring(line, method='text', encoding=unicode))
+                            paragraphs.append(E.p(' '.join(lines)))
+                   
+                    elif (el.tag == aby_ns+'row'):
+                        pass
+                    else:
+                        print('unexpected tag type' + el.tag)
+                        sys.exit(-1)
         page.clear()
         i += 1
 
     tree = make_html('sample title', 'path_to_stylesheet', paragraphs)
 
-    tree = build_html(context, scandata, metadata)
     yield ('content',
            { 'id':'book',
              'href':'book.html',
              'media-type':'application/xhtml+xml' },
-           tree)
-    yield ('spine', { 'idref':'book' }, None)
-    yield ('navpoint',  { 'id':'navpoint-1',
-                          'playOrder': '1',
-                          'text':'Book',
-                          'content':'book.html' }, None)
+           common.tree_to_str(tree, xml_declaration=False))
+    yield ('spine',
+           { 'idref':'book' },
+           None)
+    yield ('navpoint',
+           { 'text':'Book',
+             'content':'book.html' },
+           None)
 # OPF
 #manifest_items = [
 #     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
@@ -163,9 +218,7 @@ def include_page(page):
     else:
         return False
 
-
 def make_html(title, stylesheet_href, body_elems):
-    from lxml.builder import E
     html = E.html(
         E.head(
             E.title(title),
@@ -181,6 +234,6 @@ def make_html(title, stylesheet_href, body_elems):
         ),
         xmlns='http://www.w3.org/1999/xhtml'
     )
-    html.xpath('/html/body/div')[0].append(body_elems)
+    for el in body_elems:
+        html.xpath('/html/body/div')[0].append(el)
     return etree.ElementTree(html)
-

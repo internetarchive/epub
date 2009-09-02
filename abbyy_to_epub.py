@@ -30,8 +30,8 @@ def main(argv):
     z = zipfile.ZipFile(book_id + '.epub', 'w')
     add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
-    tree = epub.make_container_info()
-    add_to_zip(z, 'META-INF/container.xml', tree_to_str(tree))
+    tree_str = epub.make_container_info()
+    add_to_zip(z, 'META-INF/container.xml', tree_str)
 
     manifest_items = [
         { 'id':'ncx',
@@ -43,6 +43,7 @@ def main(argv):
     guide_items = []
     navpoints = []
     for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id):
+        nav_number = 0
         if itemtype == 'content':
             manifest_items.append(info)
             add_to_zip(z, 'OEBPS/'+info['href'], item)
@@ -51,18 +52,21 @@ def main(argv):
         elif itemtype == 'guide':
             guide_items.append(info)
         elif itemtype == 'navpoint':
+            info['id'] = 'navpoint-' + str(nav_number)
+            info['playOrder'] = str(nav_number)
+            nav_number += 1
             navpoints.append(info)
 
     meta_info_items = process_abbyy.get_meta_items(book_id)
 
-    tree = epub.make_opf(meta_info_items,
+    tree_str = epub.make_opf(meta_info_items,
                          manifest_items,
                          spine_items,
                          guide_items);
-    add_to_zip(z, 'OEBPS/content.opf', tree_to_str(tree))
+    add_to_zip(z, 'OEBPS/content.opf', tree_str)
 
-    tree = epub.make_ncx(navpoints);
-    add_to_zip(z, 'OEBPS/toc.ncx', tree_to_str(tree))
+    tree_str = epub.make_ncx(navpoints);
+    add_to_zip(z, 'OEBPS/toc.ncx', tree_str)
 
     z.close()
 
@@ -76,13 +80,6 @@ def add_to_zip(z, path, s, deflate=True):
     info.external_attr = 0666 << 16L # fix access
     info.date_time = (2009, 12, 25, 0, 0, 0)
     z.writestr(info, s)
-
-# xxx move this elsewhere - to encapsulate knowledge of xml?
-def tree_to_str(tree):
-    return etree.tostring(tree,
-                          pretty_print=True,
-                          xml_declaration=True,
-                          encoding='utf-8')
 
 if __name__ == '__main__':
     main(sys.argv[1:])

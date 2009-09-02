@@ -3,6 +3,7 @@
 
 import os
 import re
+from lxml import etree
 
 def get_book_id():
     files=os.listdir(".")
@@ -13,3 +14,9 @@ def get_book_id():
             return re.sub('_abbyy.gz$', '', fname)
     print 'couldn''t get book id'
     debug()
+
+def tree_to_str(tree, xml_declaration=True):
+    return etree.tostring(tree,
+                          pretty_print=True,
+                          xml_declaration=xml_declaration,
+                          encoding='utf-8')
