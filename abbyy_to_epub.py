@@ -18,7 +18,7 @@ import process_abbyy
 import common
 
 # remove me for faster execution
-debugme = True
+debugme = False
 if debugme:
     from  pydbgr.api import debug
 else:

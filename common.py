@@ -13,7 +13,6 @@ def get_book_id():
         if re.match('.*_abbyy.gz$', fname):
             return re.sub('_abbyy.gz$', '', fname)
     print 'couldn''t get book id'
-    debug()
 
 def tree_to_str(tree, xml_declaration=True):
     return etree.tostring(tree,
