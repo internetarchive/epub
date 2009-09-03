@@ -88,6 +88,85 @@ def make_ncx(navpoints):
     tree = etree.ElementTree(root)
     return common.tree_to_str(tree)
 
+def make_stylesheet():
+    return '''body {
+    font-family: sans-serif;
+}
+h1,h2,h3,h4 {
+    font-family: serif;
+    color: red;
+}
+'''
+
+def make_ade_stylesheet():
+    # to be called 'page-template.xpgt'
+    return '''<ade:template xmlns="http://www.w3.org/1999/xhtml" 
+   xmlns:ade="http://ns.adobe.com/2006/ade" 
+   xmlns:fo="http://www.w3.org/1999/XSL/Format">
+
+   <fo:layout-master-set>
+      <fo:simple-page-master master-name="single_column" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-body/>
+      </fo:simple-page-master>
+
+      <fo:simple-page-master master-name="single_column_head" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-before extent="8em"/>
+         <fo:region-body margin-top="8em"/>
+      </fo:simple-page-master>
+
+      <fo:simple-page-master master-name="two_column" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-body column-count="2" column-gap="3em"/>
+      </fo:simple-page-master>
+
+      <fo:simple-page-master master-name="two_column_head" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-before extent="8em"/>
+         <fo:region-body column-count="2" margin-top="8em" column-gap="3em"/>
+      </fo:simple-page-master>
+
+      <fo:simple-page-master master-name="three_column" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-body column-count="3" column-gap="3em"/>
+      </fo:simple-page-master>
+
+      <fo:simple-page-master master-name="three_column_head" margin-bottom="2em" 
+         margin-top="2em" margin-left="2em" margin-right="2em">
+         <fo:region-before extent="8em"/>
+         <fo:region-body column-count="3" margin-top="8em" column-gap="3em"/>
+      </fo:simple-page-master>
+
+      <fo:page-sequence-master>
+         <fo:repeatable-page-master-alternatives>
+            <fo:conditional-page-master-reference 
+               master-reference="three_column_head" page-position="first" 
+               ade:min-page-width="80em"/>
+            <fo:conditional-page-master-reference 
+               master-reference="three_column" ade:min-page-width="80em"/>
+            <fo:conditional-page-master-reference 
+               master-reference="two_column_head" page-position="first" 
+               ade:min-page-width="50em"/>
+            <fo:conditional-page-master-reference 
+               master-reference="two_column" ade:min-page-width="50em"/>
+            <fo:conditional-page-master-reference 
+               master-reference="single_column_head" page-position="first"/>
+            <fo:conditional-page-master-reference 
+               master-reference="single_column"/>
+         </fo:repeatable-page-master-alternatives>
+      </fo:page-sequence-master>
+   </fo:layout-master-set>
+
+   <ade:style>
+      <ade:styling-rule selector="#header" display="adobe-other-region" 
+         adobe-region="xsl-region-before"/>
+   </ade:style>
+
+</ade:template>
+'''
+
+
 if __name__ == '__main__':
     sys.stderr.write('I''m a module.  Don''t run me directly!')
     sys.exit(-1)

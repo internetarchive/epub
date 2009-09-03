@@ -50,11 +50,25 @@ def main(argv):
     tree_str = epub.make_container_info()
     add_to_zip(z, 'META-INF/container.xml', tree_str)
 
+    # style sheet
+    add_to_zip(z, 'OEBPS/stylesheet.css', epub.make_stylesheet())
+
+    # This file enables ADE mojo
+    add_to_zip(z, 'OEBPS/page-template.xpgt', epub.make_ade_stylesheet())
+
     manifest_items = [
         { 'id':'ncx',
           'href':'toc.ncx',
           'media-type':'application/x-dtbncx+xml'
-          }
+          },
+        { 'id':'css',
+          'href':'stylesheet.css',
+          'media-type':'text/css'
+          },
+        { 'id','ade-page-template',
+          'href':'page-template.xpgt',
+          'media-type':'application/vnd.adobe-page-template+xml'
+          },
         ]
     spine_items = []
     guide_items = []

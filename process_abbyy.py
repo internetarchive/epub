@@ -42,6 +42,19 @@ def get_image(zipf, image_path, region,
         ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
 
+
+# 'some have optional attributes'
+#     *  creator, contributor
+#           o opf:role — see http://www.loc.gov/marc/relators/ for values
+#     * date
+#           o opf:event — unstandardised: use something sensible
+#     * identifier
+#           o opf:scheme — unstandardised: use something sensible
+#     * date, format, identifier, language, type
+#           o xsi:type — use an appropriate standard term (such as W3CDTF for date)
+#     * contributor, coverage, creator, description, publisher, relation, rights, source, subject, title
+#           o xml:lang — use RFC-3066 format
+
 def get_meta_items(book_id, book_path):
     md = objectify.parse(os.path.join(book_path,
                                       book_id + '_meta.xml')).getroot()
@@ -58,6 +71,7 @@ def get_meta_items(book_id, book_path):
                 result.append({ 'item':dc_ns+tagname, 'text':tag.text,
                                 'atts':{ 'id':'bookid' } })
             elif tagname == 'language':
+                # "use a RFC3066 language code"
                 # try to translate to standard notation
 #                lang_map = { 'eng':'en-US' }
                 lang_map = {}
@@ -66,6 +80,8 @@ def get_meta_items(book_id, book_path):
             elif tagname == 'type' and tag.text == 'Text':
                 # already included above
                 continue
+#             elif tagname == 'date':
+#                 dc:date xsi:type="dcterms:W3CDTF">2007-12-28</dc:date>
             else:
                 result.append({ 'item':dc_ns+tagname, 'text':tag.text })
     return result
@@ -116,7 +132,7 @@ def generate_epub_items(book_id, book_path):
                   image);
             img_tag = E.img({'src':'images/cover' + cnstr + '.png',
                              'alt':cover_title})
-            tree = make_html(cover_title, 'css/stylesheet.css', [ img_tag ])
+            tree = make_html(cover_title, [ img_tag ])
             cover_file = 'cover' + cnstr + '.html'
             yield('content',
                   { 'id':'cover' + cnstr,
@@ -170,7 +186,7 @@ def generate_epub_items(book_id, book_path):
         page.clear()
         i += 1
 
-    tree = make_html('sample title', 'path_to_stylesheet', paragraphs)
+    tree = make_html('sample title', paragraphs)
 
     yield ('content',
            { 'id':'book',
@@ -219,6 +235,7 @@ def generate_epub_items(book_id, book_path):
 #     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
 #     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
 #     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
+# CAN NEST NAVPOINTS
 
 def include_page(page):
     add = page.find('addToAccessFormats')
@@ -227,14 +244,17 @@ def include_page(page):
     else:
         return False
 
-def make_html(title, stylesheet_href, body_elems):
+def make_html(title, body_elems):
     html = E.html(
         E.head(
             E.title(title),
             E.meta(name='generator', content='abbyy to epub tool'),
             E.link(rel='stylesheet',
-                href=stylesheet_href,
-                type='text/css'),
+                   href='stylesheet.css',
+                   type='text/css'),
+            E.link(rel='stylesheet',
+                   href='page-template.xpgt',
+                   type='application/vnd.adobe-page-template+xml'
             E.meta({'http-equiv':'Content-Type',
                 'content':'application/xhtml+xml; charset=utf-8'})
         ),
