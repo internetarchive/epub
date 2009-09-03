@@ -26,16 +26,25 @@ else:
         pass
 
 def usage():
-    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files")
+    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]")
+    sys.stderr.write("  Output defaults to book_id.epub.")
+    sys.stderr.write("  Use '-' to write output to stdout.")
 
 def main(argv):
-    if len(argv) != 2:
+    if len(argv) != 2 and len(argv) != 3:
         usage()
         sys.exit(-1)
     book_id = argv[0]
     book_path = argv[1]
+    if len(argv) == 3:
+        if argv[2] == '-':
+            epub_out = sys.stdout
+        else:
+            epub_out = argv[2]
+    else:
+        epub_out = book_id + '.epub'
     
-    z = zipfile.ZipFile(book_id + '.epub', 'w')
+    z = zipfile.ZipFile(epub_out, 'w')
     add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
     tree_str = epub.make_container_info()
