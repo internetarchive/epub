@@ -246,3 +246,7 @@ def make_html(title, stylesheet_href, body_elems):
     for el in body_elems:
         html.xpath('/html/body/div')[0].append(el)
     return etree.ElementTree(html)
+
+if __name__ == '__main__':
+    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.exit(-1)

@@ -87,3 +87,7 @@ def make_ncx(navpoints):
         etree.SubElement(navpoint, 'content', src=item['content'])
     tree = etree.ElementTree(root)
     return common.tree_to_str(tree)
+
+if __name__ == '__main__':
+    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.exit(-1)
