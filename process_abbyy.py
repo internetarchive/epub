@@ -38,7 +38,7 @@ def get_image(zipf, image_path, region,
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
         ' | kdu_expand -region "' + region + '" ' +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm' +
-        ' | pamscale -xyfit ' + str(width) + ' ' + str(height) +
+        ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
         ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
 
