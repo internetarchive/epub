@@ -87,6 +87,17 @@ def generate_epub_items(book_id, book_path):
     i = 0
     cover_number = 0
     nav_number = 0
+
+    # search thru pages to see if a title page exists; if so, we'll
+    # treat the initial pages differently -> as images
+    found_title = False
+    for page_scandata in scandata_pages: #scan thru to make sure title exists
+        if page_scandata.pageType.text == 'Title':
+            found_title = True
+            break
+    # True if no title found, else False now, True later.
+    before_title_page = not found_title
+    chunk_counter = 1
     for event, page in context:
         page_scandata = scandata_pages[i]
 #        debug()
@@ -94,7 +105,7 @@ def generate_epub_items(book_id, book_path):
             i += 1
             continue
         if page_scandata.pageType.text == 'Cover':
-            image = get_image(os.path.join(book_path,
+             image = get_image(os.path.join(book_path,
                                            book_id + '_jp2.zip'),
                               book_id + '_jp2/' + book_id + '_'
                               + str(i).zfill(4) + '.jp2',
@@ -107,10 +118,13 @@ def generate_epub_items(book_id, book_path):
             cnstr = str(cover_number)
             yield('content',
                   { 'id':'cover-image' + cnstr,
-                    'href':'images/cover' + cnstr + '.png',
-                    'media-type':'image/png' },
+                    'href':'images/cover' + cnstr + '.jpg',
+                    'media-type':'image/jpeg' },
                   image);
-            img_tag = E.img({'src':'images/cover' + cnstr + '.png',
+            yield('cover_id',
+                  None,
+                  'cover-image' + cnstr)
+            img_tag = E.img({'src':'images/cover' + cnstr + '.jpg',
                              'alt':cover_title})
             tree = make_html(cover_title, 'css/stylesheet.css', [ img_tag ])
             cover_file = 'cover' + cnstr + '.html'
@@ -133,6 +147,42 @@ def generate_epub_items(book_id, book_path):
                         'title':cover_title },
                       None)
             cover_number += 1
+        elif page_scandata.pageType.text == 'Normal':
+            if before_title_page:
+                image = get_image(os.path.join(book_path,
+                                               book_id + '_jp2.zip'),
+                                  book_id + '_jp2/' + book_id + '_'
+                                  + str(i).zfill(4) + '.jp2',
+                                  '{0.0,0.0},{1.0,1.0}',
+                                  width=600, height=780, quality=90)
+                yield('content',
+                      { 'id':'leaf-image' + str(i),
+                        'href':'images/leaf' + str(i) '.jpg',
+                        'media-type':'image/jpeg' },
+                      image);
+            img_tag = E.img({'src':'images/leaf-image' + str(i) + '.jpg'})
+            tree = make_html(cover_title, 'css/stylesheet.css', [ img_tag ])
+            cover_file = 'cover' + cnstr + '.html'
+            yield('content',
+                  { 'id':'cover' + cnstr,
+                    'href':cover_file,
+                    'media-type':'application/xhtml+xml' },
+                  common.tree_to_str(tree, xml_declaration=False))
+            yield('spine',
+                  { 'idref':'cover' + cnstr, 'linear':'no' },
+                  None)
+            yield('navpoint',
+                  { 'text':cover_title,
+                    'content':cover_file },
+                  None)
+            if cover_number == 0:
+                yield('guide',
+                      { 'href':cover_file,
+                        'type':'cover',
+                        'title':cover_title },
+                      None)
+            cover_number += 1
+                _
 
 # Cover
 # Normal
@@ -227,7 +277,7 @@ def make_html(title, stylesheet_href, body_elems):
     html = E.html(
         E.head(
             E.title(title),
-            E.meta(name='generator', content='abbyy to epub tool'),
+            E.meta(name='generator', content='abbyy to epub tool, v0.0'),
             E.link(rel='stylesheet',
                 href=stylesheet_href,
                 type='text/css'),
