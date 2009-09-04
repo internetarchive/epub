@@ -25,12 +25,8 @@ else:
     def debug():
         pass
 
-# XXX need review of temp dir choice
-# and translation of
-# if (!file_exists('/tmp/stdout.ppm'))
-# {
-#   system('ln -s /dev/stdout /tmp/stdout.ppm');
-# }
+if not os.path.exists('/tmp/stdout.ppm'):
+    os.symlink('/dev/stdout', '/tmp/stdout.ppm')
  
 # get python string with image data - from .jp2 image in zip
 def get_image(zipf, image_path, region,
