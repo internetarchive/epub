@@ -43,73 +43,13 @@ def main(argv):
             epub_out = argv[2]
     else:
         epub_out = book_id + '.epub'
-    
-    z = zipfile.ZipFile(epub_out, 'w')
-    add_to_zip(z, 'mimetype', 'application/epub+zip', deflate=False)
 
-    tree_str = epub.make_container_info()
-    add_to_zip(z, 'META-INF/container.xml', tree_str)
+    ebook = epub.Book(epub_out)
 
-    # style sheet
-    add_to_zip(z, 'OEBPS/stylesheet.css', epub.make_stylesheet())
-
-    # This file enables ADE mojo
-    add_to_zip(z, 'OEBPS/page-template.xpgt', epub.make_ade_stylesheet())
-
-    manifest_items = [
-        { 'id':'ncx',
-          'href':'toc.ncx',
-          'media-type':'application/x-dtbncx+xml'
-          },
-        { 'id':'css',
-          'href':'stylesheet.css',
-          'media-type':'text/css'
-          },
-        { 'id','ade-page-template',
-          'href':'page-template.xpgt',
-          'media-type':'application/vnd.adobe-page-template+xml'
-          },
-        ]
-    spine_items = []
-    guide_items = []
-    navpoints = []
-    cover_id = None
-    for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id,
-                                                                    book_path):
-        if itemtype == 'content':
-            manifest_items.append(info)
-            add_to_zip(z, 'OEBPS/'+info['href'], item)
-        if itemtype == 'cover_id':
-            cover_id = item
-        elif itemtype == 'spine':
-            spine_items.append(info)
-        elif itemtype == 'guide':
-            guide_items.append(info)
-        elif itemtype == 'navpoint':
-            navpoints.append(info)
+    process_abbyy.process_book(book_id, book_path, ebook)
 
     meta_info_items = process_abbyy.get_meta_items(book_id, book_path)
-
-    tree_str = epub.make_opf(meta_info_items,
-                             manifest_items,
-                             spine_items,
-                             guide_items,
-                             cover_id)
-    add_to_zip(z, 'OEBPS/content.opf', tree_str)
-
-    tree_str = epub.make_ncx(navpoints)
-    add_to_zip(z, 'OEBPS/toc.ncx', tree_str)
-
-    z.close()
-
-def add_to_zip(z, path, s, deflate=True):
-    info = zipfile.ZipInfo(path)
-    info.compress_type = zipfile.ZIP_DEFLATED if deflate else zipfile.ZIP_STORED
-    info.external_attr = 0666 << 16L # fix access
-    info.date_time = (2009, 12, 25, 0, 0, 0)
-    z.writestr(info, s)
+    ebook.finish(meta_info_items)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-# bad char? iso-8859-1 - '—' = 80 e2 94

@@ -5,6 +5,7 @@ from lxml import etree
 from lxml import objectify
 
 import common
+import zipfile
 
 # remove me for faster execution
 debugme = False
@@ -13,6 +14,75 @@ if debugme:
 else:
     def debug():
         pass
+
+class Book(object):
+    def __init__(self, epub_out):
+        self.z = zipfile.ZipFile(epub_out, 'w')
+        add_to_zip(self.z, 'mimetype', 'application/epub+zip', deflate=False)
+
+        tree_str = make_container_info()
+        add_to_zip(self.z, 'META-INF/container.xml', tree_str)
+
+        # style sheet
+        add_to_zip(self.z, 'OEBPS/stylesheet.css', make_stylesheet())
+
+        # This file enables ADE mojo
+        add_to_zip(self.z, 'OEBPS/page-template.xpgt', make_ade_stylesheet())
+
+        self.manifest_items = [
+            { 'id':'ncx',
+              'href':'toc.ncx',
+              'media-type':'application/x-dtbncx+xml'
+              },
+            { 'id':'css',
+              'href':'stylesheet.css',
+              'media-type':'text/css'
+              },
+            { 'id':'ade-page-template',
+              'href':'page-template.xpgt',
+              'media-type':'application/vnd.adobe-page-template+xml'
+              },
+            ]
+        self.spine_items = []
+        self.guide_items = []
+        self.navpoints = []
+        self.cover_id = None
+
+    def add_content(self, info, content):
+        self.manifest_items.append(info)
+        add_to_zip(self.z, 'OEBPS/'+info['href'], content)
+
+    def add_cover_id(self, cover_id):
+        self.cover_id = cover_id
+
+    def add_spine_item(self, info):
+        self.spine_items.append(info)
+
+    def add_guide_item(self, info):
+        self.guide_items.append(info)
+
+    def add_navpoint(self, info):
+        self.navpoints.append(info)
+
+    def finish(self, meta_info_items):
+        tree_str = make_opf(meta_info_items,
+                            self.manifest_items,
+                            self.spine_items,
+                            self.guide_items,
+                            self.cover_id)
+        add_to_zip(self.z, 'OEBPS/content.opf', tree_str)
+        
+        tree_str = make_ncx(self.navpoints)
+        add_to_zip(self.z, 'OEBPS/toc.ncx', tree_str)
+
+        self.z.close()
+
+def add_to_zip(z, path, s, deflate=True):
+    info = zipfile.ZipInfo(path)
+    info.compress_type = zipfile.ZIP_DEFLATED if deflate else zipfile.ZIP_STORED
+    info.external_attr = 0666 << 16L # fix access
+    info.date_time = (2009, 12, 25, 0, 0, 0)
+    z.writestr(info, s)
 
 def make_container_info():
     root = etree.Element('container',

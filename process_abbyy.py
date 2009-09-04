@@ -18,6 +18,7 @@ import epub
 import common
 
 # remove me for faster execution
+# XXX make me depend on something in the env?
 debugme = False
 if debugme:
     from  pydbgr.api import debug
@@ -34,10 +35,10 @@ def get_image(zipf, image_path, region,
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
         ' | kdu_expand -region "' + region + '" ' +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm' +
-        ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
+        ' | pamscale -xyfit ' + str(width) + ' ' + str(height) + # or pamscale
+#         ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
         ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
-
 
 # 'some have optional attributes'
 #     *  creator, contributor
@@ -50,7 +51,6 @@ def get_image(zipf, image_path, region,
 #           o xsi:type — use an appropriate standard term (such as W3CDTF for date)
 #     * contributor, coverage, creator, description, publisher, relation, rights, source, subject, title
 #           o xml:lang — use RFC-3066 format
-
 def get_meta_items(book_id, book_path):
     md = objectify.parse(os.path.join(book_path,
                                       book_id + '_meta.xml')).getroot()
@@ -82,8 +82,9 @@ def get_meta_items(book_id, book_path):
                 result.append({ 'item':dc_ns+tagname, 'text':tag.text })
     return result
 
-aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
-def generate_epub_items(book_id, book_path):
+
+def process_book(book_id, book_path, ebook):
+    aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = objectify.parse(os.path.join(book_path,
                                             book_id + '_scandata.xml')
                                ).getroot()
@@ -93,9 +94,6 @@ def generate_epub_items(book_id, book_path):
     aby_file = gzip.open(os.path.join(book_path,
                                       book_id + '_abbyy.gz'),
                          'rb')
-    context = etree.iterparse(aby_file,
-                              tag=aby_ns+'page',
-                              resolve_entities=False)
     bookData = scandata.find('bookData')
     scanLog = scandata.find('scanLog')
     scandata_pages = scandata.xpath('/book/pageData/page')
@@ -103,149 +101,162 @@ def generate_epub_items(book_id, book_path):
     i = 0
     cover_number = 0
     nav_number = 0
-
-    # search thru pages to see if a title page exists; if so, we'll
-    # treat the initial pages differently -> as images
+    context = etree.iterparse(aby_file,
+                              tag=aby_ns+'page',
+                              resolve_entities=False)
     found_title = False
     for page_scandata in scandata_pages: #scan thru to make sure title exists
         if page_scandata.pageType.text == 'Title':
             found_title = True
             break
     # True if no title found, else False now, True later.
-    before_title_page = not found_title
-    chunk_counter = 1
+    before_title_page = found_title
     for event, page in context:
         page_scandata = scandata_pages[i]
-#        debug()
+        def include_page(page):
+            add = page.find('addToAccessFormats')
+            if add is not None and add.text == 'true':
+                return True
+            else:
+                return False
         if not include_page(page_scandata):
             i += 1
             continue
         if page_scandata.pageType.text == 'Cover':
-             image = get_image(os.path.join(book_path,
-                                           book_id + '_jp2.zip'),
-                              book_id + '_jp2/' + book_id + '_'
-                              + str(i).zfill(4) + '.jp2',
-                              '{0.0,0.0},{1.0,1.0}',
-                              width=600, height=780, quality=90)
+            (id, filename) = make_page_image(i, book_path, book_id, ebook)
             if cover_number == 0:
                 cover_title = 'Front Cover'
             else:
                 cover_title = 'Back Cover' ## xxx detect back page?
-            cnstr = str(cover_number)
-            yield('content',
-                  { 'id':'cover-image' + cnstr,
-                    'href':'images/cover' + cnstr + '.jpg',
-                    'media-type':'image/jpeg' },
-                  image);
-            yield('cover_id',
-                  None,
-                  'cover-image' + cnstr)
-            img_tag = E.img({'src':'images/cover' + cnstr + '.jpg',
-                             'alt':cover_title})
-            tree = make_html(cover_title, [ img_tag ])
-            cover_file = 'cover' + cnstr + '.html'
-            yield('content',
-                  { 'id':'cover' + cnstr,
-                    'href':cover_file,
-                    'media-type':'application/xhtml+xml' },
-                  common.tree_to_str(tree, xml_declaration=False))
-            yield('spine',
-                  { 'idref':'cover' + cnstr, 'linear':'no' },
-                  None)
-            yield('navpoint',
-                  { 'text':cover_title,
-                    'content':cover_file },
-                  None)
+            ebook.add_navpoint( { 'text':cover_title, 'content':filename } )
             if cover_number == 0:
-                yield('guide',
-                      { 'href':cover_file,
-                        'type':'cover',
-                        'title':cover_title },
-                      None)
+                ebook.add_guide_item( { 'href':filename,
+                                        'type':'cover',
+                                        'title':cover_title } )
+                ebook.add_cover_id(id)
             cover_number += 1
+        elif page_scandata.pageType.text == 'Title':
+            before_title_page = False
+            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            ebook.add_navpoint( { 'text':'Title Page', 'content':filename } )
+            ebook.add_guide_item( { 'href':filename,
+                                    'type':'title-page',
+                                    'title':'Title Page' } )
+        elif page_scandata.pageType.text == 'Copyright':
+            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            ebook.add_navpoint( { 'text':'Copyright', 'content':filename } )
+            ebook.add_guide_item( { 'href':filename,
+                                    'type':'copyright-page',
+                                    'title':'Title Page' } )
+        elif page_scandata.pageType.text == 'Contents':
+            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            ebook.add_navpoint( { 'text':'Contents', 'content':filename } )
+            ebook.add_guide_item( { 'href':filename,
+                                    'type':'toc',
+                                    'title':'Title Page' } )
         elif page_scandata.pageType.text == 'Normal':
             if before_title_page:
-                image = get_image(os.path.join(book_path,
-                                               book_id + '_jp2.zip'),
-                                  book_id + '_jp2/' + book_id + '_'
-                                  + str(i).zfill(4) + '.jp2',
-                                  '{0.0,0.0},{1.0,1.0}',
-                                  width=600, height=780, quality=90)
-                yield('content',
-                      { 'id':'leaf-image' + str(i),
-                        'href':'images/leaf' + str(i) '.jpg',
-                        'media-type':'image/jpeg' },
-                      image);
-            img_tag = E.img({'src':'images/leaf-image' + str(i) + '.jpg'})
-            tree = make_html(cover_title, 'css/stylesheet.css', [ img_tag ])
-            cover_file = 'cover' + cnstr + '.html'
-            yield('content',
-                  { 'id':'cover' + cnstr,
-                    'href':cover_file,
-                    'media-type':'application/xhtml+xml' },
-                  common.tree_to_str(tree, xml_declaration=False))
-            yield('spine',
-                  { 'idref':'cover' + cnstr, 'linear':'no' },
-                  None)
-            yield('navpoint',
-                  { 'text':cover_title,
-                    'content':cover_file },
-                  None)
-            if cover_number == 0:
-                yield('guide',
-                      { 'href':cover_file,
-                        'type':'cover',
-                        'title':cover_title },
-                      None)
-            cover_number += 1
-                _
-
-# Cover
-# Normal
-# Title
-# Copyright
-# Contents
-# Normal
-# Cover
-        else:    
-            for block in page:
-                if block.get('blockType') == 'Text':
-                    pass
-                else:
-                    pass
-                for el in block:
-                    if el.tag == aby_ns+'region':
-                        for rect in el:
-                            pass
-                    elif el.tag == aby_ns+'text':
-                        for par in el:
-                            lines = []
-                            for line in par:
-                                lines.append(etree.tostring(line, method='text', encoding=unicode))
-                            paragraphs.append(E.p(' '.join(lines)))
-                   
-                    elif (el.tag == aby_ns+'row'):
+                # XXX consider skipping if blank + no words?
+                # make page image
+                (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            else:
+                for block in page:
+                    if block.get('blockType') == 'Text':
                         pass
                     else:
-                        print('unexpected tag type' + el.tag)
-                        sys.exit(-1)
+                        pass
+                    for el in block:
+                        if el.tag == aby_ns+'region':
+                            for rect in el:
+                                pass
+                        elif el.tag == aby_ns+'text':
+                            for par in el:
+                                lines = []
+                                for line in par:
+                                    lines.append(etree.tostring(line, method='text', encoding=unicode))
+                                paragraphs.append(E.p(' '.join(lines)))
+
+                        elif (el.tag == aby_ns+'row'):
+                            pass
+                        else:
+                            print('unexpected tag type' + el.tag)
+                            sys.exit(-1)
         page.clear()
         i += 1
 
-    tree = make_html('sample title', paragraphs)
+    tree = make_html('Archive',
+                     [E.p('This book made available by the Internet Archive.')])
+    ebook.add_content({ 'id':'intro',
+                        'href':'intro.html',
+                        'media-type':'application/xhtml+xml' },
+                      common.tree_to_str(tree, xml_declaration=False))
+    ebook.add_spine_item({ 'idref':'intro' })
 
-    yield ('content',
-           { 'id':'book',
+
+    tree = make_html('sample title', paragraphs)
+    ebook.add_content({ 'id':'book',
              'href':'book.html',
              'media-type':'application/xhtml+xml' },
-           common.tree_to_str(tree, xml_declaration=False))
-    yield ('spine',
-           { 'idref':'book' },
-           None)
-    yield ('navpoint',
-           { 'text':'Book',
-             'content':'book.html' },
-           None)
+                      common.tree_to_str(tree, xml_declaration=False))
+    ebook.add_spine_item({ 'idref':'book' })
+    ebook.add_navpoint({ 'text':'Book',
+                         'content':'book.html' })
+    ebook.add_guide_item( { 'href':'book.html',
+                            'type':'text',
+                            'title':'Book' } )
+
+def make_page_image(i, book_path, book_id, ebook):
+    image = get_image(os.path.join(book_path,
+                                   book_id + '_jp2.zip'),
+                      book_id + '_jp2/' + book_id + '_'
+                      + str(i).zfill(4) + '.jp2',
+                      '{0.0,0.0},{1.0,1.0}',
+                      width=600, height=780, quality=90)
+    leaf_id = 'leaf' + str(i).zfill(4)
+    ebook.add_content({ 'id':'leaf-image' + str(i).zfill(4),
+                         'href':'images/' + leaf_id + '.jpg',
+                         'media-type':'image/jpeg' },
+                       image);
+    img_tag = E.img({ 'src':'images/' + leaf_id + '.jpg',
+                      'alt':'leaf ' + str(i) })
+    tree = make_html('leaf ' + str(i).zfill(4), [ img_tag ])
+    ebook.add_content({ 'id':leaf_id,
+                        'href':leaf_id + '.html',
+                        'media-type':'application/xhtml+xml' },
+                      common.tree_to_str(tree, xml_declaration=False))
+    ebook.add_spine_item({ 'idref':leaf_id, 'linear':'no' })
+
+    return leaf_id, leaf_id + '.html'
+
+def make_html(title, body_elems):
+    html = E.html(
+        E.head(
+            E.title(title),
+            E.meta(name='generator', content='abbyy to epub tool, v0.0'),
+            E.link(rel='stylesheet',
+                   href='stylesheet.css',
+                   type='text/css'),
+#             E.link(rel='stylesheet',
+#                    href='page-template.xpgt',
+#                    type='application/vnd.adobe-page-template+xml'),
+            E.meta({'http-equiv':'Content-Type',
+                'content':'application/xhtml+xml; charset=utf-8'})
+        ),
+        E.body(
+            E.div({ 'class':'body' })
+        ),
+        xmlns='http://www.w3.org/1999/xhtml'
+    )
+    for el in body_elems:
+        html.xpath('/html/body/div')[0].append(el)
+    return etree.ElementTree(html)
+
+if __name__ == '__main__':
+    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.exit(-1)
+
+
+
 # OPF
 #manifest_items = [
 #     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
@@ -282,37 +293,3 @@ def generate_epub_items(book_id, book_path):
 #     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
 #     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
 # CAN NEST NAVPOINTS
-
-def include_page(page):
-    add = page.find('addToAccessFormats')
-    if add is not None and add.text == 'true':
-        return True
-    else:
-        return False
-
-def make_html(title, body_elems):
-    html = E.html(
-        E.head(
-            E.title(title),
-            E.meta(name='generator', content='abbyy to epub tool, v0.0'),
-            E.link(rel='stylesheet',
-                   href='stylesheet.css',
-                   type='text/css'),
-            E.link(rel='stylesheet',
-                   href='page-template.xpgt',
-                   type='application/vnd.adobe-page-template+xml'
-            E.meta({'http-equiv':'Content-Type',
-                'content':'application/xhtml+xml; charset=utf-8'})
-        ),
-        E.body(
-            E.div({ 'class':'body' })
-        ),
-        xmlns='http://www.w3.org/1999/xhtml'
-    )
-    for el in body_elems:
-        html.xpath('/html/body/div')[0].append(el)
-    return etree.ElementTree(html)
-
-if __name__ == '__main__':
-    sys.stderr.write('I''m a module.  Don''t run me directly!')
-    sys.exit(-1)
