@@ -73,31 +73,31 @@ def main(argv):
     spine_items = []
     guide_items = []
     navpoints = []
+    cover_id = None
     for (itemtype, info, item) in process_abbyy.generate_epub_items(book_id,
                                                                     book_path):
-        nav_number = 0
         if itemtype == 'content':
             manifest_items.append(info)
             add_to_zip(z, 'OEBPS/'+info['href'], item)
+        if itemtype == 'cover_id':
+            cover_id = item
         elif itemtype == 'spine':
             spine_items.append(info)
         elif itemtype == 'guide':
             guide_items.append(info)
         elif itemtype == 'navpoint':
-            info['id'] = 'navpoint-' + str(nav_number)
-            info['playOrder'] = str(nav_number)
-            nav_number += 1
             navpoints.append(info)
 
     meta_info_items = process_abbyy.get_meta_items(book_id, book_path)
 
     tree_str = epub.make_opf(meta_info_items,
-                         manifest_items,
-                         spine_items,
-                         guide_items);
+                             manifest_items,
+                             spine_items,
+                             guide_items,
+                             cover_id)
     add_to_zip(z, 'OEBPS/content.opf', tree_str)
 
-    tree_str = epub.make_ncx(navpoints);
+    tree_str = epub.make_ncx(navpoints)
     add_to_zip(z, 'OEBPS/toc.ncx', tree_str)
 
     z.close()

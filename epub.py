@@ -29,7 +29,8 @@ dcb = '{' + dc + '}'
 def make_opf(meta_info_items,
              manifest_items,
              spine_items,
-             guide_items):
+             guide_items,
+             cover_id=None):
     root = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
                            'unique-identifier' : 'bookid',
@@ -43,6 +44,9 @@ def make_opf(meta_info_items,
     manifest = etree.SubElement(root, 'manifest')
     for item in manifest_items:
         etree.SubElement(manifest, 'item', item)
+#     if cover_id is not None:
+#         etree.SubElement(manifest, 'meta', name='cover',
+#                          content=cover_id)
     if len(spine_items) > 0:    
         spine = etree.SubElement(root, 'spine', toc='ncx')
     for item in spine_items:
@@ -80,11 +84,15 @@ def make_ncx(navpoints):
     doctitle = etree.SubElement(root, 'docTitle')
     etree.SubElement(doctitle, 'text').text = 'Hello World';
     navmap = etree.SubElement(root, 'navMap')
+    nav_number = 0
     for item in navpoints:
-        navpoint = etree.SubElement(navmap, 'navPoint', id=item['id'], playOrder=item['playOrder'])
+        navpoint = etree.SubElement(navmap, 'navPoint',
+                                    id=('navpoint' + str(nav_number)),
+                                    playOrder=str(nav_number))
         navlabel = etree.SubElement(navpoint, 'navLabel')
         etree.SubElement(navlabel, 'text').text = item['text']
         etree.SubElement(navpoint, 'content', src=item['content'])
+        nav_number = nav_number + 1
     tree = etree.ElementTree(root)
     return common.tree_to_str(tree)
 
