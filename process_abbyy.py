@@ -32,8 +32,9 @@ if not os.path.exists('/tmp/stdout.ppm'):
 # get python string with image data - from .jp2 image in zip
 def get_image(zipf, image_path, region,
               height=600, width=780, quality=90):
-    output = os.popen('unzip -p ' + zipf + ' ' + image_path +
-        ' | kdu_expand -region "' + region + '" ' +
+    output = os.popen('unzip -p ' + zipf + ' ' + image_path
+        + ' | kdu_expand -region "' + region + '"'
+        + ' -reduce 2 ' +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm' +
         ' | pamscale -xyfit ' + str(width) + ' ' + str(height) + # or pamscale
 #         ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
