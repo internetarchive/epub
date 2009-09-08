@@ -8,7 +8,8 @@ import common
 import zipfile
 
 # remove me for faster execution
-debugme = False
+import os
+debugme = os.environ.get('DEBUG')
 if debugme:
     from  pydbgr.api import debug
 else:

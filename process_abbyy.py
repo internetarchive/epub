@@ -18,8 +18,8 @@ import epub
 import common
 
 # remove me for faster execution
-# XXX make me depend on something in the env?
-debugme = False
+import os
+debugme = os.environ.get('DEBUG')
 if debugme:
     from  pydbgr.api import debug
 else:
