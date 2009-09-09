@@ -6,6 +6,7 @@ from lxml import objectify
 
 import common
 import zipfile
+from datetime import datetime
 
 # remove me for faster execution
 import os
@@ -18,17 +19,18 @@ else:
 
 class Book(object):
     def __init__(self, epub_out):
+        self.dt = datetime.now()
         self.z = zipfile.ZipFile(epub_out, 'w')
-        add_to_zip(self.z, 'mimetype', 'application/epub+zip', deflate=False)
+        self.add('mimetype', 'application/epub+zip', deflate=False)
 
         tree_str = make_container_info()
-        add_to_zip(self.z, 'META-INF/container.xml', tree_str)
+        self.add('META-INF/container.xml', tree_str)
 
         # style sheet
-        add_to_zip(self.z, 'OEBPS/stylesheet.css', make_stylesheet())
+        self.add('OEBPS/stylesheet.css', make_stylesheet())
 
         # This file enables ADE mojo
-        add_to_zip(self.z, 'OEBPS/page-template.xpgt', make_ade_stylesheet())
+        self.add('OEBPS/page-template.xpgt', make_ade_stylesheet())
 
         self.manifest_items = [
             { 'id':'ncx',
@@ -51,7 +53,7 @@ class Book(object):
 
     def add_content(self, info, content):
         self.manifest_items.append(info)
-        add_to_zip(self.z, 'OEBPS/'+info['href'], content)
+        self.add('OEBPS/'+info['href'], content)
 
     def add_cover_id(self, cover_id):
         self.cover_id = cover_id
@@ -65,30 +67,32 @@ class Book(object):
     def add_navpoint(self, info):
         self.navpoints.append(info)
 
+    def add(self, path, s, deflate=True):
+        info = zipfile.ZipInfo(path)
+        info.compress_type = (zipfile.ZIP_DEFLATED if deflate
+                              else zipfile.ZIP_STORED)
+        info.external_attr = 0666 << 16L # fix access
+        info.date_time = (self.dt.year, self.dt.month, self.dt.day,
+                          self.dt.hour, self.dt.minute, self.dt.second)
+        self.z.writestr(info, s)
+
     def finish(self, meta_info_items):
         tree_str = make_opf(meta_info_items,
                             self.manifest_items,
                             self.spine_items,
                             self.guide_items,
                             self.cover_id)
-        add_to_zip(self.z, 'OEBPS/content.opf', tree_str)
+        self.add('OEBPS/content.opf', tree_str)
         
         tree_str = make_ncx(self.navpoints)
-        add_to_zip(self.z, 'OEBPS/toc.ncx', tree_str)
+        self.add('OEBPS/toc.ncx', tree_str)
 
         self.z.close()
 
-def add_to_zip(z, path, s, deflate=True):
-    info = zipfile.ZipInfo(path)
-    info.compress_type = zipfile.ZIP_DEFLATED if deflate else zipfile.ZIP_STORED
-    info.external_attr = 0666 << 16L # fix access
-    info.date_time = (2009, 12, 25, 0, 0, 0)
-    z.writestr(info, s)
-
 def make_container_info():
     root = etree.Element('container',
-                         version='1.0',
-                         xmlns='urn:oasis:names:tc:opendocument:xmlns:container')
+                     version='1.0',
+                     xmlns='urn:oasis:names:tc:opendocument:xmlns:container')
     rootfiles = etree.SubElement(root, 'rootfiles')
     etree.SubElement(rootfiles, 'rootfile',
                      { 'full-path' : 'OEBPS/content.opf',
@@ -109,7 +113,9 @@ def make_opf(meta_info_items,
                          nsmap={'dc' : dc })
     metadata = etree.SubElement(root, 'metadata')
     for item in meta_info_items:
-        el = etree.SubElement(metadata, item['item'], item['atts'] if 'atts' in item else None)
+        el = etree.SubElement(metadata, item['item'], item['atts']
+                              if 'atts' in item
+                              else None)
         if 'text' in item:
             el.text = item['text']
     manifest = etree.SubElement(root, 'manifest')
@@ -129,10 +135,8 @@ def make_opf(meta_info_items,
     return common.tree_to_str(root)
 
 navpoints = [
-    { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
-
-#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
-#     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
+    { 'id':'navpoint-1', 'playOrder':'1',
+      'text':'Book', 'content':'book.html' },
     ]
 def make_ncx(navpoints):
     import StringIO
@@ -244,7 +248,6 @@ def make_ade_stylesheet():
 
 </ade:template>
 '''
-
 
 if __name__ == '__main__':
     sys.stderr.write('I''m a module.  Don''t run me directly!')

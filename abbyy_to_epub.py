@@ -14,6 +14,7 @@ from lxml import html
 import lxml
 
 import epub
+import iarchive
 import process_abbyy
 import common
 
@@ -29,7 +30,6 @@ else:
 def usage():
     sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]")
     sys.stderr.write("  Output defaults to book_id.epub.")
-    sys.stderr.write("  Use '-' to write output to stdout.")
 
 def main(argv):
     if len(argv) != 2 and len(argv) != 3:
@@ -45,11 +45,12 @@ def main(argv):
     else:
         epub_out = book_id + '.epub'
 
+    iabook = iarchive.Book(book_id, book_path)
     ebook = epub.Book(epub_out)
 
-    process_abbyy.process_book(book_id, book_path, ebook)
+    process_abbyy.process_book(iabook, ebook)
 
-    meta_info_items = process_abbyy.get_meta_items(book_id, book_path)
+    meta_info_items = process_abbyy.get_meta_items(iabook)
     ebook.finish(meta_info_items)
 
 if __name__ == '__main__':
