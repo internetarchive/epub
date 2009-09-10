@@ -139,11 +139,14 @@ def process_book(iabook, ebook):
                                     'type':'toc',
                                     'title':'Title Page' } )
         elif page_scandata.pageType.text == 'Normal':
+#             if i == 10:
+#                 debug()
             if before_title_page:
                 # XXX consider skipping if blank + no words?
                 # make page image
                 (id, filename) = make_page_image(i, iabook, ebook)
             else:
+                first_par = True
                 for block in page:
                     if block.get('blockType') == 'Text':
                         pass
@@ -155,29 +158,51 @@ def process_book(iabook, ebook):
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
+                                def par_is_header(par):
+                                    # if:
+                                    #   it's the first on the page
+                                    #   there's only one line
+                                    #   on that line, there's a formatting tag, s.t.
+                                    #   - it has < 6 charParam kids
+                                    #   - each is wordNumeric
+                                    # then:
+                                    #   Skip it!
+                                    if len(par) != 1:
+                                        return False
+                                    line = par[0]
+                                    for fmt in line:
+                                        if len(fmt) > 6:
+                                            continue
+                                        saw_non_num = False
+                                        for cp in fmt:
+                                            if cp.get('wordNumeric') != 'true':
+                                                saw_non_num = True
+                                                break
+                                        if not saw_non_num:
+                                            return True
+                                    return False
+                                if first_par and par_is_header(par):
+                                    first_par = False
+                                    continue
+                                first_par = False
                                 lines = []
                                 prev_line = ''
                                 for line in par:
                                     for fmt in line:
-                                        fmt_text = etree.tostring(line,
+                                        fmt_text = etree.tostring(fmt,
                                                                   method='text',
                                                                   encoding=unicode)
                                         if len(fmt_text) > 0:
-                                            if (prev_line[-1:] == '-'
-                                                and fmt[0].get('wordStart') == 'false'
-                                                and fmt[0].get('wordFromDictionary') == 'true'):
-                                                lines.append(prev_line[:-1])
+                                            if prev_line[-1:] == '-':
+                                                if fmt[0].get('wordStart') == 'false':
+                                                    # ? and wordFromDictionary = true ?
+                                                    lines.append(prev_line[:-1])
+                                                else:
+                                                    lines.append(prev_line)
                                             else:
                                                 lines.append(prev_line)
                                                 lines.append(' ')
                                             prev_line = fmt_text
-
-                                # prob here with single lines?
-
-                                # Also maybe strategy - to deal with hotel-
-                                # room keys - 2nd word is wordstart true...
-                                # but maybe keep '-' but fail to append ' '?
-                                
                                 lines.append(prev_line)
                                 paragraphs.append(E.p(''.join(lines)))
                         elif (el.tag == aby_ns+'row'):
