@@ -57,8 +57,7 @@ def get_meta_items(iabook):
             elif tagname == 'language':
                 # "use a RFC3066 language code"
                 # try to translate to standard notation
-#                lang_map = { 'eng':'en-US' }
-                lang_map = {}
+                lang_map = {} # { 'eng':'en-US' }
                 lang = (lang_map[md.language.text]
                         if md.language.text in lang_map
                         else md.language.text)
@@ -157,11 +156,30 @@ def process_book(iabook, ebook):
                         elif el.tag == aby_ns+'text':
                             for par in el:
                                 lines = []
+                                prev_line = ''
                                 for line in par:
-                                    lines.append(etree.tostring(line,
-                                                            method='text',
-                                                            encoding=unicode))
-                                paragraphs.append(E.p(' '.join(lines)))
+                                    for fmt in line:
+                                        fmt_text = etree.tostring(line,
+                                                                  method='text',
+                                                                  encoding=unicode)
+                                        if len(fmt_text) > 0:
+                                            if (prev_line[-1:] == '-'
+                                                and fmt[0].get('wordStart') == 'false'
+                                                and fmt[0].get('wordFromDictionary') == 'true'):
+                                                lines.append(prev_line[:-1])
+                                            else:
+                                                lines.append(prev_line)
+                                                lines.append(' ')
+                                            prev_line = fmt_text
+
+                                # prob here with single lines?
+
+                                # Also maybe strategy - to deal with hotel-
+                                # room keys - 2nd word is wordstart true...
+                                # but maybe keep '-' but fail to append ' '?
+                                
+                                lines.append(prev_line)
+                                paragraphs.append(E.p(''.join(lines)))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:

@@ -63,9 +63,10 @@ def image_from_zip(zipf, image_path, region,
         +   ' -reduce 2 '
         +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
         + ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
-#         ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
         + ' | pnmtojpeg -quality ' + str(quality))
     return output.read()
+
+# ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
 
 if __name__ == '__main__':
     sys.stderr.write('I''m a module.  Don''t run me directly!')

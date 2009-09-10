@@ -12,7 +12,8 @@ import common
 
 noclose=True
 # noclose=False
-verbose=False
+# verbose=False
+verbose=True
 
 def main(argv):
 #     if len(argv) != 2:
