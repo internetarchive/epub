@@ -145,7 +145,7 @@ to_keep = {
     ns+'rect':([ 'indent' ], [ ]),
     ns+'text':(['indent'], [ ]),
     ns+'line':(['indent'], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
-    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing']),
+    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing', 'align']),
     ns+'formatting':(['indent'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
     ns+'cell':(['indent', 'showall'], [ ]),
     ns+'row':(['indent', 'showall'], [ ]),
@@ -166,7 +166,7 @@ synonyms = {
 }
 
 def condense_abbyy(xml, outfile='outfile.txt'): 
-   try:
+    try:
         out = sys.stdout
         parser = etree.XMLParser(resolve_entities=False, target=FilterTarget(to_keep, synonyms, out))
         tree = etree.parse(xml, parser)
