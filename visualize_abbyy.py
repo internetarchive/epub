@@ -54,7 +54,7 @@ def draw_rect(draw, el, sty, use_coords=None):
     if sty['width'] == 0:
         return
     
-    lt, rb = use_coords if use_coords is not None else tag_coords(el)
+    lt, rb = use_coords if use_coords is not None else tag_coords(el, s)
 
     x1, y1 = lt
     x2, y2 = rb
@@ -63,7 +63,7 @@ def draw_rect(draw, el, sty, use_coords=None):
     if use_coords is None:
         enclosing = enclosing_tag(el)
     if enclosing is not None and enclosing.get('t') is not None:
-        elt, erb = tag_coords(enclosing)
+        elt, erb = tag_coords(enclosing, s)
         ex1, ey1 = elt
         ex2, ey2 = erb
 
@@ -83,18 +83,18 @@ def draw_rect(draw, el, sty, use_coords=None):
     draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)],
               width=sty['width'], fill=sty['col'])
     
-def tag_coords(tag):
-    t = int(tag.get('t'))
-    b = int(tag.get('b'))
-    l = int(tag.get('l'))
-    r = int(tag.get('r'))
+def tag_coords(tag, s):
+    t = int(tag.get('t'))/s
+    b = int(tag.get('b'))/s
+    l = int(tag.get('l'))/s
+    r = int(tag.get('r'))/s
     return ((l, t), (r, b))
 
-def four_coords(tag):
-    l = int(tag.get('l'))
-    t = int(tag.get('t'))
-    r = int(tag.get('r'))
-    b = int(tag.get('b'))
+def four_coords(tag, s):
+    l = int(tag.get('l'))/s
+    t = int(tag.get('t'))/s
+    r = int(tag.get('r'))/s
+    b = int(tag.get('b'))/s
     return l, t, r, b
 
 def enclosing_tag(tag):
@@ -129,9 +129,9 @@ def assert_tag(el, expected):
 
 def box_from_par(par):
     if len(par) > 0:
-        (o_l, o_t), (o_r, o_b) = tag_coords(par[0])
+        (o_l, o_t), (o_r, o_b) = tag_coords(par[0], s)
         for line in par:
-            (l, t), (r, b) = tag_coords(line)
+            (l, t), (r, b) = tag_coords(line, s)
             o_l = l if (l - o_l < 0) else o_l
             o_t = t if (t - o_t < 0) else o_t
             o_r = r if (o_r - r < 0) else o_r
@@ -143,12 +143,16 @@ def box_from_par(par):
 import os
 
 # get python string with image data - from .jp2 image in zip
-def get_png(zipf, image_path):
+def get_png(zipf, image_path, width, height, quality=90):
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
-        ' | kdu_expand ' +
+        ' | kdu_expand -reduce 1' +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
+#     + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
     return output.read()
 
+
+scale = 2
+s = scale
 import StringIO
 import font
 def scan_pages(context, scandata, id):
@@ -157,25 +161,28 @@ def scan_pages(context, scandata, id):
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
     for event, page in context:
-        image = Image.new('RGB',
-                          (int(page.get('width')),
-                           int(page.get('height'))))
-#         if i < 5:
-#             i += 1
-#             continue
+        orig_width = int(page.get('width'))
+        orig_height = int(page.get('height'))
+        width = orig_width / s
+        height = orig_height / s
+        
+        image = Image.new('RGB', (width, height))
 
-        if True:
-            zipf = id + '_jp2.zip'
-            image_path = id + '_jp2/' + id + '_' + str(i).zfill(4) + '.jp2'
-            page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path)))
-#         image.paste(page_image, None)
-            image = Image.blend(image, page_image, .2)
+        zipf = id + '_jp2.zip'
+        image_path = id + '_jp2/' + id + '_' + str(i).zfill(4) + '.jp2'
+        page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path, width, height)))
+
+        (nw, nh) = page_image.size
+        if nw != width or nh != height:
+            page_image = page_image.resize((width, height))
+#        image.paste(page_image, None)
+        image = Image.blend(image, page_image, .2)
         draw = ImageDraw.Draw(image)
 
         for block in page:
             if block.get('blockType') == 'Picture':
-                cropped = page_image.crop(four_coords(block))
-                image.paste(cropped, four_coords(block))
+                cropped = page_image.crop(four_coords(block, scale))
+                image.paste(cropped, four_coords(block, scale))
                 
         for block in page:
             if block.get('blockType') == 'Text':
@@ -210,8 +217,8 @@ def scan_pages(context, scandata, id):
                                         f = font.get_font(font_name, font_size, font_ital)
                                         for cp in fmt:
                                             assert_d(cp.tag == abyns+'charParams')
-                                            draw.text((int(cp.get('l')),
-                                                       int(cp.get('b'))),
+                                            draw.text((int(cp.get('l'))/s,
+                                                       int(cp.get('b'))/s),
                                                       cp.text.encode('utf-8'),
                                                       font=f,
                                                       fill=color.yellow)
@@ -231,8 +238,8 @@ def scan_pages(context, scandata, id):
                                 f = font.get_font(font_name, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
-                                    draw.text((int(cp.get('l')),
-                                               int(cp.get('b'))),
+                                    draw.text((int(cp.get('l'))/s,
+                                               int(cp.get('b'))/s),
                                               cp.text.encode('utf-8'),
                                               font=f,
                                               fill=color.yellow)
@@ -246,8 +253,6 @@ def scan_pages(context, scandata, id):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
         
         image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
-#         if i > 10:
-#             break
         print i
         page.clear()
         i += 1

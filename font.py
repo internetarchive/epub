@@ -18,7 +18,7 @@ import ImageDraw
 import ImageFont 
 
 def get_font(name, size, italic):
-    size *= 400/72
+    size *= 200/72 # 400 / 72
     if not name in fonts:
         fonts[name] = {}
     family = fonts[name];
