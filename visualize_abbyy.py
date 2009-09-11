@@ -4,14 +4,18 @@ import sys
 import getopt
 import re
 import os
-import gzip
 
 from lxml import etree
 from lxml import objectify
 
+import iarchive
 import common
 
 outdir='viz'
+
+kdu_reduce = 2
+scale = 2 ** kdu_reduce
+s = scale
 
 # remove me for faster execution
 debugme = True
@@ -34,9 +38,8 @@ def main(argv):
         os.mkdir('./' + outdir + '/')
 
     id = common.get_book_id()
-    aby_file = gzip.open(id + '_abbyy.gz', 'rb')
-    scandata_file = id + '_scandata.xml'
-    visualize(aby_file, scandata_file, id)
+    iabook = iarchive.Book(id, '.')
+    visualize(iabook)
 
 abbyyns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
 abyns = abbyyns
@@ -45,10 +48,10 @@ import ImageDraw
 import ImageFont 
 import color
 from color import color as c
-def visualize(aby_file, scandata_file, id):
-    scandata = objectify.parse(scandata_file)
-    context = etree.iterparse(aby_file, tag=abbyyns+'page')
-    info = scan_pages(context, scandata, id)
+def visualize(iabook):
+    scandata = objectify.parse(iabook.get_scandata()).getroot()
+    context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
+    info = scan_pages(context, scandata, iabook.get_book_id())
 
 def draw_rect(draw, el, sty, use_coords=None):
     if sty['width'] == 0:
@@ -145,18 +148,17 @@ import os
 # get python string with image data - from .jp2 image in zip
 def get_png(zipf, image_path, width, height, quality=90):
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
-        ' | kdu_expand -reduce 1' +
+        ' | kdu_expand -reduce ' + str(kdu_reduce) +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
 #     + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
     return output.read()
 
 
-scale = 2
-s = scale
 import StringIO
 import font
 def scan_pages(context, scandata, id):
-    scandata_pages = scandata.getroot().pageData.page
+    scandata_pages = scandata.pageData.page
+    dpi = int(scandata.bookData.dpi.text)
     i = 0
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
@@ -214,7 +216,7 @@ def scan_pages(context, scandata, id):
                                         font_size = fmt.get('fs')
                                         font_size = int(re.sub('\.', '', font_size))
                                         font_ital = (fmt.get('italic') == 'true')
-                                        f = font.get_font(font_name, font_size, font_ital)
+                                        f = font.get_font(font_name, dpi / scale, font_size, font_ital)
                                         for cp in fmt:
                                             assert_d(cp.tag == abyns+'charParams')
                                             draw.text((int(cp.get('l'))/s,
@@ -235,7 +237,7 @@ def scan_pages(context, scandata, id):
                                 font_size = fmt.get('fs')
                                 font_size = int(re.sub('\.', '', font_size))
                                 font_ital = (fmt.get('italic') == 'true')
-                                f = font.get_font(font_name, font_size, font_ital)
+                                f = font.get_font(font_name, dpi / scale, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
                                     draw.text((int(cp.get('l'))/s,
