@@ -17,29 +17,7 @@ from lxml.builder import E
 import epub
 import common
 
-# remove me for faster execution
-# XXX make me depend on something in the env?
-debugme = False
-if debugme:
-    from  pydbgr.api import debug
-else:
-    def debug():
-        pass
-
-if not os.path.exists('/tmp/stdout.ppm'):
-    os.symlink('/dev/stdout', '/tmp/stdout.ppm')
- 
-# get python string with image data - from .jp2 image in zip
-def get_image(zipf, image_path, region,
-              height=600, width=780, quality=90):
-    output = os.popen('unzip -p ' + zipf + ' ' + image_path
-        + ' | kdu_expand -region "' + region + '"'
-        + ' -reduce 2 ' +
-           ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm' +
-        ' | pamscale -xyfit ' + str(width) + ' ' + str(height) + # or pamscale
-#         ' | pnmscale -xysize ' + str(width) + ' ' + str(height) + # or pamscale
-        ' | pnmtojpeg -quality ' + str(quality))
-    return output.read()
+from debug import debug, debugging, assert_d
 
 # 'some have optional attributes'
 #     *  creator, contributor
@@ -49,14 +27,16 @@ def get_image(zipf, image_path, region,
 #     * identifier
 #           o opf:scheme — unstandardised: use something sensible
 #     * date, format, identifier, language, type
-#           o xsi:type — use an appropriate standard term (such as W3CDTF for date)
-#     * contributor, coverage, creator, description, publisher, relation, rights, source, subject, title
+#           o xsi:type — use an appropriate standard term
+#               (such as W3CDTF for date)
+#     * contributor, coverage, creator, description, publisher, relation,
+#       rights, source, subject, title
 #           o xml:lang — use RFC-3066 format
-def get_meta_items(book_id, book_path):
-    md = objectify.parse(os.path.join(book_path,
-                                      book_id + '_meta.xml')).getroot()
+def get_meta_items(iabook):
+    md = objectify.parse(iabook.get_metadata_path()).getroot()
     dc_ns = '{http://purl.org/dc/elements/1.1/}'
-    result = [{ 'item':'meta', 'atts':{ 'name':'cover', 'content':'cover-image1' } },
+    result = [{ 'item':'meta', 'atts':{ 'name':'cover',
+                                        'content':'cover-image1' } },
               { 'item':dc_ns+'type', 'text':'Text' }]
     # catch dublin core stragglers
     for tagname in [ 'title', 'creator', 'subject', 'description',
@@ -70,9 +50,10 @@ def get_meta_items(book_id, book_path):
             elif tagname == 'language':
                 # "use a RFC3066 language code"
                 # try to translate to standard notation
-#                lang_map = { 'eng':'en-US' }
-                lang_map = {}
-                lang = lang_map[md.language.text] if md.language.text in lang_map else md.language.text
+                lang_map = {} # { 'eng':'en-US' }
+                lang = (lang_map[md.language.text]
+                        if md.language.text in lang_map
+                        else md.language.text)
                 result.append({ 'item':dc_ns+tagname, 'text':lang })
             elif tagname == 'type' and tag.text == 'Text':
                 # already included above
@@ -83,21 +64,16 @@ def get_meta_items(book_id, book_path):
                 result.append({ 'item':dc_ns+tagname, 'text':tag.text })
     return result
 
-
-def process_book(book_id, book_path, ebook):
+def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
-    scandata = objectify.parse(os.path.join(book_path,
-                                            book_id + '_scandata.xml')
-                               ).getroot()
-    metadata = objectify.parse(os.path.join(book_path,
-                                            book_id + '_meta.xml')
-                               ).getroot()
-    aby_file = gzip.open(os.path.join(book_path,
-                                      book_id + '_abbyy.gz'),
-                         'rb')
+    scandata = iabook.get_scandata()
+    metadata = objectify.parse(iabook.get_metadata_path()).getroot()
+    aby_file = iabook.get_abbyy()
+
     bookData = scandata.find('bookData')
     scanLog = scandata.find('scanLog')
     scandata_pages = scandata.xpath('/book/pageData/page')
+    
     paragraphs = []
     i = 0
     cover_number = 0
@@ -113,8 +89,10 @@ def process_book(book_id, book_path, ebook):
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
-        page_scandata = scandata_pages[i]
+        page_scandata = iabook.get_page_data(i)
         def include_page(page):
+            if page is None:
+                return False
             add = page.find('addToAccessFormats')
             if add is not None and add.text == 'true':
                 return True
@@ -124,7 +102,7 @@ def process_book(book_id, book_path, ebook):
             i += 1
             continue
         if page_scandata.pageType.text == 'Cover':
-            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            (id, filename) = make_page_image(i, iabook, ebook)
             if cover_number == 0:
                 cover_title = 'Front Cover'
             else:
@@ -138,29 +116,32 @@ def process_book(book_id, book_path, ebook):
             cover_number += 1
         elif page_scandata.pageType.text == 'Title':
             before_title_page = False
-            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Title Page', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'title-page',
                                     'title':'Title Page' } )
         elif page_scandata.pageType.text == 'Copyright':
-            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Copyright', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'copyright-page',
                                     'title':'Title Page' } )
         elif page_scandata.pageType.text == 'Contents':
-            (id, filename) = make_page_image(i, book_path, book_id, ebook)
+            (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Contents', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'toc',
                                     'title':'Title Page' } )
         elif page_scandata.pageType.text == 'Normal':
+#             if i == 10:
+#                 debug()
             if before_title_page:
                 # XXX consider skipping if blank + no words?
                 # make page image
-                (id, filename) = make_page_image(i, book_path, book_id, ebook)
+                (id, filename) = make_page_image(i, iabook, ebook)
             else:
+                first_par = True
                 for block in page:
                     if block.get('blockType') == 'Text':
                         pass
@@ -172,11 +153,53 @@ def process_book(book_id, book_path, ebook):
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
+                                def par_is_header(par):
+                                    # if:
+                                    #   it's the first on the page
+                                    #   there's only one line
+                                    #   on that line, there's a formatting tag, s.t.
+                                    #   - it has < 6 charParam kids
+                                    #   - each is wordNumeric
+                                    # then:
+                                    #   Skip it!
+                                    if len(par) != 1:
+                                        return False
+                                    line = par[0]
+                                    for fmt in line:
+                                        if len(fmt) > 6:
+                                            continue
+                                        saw_non_num = False
+                                        for cp in fmt:
+                                            if cp.get('wordNumeric') != 'true':
+                                                saw_non_num = True
+                                                break
+                                        if not saw_non_num:
+                                            return True
+                                    return False
+                                if first_par and par_is_header(par):
+                                    first_par = False
+                                    continue
+                                first_par = False
                                 lines = []
+                                prev_line = ''
                                 for line in par:
-                                    lines.append(etree.tostring(line, method='text', encoding=unicode))
-                                paragraphs.append(E.p(' '.join(lines)))
-
+                                    for fmt in line:
+                                        fmt_text = etree.tostring(fmt,
+                                                                  method='text',
+                                                                  encoding=unicode)
+                                        if len(fmt_text) > 0:
+                                            if prev_line[-1:] == '-':
+                                                if fmt[0].get('wordStart') == 'false':
+                                                    # ? and wordFromDictionary = true ?
+                                                    lines.append(prev_line[:-1])
+                                                else:
+                                                    lines.append(prev_line)
+                                            else:
+                                                lines.append(prev_line)
+                                                lines.append(' ')
+                                            prev_line = fmt_text
+                                lines.append(prev_line)
+                                paragraphs.append(E.p(''.join(lines)))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:
@@ -206,13 +229,8 @@ def process_book(book_id, book_path, ebook):
                             'type':'text',
                             'title':'Book' } )
 
-def make_page_image(i, book_path, book_id, ebook):
-    image = get_image(os.path.join(book_path,
-                                   book_id + '_jp2.zip'),
-                      book_id + '_jp2/' + book_id + '_'
-                      + str(i).zfill(4) + '.jp2',
-                      '{0.0,0.0},{1.0,1.0}',
-                      width=600, height=780, quality=90)
+def make_page_image(i, iabook, ebook):
+    image = iabook.get_image(i, width=600, height=780, quality=90)
     leaf_id = 'leaf' + str(i).zfill(4)
     ebook.add_content({ 'id':'leaf-image' + str(i).zfill(4),
                          'href':'images/' + leaf_id + '.jpg',

@@ -7,13 +7,7 @@ import re
 from lxml import etree
 from lxml import objectify
 
-# remove me for faster execution
-debugme = True
-if debugme:
-    from  pydbgr.api import debug
-else:
-    def debug():
-        pass
+from debug import debug, debugging, assert_d
 
 def usage():
     print 'usage: make_xhtml.py abbyy.xml scandata.xml outfile.xml'

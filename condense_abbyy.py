@@ -10,9 +10,12 @@ from lxml import etree
 
 import common
 
-noclose=True
-# noclose=False
-verbose=False
+# showchars=False
+showchars=True
+
+from debug import debug, debugging, assert_d
+
+ns='{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 
 def main(argv):
 #     if len(argv) != 2:
@@ -22,6 +25,11 @@ def main(argv):
     id = common.get_book_id()
     aby_file = gzip.open(id + '_abbyy.gz', 'rb')
     scandata = id + '.xml'
+
+    if not showchars:
+        del to_keep[ns+'charParams']
+        (fmt_hints, fmt_attrs) = to_keep[ns+'formatting']
+        fmt_hints.append('nonl')
 
     condense_abbyy(aby_file, scandata)
 
@@ -40,7 +48,6 @@ def e(s):
     except UnicodeEncodeError:
         pass
 
-ns='{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 def nons(tag):
     return re.sub('{.*}', '', tag)
 
@@ -53,7 +60,7 @@ class FilterTarget:
         self.intag = False
         self.curtag = None
         self.depth = 0
-        self.leaf = 1
+        self.leaf = 0
         self.out = out
         self.current_line = ''
     def pr(self, str):
@@ -63,11 +70,7 @@ class FilterTarget:
         self.curtag = nons(tag)
         if tag in self.filter:
             (hints, atts_accepted) = self.filter[tag]
-            # only print 'ifverbose' tags if verbose
-            if not verbose and 'ifverbose' in hints:
-                return
-            if verbose or not 'inside' in hints:
-                self.pr(self.istr * self.depth)
+            self.pr(self.istr * self.depth)
             ntag = nons(tag)
             if ntag == 'page':
                 attrib['leaf'] = str(self.leaf)
@@ -94,11 +97,9 @@ class FilterTarget:
                         nattname = synonyms[attname]
                     self.pr(' ' + nattname + '=' + attrib[attname])
             self.pr('>')
-            if verbose or 'indent' in hints:
-#                 self.pr('\n')
-                if not 'nonl' in hints:
-                    self.pr('\n')
-                self.depth += 1
+            if not 'nonl' in hints:
+                self.pr('\n')
+            self.depth += 1
         elif self.curtag == 'charParams':
             pass
         else:
@@ -107,22 +108,15 @@ class FilterTarget:
         self.intag = False
         if tag in self.filter:
             (hints, atts_accepted) = self.filter[tag]
-            if not verbose and 'ifverbose' in hints:
-                return
-            if verbose or 'indent' in hints:
-                self.depth -= 1
-                self.pr(self.istr * self.depth)
+            self.depth -= 1
             ntag = stag = nons(tag)
             if ntag in synonyms:
                 ntag = synonyms[ntag];
-            if stag == 'formatting' and verbose:
+            if stag == 'formatting':
+                if not showchars:
+                    self.pr(' - ')
                 self.pr(self.current_line)
-            if stag == 'formatting' and not verbose:
                 self.pr('\n')
-            if not noclose:
-                self.pr('</' + ntag + '>')
-                if verbose or not 'inside' in hints:
-                    self.pr('\n')
     def data(self, data):
         if self.intag and self.curtag == 'charParams':
             if data == "'":
@@ -130,31 +124,12 @@ class FilterTarget:
             elif data == '"':
                 data = '""'
             self.current_line += data
-            if verbose:
+            if showchars:
                 self.pr(data + '\n')
-            else:
-                self.pr(data)
     def comment(self, text):
         self.pr('comment %s' % text)
     def close(self):
         pass
-#        print('close')
-#        return 'closed!'
-
-# to_keep = {
-#     ns+'document':(['indent'], [ 'pagesCount', 'xmlns' ]),
-#     ns+'page':(['indent'], [ 'width', 'leaf' ]),
-#     ns+'block':(['indent'], [ 'blockType', 'l', 'r', 't', 'b' ]),
-#     ns+'region':(['indent'], [ ]),
-#     ns+'rect':([ ], [ ]),
-#     ns+'text':(['indent'], [ ]),
-#     ns+'line':([ ], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
-#     ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing']),
-#     ns+'formatting':(['inside'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
-#     ns+'cell':(['indent', 'showall'], [ ]),
-#     ns+'row':(['indent', 'showall'], [ ]),
-#     ns+'charParams':(['indent', 'ifverbose', 'nonl'], [ 'wordStart', 'wordFromDictionary', 'wordNormal', 'wordNumeric', 'wordIdentifier', 'l', 'r', 't', 'b']),
-# }
 
 to_keep = {
     ns+'document':(['indent'], [ 'pagesCount', 'xmlns' ]),
@@ -164,7 +139,7 @@ to_keep = {
     ns+'rect':([ 'indent' ], [ ]),
     ns+'text':(['indent'], [ ]),
     ns+'line':(['indent'], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
-    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing']),
+    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing', 'align']),
     ns+'formatting':(['indent'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
     ns+'cell':(['indent', 'showall'], [ ]),
     ns+'row':(['indent', 'showall'], [ ]),
@@ -184,17 +159,13 @@ synonyms = {
     'false':'F',
 }
 
-def condense_abbyy(xml, outfile='outfile.txt'):
-    # remove_blank_text?
+def condense_abbyy(xml, outfile='outfile.txt'): 
     try:
-#         out = open(outfile, 'w')
         out = sys.stdout
         parser = etree.XMLParser(resolve_entities=False, target=FilterTarget(to_keep, synonyms, out))
         tree = etree.parse(xml, parser)
     finally:
         pass
-#         out.close()
-#     print tree
     for err in parser.error_log:
         e('%s - %s:%s' % (err.message, err.line, err.column))
 
