@@ -13,13 +13,7 @@ import common
 # showchars=False
 showchars=True
 
-import os
-debugme = os.environ.get('DEBUG')
-if debugme:
-    from pydbgr.api import debug
-else:
-    def debug():
-        pass
+from debug import debug, debugging, assert_d
 
 ns='{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 

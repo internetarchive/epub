@@ -18,14 +18,7 @@ import iarchive
 import process_abbyy
 import common
 
-# remove me for faster execution
-import os
-debugme = os.environ.get('DEBUG')
-if debugme:
-    from  pydbgr.api import debug
-else:
-    def debug():
-        pass
+from debug import debug, debugging, assert_d
 
 def usage():
     sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]")

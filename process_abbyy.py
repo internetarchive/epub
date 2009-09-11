@@ -17,14 +17,7 @@ from lxml.builder import E
 import epub
 import common
 
-# remove me for faster execution
-import os
-debugme = os.environ.get('DEBUG')
-if debugme:
-    from  pydbgr.api import debug
-else:
-    def debug():
-        pass
+from debug import debug, debugging, assert_d
 
 # 'some have optional attributes'
 #     *  creator, contributor
@@ -40,7 +33,7 @@ else:
 #       rights, source, subject, title
 #           o xml:lang — use RFC-3066 format
 def get_meta_items(iabook):
-    md = objectify.parse(iabook.get_metadata()).getroot()
+    md = objectify.parse(iabook.get_metadata_path()).getroot()
     dc_ns = '{http://purl.org/dc/elements/1.1/}'
     result = [{ 'item':'meta', 'atts':{ 'name':'cover',
                                         'content':'cover-image1' } },
@@ -73,14 +66,14 @@ def get_meta_items(iabook):
 
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
-    scandata = objectify.parse(iabook.get_scandata()).getroot()
-    metadata = objectify.parse(iabook.get_metadata()).getroot()
+    scandata = iabook.get_scandata()
+    metadata = objectify.parse(iabook.get_metadata_path()).getroot()
     aby_file = iabook.get_abbyy()
 
     bookData = scandata.find('bookData')
     scanLog = scandata.find('scanLog')
     scandata_pages = scandata.xpath('/book/pageData/page')
-
+    
     paragraphs = []
     i = 0
     cover_number = 0
@@ -96,8 +89,10 @@ def process_book(iabook, ebook):
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
-        page_scandata = scandata_pages[i]
+        page_scandata = iabook.get_page_data(i)
         def include_page(page):
+            if page is None:
+                return False
             add = page.find('addToAccessFormats')
             if add is not None and add.text == 'true':
                 return True

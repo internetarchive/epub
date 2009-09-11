@@ -8,14 +8,7 @@ import common
 import zipfile
 from datetime import datetime
 
-# remove me for faster execution
-import os
-debugme = os.environ.get('DEBUG')
-if debugme:
-    from  pydbgr.api import debug
-else:
-    def debug():
-        pass
+from debug import debug, debugging
 
 class Book(object):
     def __init__(self, epub_out):

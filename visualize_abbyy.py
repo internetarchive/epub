@@ -17,18 +17,7 @@ kdu_reduce = 2
 scale = 2 ** kdu_reduce
 s = scale
 
-# remove me for faster execution
-debugme = True
-if debugme:
-    from  pydbgr.api import debug
-    def assert_d(expr):
-        if not expr:
-            debug()
-else:
-    def debug():
-        pass
-    def assert_d(expr):
-        pass
+from debug import debug, debugging, assert_d
 
 def usage():
     print 'usage: visualize_abbyy.py abbyy.xml scandata.xml'
@@ -49,7 +38,7 @@ import ImageFont
 import color
 from color import color as c
 def visualize(iabook):
-    scandata = objectify.parse(iabook.get_scandata()).getroot()
+    scandata = objectify.parse(iabook.get_scandata_path()).getroot()
     context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
     info = scan_pages(context, scandata, iabook.get_book_id())
 
