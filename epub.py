@@ -242,6 +242,48 @@ def make_ade_stylesheet():
 </ade:template>
 '''
 
+
+
+
+# OPF
+#manifest_items = [
+#     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
+#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
+#     { 'id' : 'content', 'href' : 'content.html', 'media-type' : 'application/xhtml+xml' },
+#     { 'id' : 'cover-image', 'href' : 'images/cover.png', 'media-type' : 'image/png' },
+#     { 'id' : 'css', 'href' : 'stylesheet.css', 'media-type' : 'text/css' },
+# spine_items = [
+#     { 'idref' : 'book' }
+#     { 'idref' : 'cover', 'linear' : 'no' },
+#     { 'idref' : 'content' }
+# guide_items = [
+#     { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
+# cover  	 the book cover(s), jacket information, etc.
+# title-page 	page with possibly title, author, publisher, and other metadata
+# toc 	table of contents
+# index 	back-of-book style index
+# glossary 	
+# acknowledgements 	
+# bibliography 	
+# colophon 	
+# copyright-page 	
+# dedication 	
+# epigraph 	
+# foreword 	
+# loi 	list of illustrations
+# lot 	list of tables
+# notes 	
+# preface 	
+# text 	First "real" page of content (e.g. "Chapter 1") 
+#
+# NCX navpoints = [
+#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
+#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
+#     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
+# CAN NEST NAVPOINTS
+
+
 if __name__ == '__main__':
-    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)
+
