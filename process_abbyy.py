@@ -18,7 +18,6 @@ import epub
 import common
 
 from debug import debug, debugging, assert_d
-
 # 'some have optional attributes'
 #     *  creator, contributor
 #           o opf:role — see http://www.loc.gov/marc/relators/ for values
@@ -76,6 +75,7 @@ def process_book(iabook, ebook):
     
     paragraphs = []
     i = 0
+    part_number = 0
     cover_number = 0
     nav_number = 0
     context = etree.iterparse(aby_file,
@@ -113,7 +113,19 @@ def process_book(iabook, ebook):
                                         'type':'cover',
                                         'title':cover_title } )
                 ebook.add_cover_id(id)
+
+                # Add intro page after 1rst cover page
+                tree = make_html('Archive',
+                     [E.p('This book made available by the Internet Archive.')])
+                ebook.add_content({ 'id':'intro',
+                                    'href':'intro.html',
+                                    'media-type':'application/xhtml+xml' },
+                                  common.tree_to_str(tree,
+                                                     xml_declaration=False))
+                ebook.add_spine_item({ 'idref':'intro' })
+
             cover_number += 1
+
         elif page_scandata.pageType.text == 'Title':
             before_title_page = False
             (id, filename) = make_page_image(i, iabook, ebook)
@@ -205,29 +217,43 @@ def process_book(iabook, ebook):
                         else:
                             print('unexpected tag type' + el.tag)
                             sys.exit(-1)
+
         page.clear()
         i += 1
 
-    tree = make_html('Archive',
-                     [E.p('This book made available by the Internet Archive.')])
-    ebook.add_content({ 'id':'intro',
-                        'href':'intro.html',
-                        'media-type':'application/xhtml+xml' },
-                      common.tree_to_str(tree, xml_declaration=False))
-    ebook.add_spine_item({ 'idref':'intro' })
-
-
-    tree = make_html('sample title', paragraphs)
-    ebook.add_content({ 'id':'book',
-             'href':'book.html',
-             'media-type':'application/xhtml+xml' },
-                      common.tree_to_str(tree, xml_declaration=False))
-    ebook.add_spine_item({ 'idref':'book' })
-    ebook.add_navpoint({ 'text':'Book',
-                         'content':'book.html' })
-    ebook.add_guide_item( { 'href':'book.html',
-                            'type':'text',
-                            'title':'Book' } )
+        if len(paragraphs) > 100:
+            # make a chunk!
+            part_str = 'part' + str(part_number).zfill(4)
+            tree = make_html('sample title', paragraphs)
+            ebook.add_content({ 'id':part_str,
+                                'href':part_str + '.html',
+                                'media-type':'application/xhtml+xml' },
+                              common.tree_to_str(tree, xml_declaration=False))
+            ebook.add_spine_item({ 'idref':part_str })
+            if part_number == 0:
+                ebook.add_guide_item( { 'href':part_str + '.html',
+                                        'type':'text',
+                                        'title':'Book' } )
+                ebook.add_navpoint({ 'text':'Pages',
+                                     'content':part_str + 'html' })
+            part_number += 1
+            paragraphs = []
+    # MAKE CHUNK FROM LAST PARAGRAPHS!!!
+    if len(paragraphs) > 100:
+        # make a chunk!
+        part_str = 'part' + str(part_number).zfill(4)
+        tree = make_html('sample title', paragraphs)
+        ebook.add_content({ 'id':part_str,
+                            'href':part_str + '.html',
+                            'media-type':'application/xhtml+xml' },
+                          common.tree_to_str(tree, xml_declaration=False))
+        ebook.add_spine_item({ 'idref':part_str })
+        if part_number == 0:
+            ebook.add_guide_item( { 'href':part_str + '.html',
+                                    'type':'text',
+                                    'title':'Book' } )
+            ebook.add_navpoint({ 'text':'Pages',
+                                 'content':part_str + 'html' })
 
 def make_page_image(i, iabook, ebook):
     image = iabook.get_image(i, width=600, height=780, quality=90)
@@ -271,44 +297,5 @@ def make_html(title, body_elems):
     return etree.ElementTree(html)
 
 if __name__ == '__main__':
-    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)
-
-
-
-# OPF
-#manifest_items = [
-#     { 'id' : 'ncx', 'href' : 'toc.ncx', 'media-type' : 'text/html' },
-#     { 'id' : 'cover', 'href' : 'title.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'content', 'href' : 'content.html', 'media-type' : 'application/xhtml+xml' },
-#     { 'id' : 'cover-image', 'href' : 'images/cover.png', 'media-type' : 'image/png' },
-#     { 'id' : 'css', 'href' : 'stylesheet.css', 'media-type' : 'text/css' },
-# spine_items = [
-#     { 'idref' : 'book' }
-#     { 'idref' : 'cover', 'linear' : 'no' },
-#     { 'idref' : 'content' }
-# guide_items = [
-#     { 'href' : 'title.html', 'type' : 'cover', 'title' : 'cover' }
-# cover  	 the book cover(s), jacket information, etc.
-# title-page 	page with possibly title, author, publisher, and other metadata
-# toc 	table of contents
-# index 	back-of-book style index
-# glossary 	
-# acknowledgements 	
-# bibliography 	
-# colophon 	
-# copyright-page 	
-# dedication 	
-# epigraph 	
-# foreword 	
-# loi 	list of illustrations
-# lot 	list of tables
-# notes 	
-# preface 	
-# text 	First "real" page of content (e.g. "Chapter 1") 
-#
-# NCX navpoints = [
-#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book', 'content' : 'book.html' },
-#     { 'id' : 'navpoint-1', 'playOrder' : '1', 'text' : 'Book Cover', 'content' : 'title.html' },
-#     { 'id' : 'navpoint-2', 'playOrder' : '2', 'text' : 'Contents', 'content' : 'content.html' },
-# CAN NEST NAVPOINTS
