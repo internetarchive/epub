@@ -82,7 +82,7 @@ if not os.path.exists('/tmp/stdout.ppm'):
  
 # get python string with image data - from .jp2 image in zip
 def image_from_zip(zipf, image_path, region,
-                   height=600, width=780, quality=90):
+                   width=600, height=780, quality=80):
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
 

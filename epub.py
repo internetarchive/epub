@@ -243,5 +243,6 @@ def make_ade_stylesheet():
 '''
 
 if __name__ == '__main__':
-    sys.stderr.write('I''m a module.  Don''t run me directly!')
+    sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)
+
