@@ -69,6 +69,7 @@ class Book(object):
         # info is e.g. { 'href':'title.html',
         #                'type':'title-page',
         #                'title':'Title Page' }
+        self.guide_items.append(info)
 
     def add_navpoint(self, info):
         # info is e.g. { 'text':'Title Page',
