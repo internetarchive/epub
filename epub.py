@@ -22,7 +22,13 @@ class Book(object):
         # style sheet
         self.add('OEBPS/stylesheet.css', make_stylesheet())
 
-        # This file enables ADE mojo
+        # This file enables Adobe Digital Editions features,
+        # if referenced by a content file.
+        #
+        # Source:
+        # http://www.adobe.com/devnet/digitalpublishing/epubs/EPUBBestPractices-1_0_3.epub
+        # ... link from
+        # http://www.adobe.com/devnet/digitalpublishing/
         self.add('OEBPS/page-template.xpgt', make_ade_stylesheet())
 
         self.manifest_items = [
