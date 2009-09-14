@@ -51,29 +51,40 @@ class Book(object):
         self.cover_id = None
 
     def add_content(self, info, content):
+        # info is e.g. { 'id':'title',
+        #                'href':'title.html',
+        #                'media-type':'application/xhtml+xml' },
         self.manifest_items.append(info)
         self.add('OEBPS/'+info['href'], content)
 
     def add_cover_id(self, cover_id):
+        # used for meta tag to flag
         self.cover_id = cover_id
 
     def add_spine_item(self, info):
+        # info is e.g. { 'idref':'title' }
         self.spine_items.append(info)
 
     def add_guide_item(self, info):
-        self.guide_items.append(info)
+        # info is e.g. { 'href':'title.html',
+        #                'type':'title-page',
+        #                'title':'Title Page' }
 
     def add_navpoint(self, info):
+        # info is e.g. { 'text':'Title Page',
+        #                'content':'title.html' }
+        # navpoints added thru this interface are sequential -
+        # id and playOrder are generated.
         self.navpoints.append(info)
 
-    def add(self, path, s, deflate=True):
+    def add(self, path, content_str, deflate=True):
         info = zipfile.ZipInfo(path)
         info.compress_type = (zipfile.ZIP_DEFLATED if deflate
                               else zipfile.ZIP_STORED)
         info.external_attr = 0666 << 16L # fix access
         info.date_time = (self.dt.year, self.dt.month, self.dt.day,
                           self.dt.hour, self.dt.minute, self.dt.second)
-        self.z.writestr(info, s)
+        self.z.writestr(info, content_str)
 
     def finish(self, meta_info_items):
         tree_str = make_opf(meta_info_items,
