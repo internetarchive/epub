@@ -143,7 +143,11 @@ to_keep = {
     ns+'formatting':(['indent'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
     ns+'cell':(['indent', 'showall'], [ ]),
     ns+'row':(['indent', 'showall'], [ ]),
-    ns+'charParams':(['indent', 'ifverbose', 'nonl'], [ 'wordStart', 'wordFromDictionary', 'wordNormal', 'wordNumeric', 'wordIdentifier', 'l', 'r', 't', 'b']),
+    ns+'charParams':(['indent', 'ifverbose', 'nonl'],
+                     [ 'wordStart', 'wordFromDictionary', 'wordNormal',
+                       'wordNumeric', 'wordIdentifier',
+                       'suspicious',
+                       'l', 'r', 't', 'b']),
 }
 
 synonyms = {
