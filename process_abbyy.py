@@ -44,7 +44,11 @@ def get_meta_items(iabook):
                      'relation','coverage', 'rights' ]:
         for tag in md.findall(tagname):
             if tagname == 'identifier':
-                result.append({ 'item':dc_ns+tagname, 'text':tag.text,
+                from datetime import datetime
+                dt = datetime.now()
+                xtra = (str(dt.year) + str(dt.month) + str(dt.day) +
+                        str(dt.hour) + str(dt.minute) + str(dt.second))
+                result.append({ 'item':dc_ns+tagname, 'text':tag.text + xtra,
                                 'atts':{ 'id':'bookid' } })
             elif tagname == 'language':
                 # "use a RFC3066 language code"
@@ -102,7 +106,7 @@ def process_book(iabook, ebook):
             i += 1
             continue
         if page_scandata.pageType.text == 'Cover':
-            (id, filename) = make_page_image(i, iabook, ebook)
+            (id, filename) = make_html_page_image(i, iabook, ebook)
             if cover_number == 0:
                 cover_title = 'Front Cover'
             else:
@@ -187,6 +191,18 @@ def process_book(iabook, ebook):
                                                 break
                                         if not saw_non_num:
                                             return True
+                                        hdr_text = etree.tostring(fmt,
+                                                              method='text',
+                                                              encoding=unicode)
+                                        rnums = ['i', 'ii', 'iii', 'iv',
+                                                 'v', 'vi', 'vii', 'viii',
+                                                 'ix', 'x', 'xi', 'xii',
+                                                 'xiii', 'xiv', 'xv', 'xvi',
+                                                 'xvii', 'xviii', 'xix', 'xx',
+                                                 'xxi', 'xxii',
+                                                 ]
+                                        if hdr_text in rnums:
+                                            return True
                                     return False
                                 if first_par and par_is_header(par):
                                     first_par = False
@@ -255,14 +271,15 @@ def process_book(iabook, ebook):
             ebook.add_navpoint({ 'text':'Pages',
                                  'content':part_str + 'html' })
 
-def make_page_image(i, iabook, ebook):
-    image = iabook.get_image(i, width=600, height=780, quality=90)
+def make_html_page_image(i, iabook, ebook):
+    image = iabook.get_image(i, width=1200, height=1500, quality=90)
     leaf_id = 'leaf' + str(i).zfill(4)
-    ebook.add_content({ 'id':'leaf-image' + str(i).zfill(4),
-                         'href':'images/' + leaf_id + '.jpg',
+    leaf_image_id = 'leaf-image' + str(i).zfill(4)
+    ebook.add_content({ 'id':leaf_image_id,
+                         'href':'images/' + leaf_image_id + '.jpg',
                          'media-type':'image/jpeg' },
                        image);
-    img_tag = E.img({ 'src':'images/' + leaf_id + '.jpg',
+    img_tag = E.img({ 'src':'images/' + leaf_image_id + '.jpg',
                       'alt':'leaf ' + str(i) })
     tree = make_html('leaf ' + str(i).zfill(4), [ img_tag ])
     ebook.add_content({ 'id':leaf_id,
@@ -273,11 +290,21 @@ def make_page_image(i, iabook, ebook):
 
     return leaf_id, leaf_id + '.html'
 
+def make_page_image(i, iabook, ebook):
+    image = iabook.get_image(i, width=600, height=800, quality=90)
+    leaf_image_id = 'leaf-image' + str(i).zfill(4)
+    ebook.add_content({ 'id':leaf_image_id,
+                         'href':'images/' + leaf_image_id + '.jpg',
+                         'media-type':'image/jpeg' },
+                       image);
+    ebook.add_spine_item({ 'idref':leaf_image_id, 'linear':'no' })
+    return leaf_image_id, leaf_image_id + '.jpg'
+
 def make_html(title, body_elems):
     html = E.html(
         E.head(
             E.title(title),
-            E.meta(name='generator', content='abbyy to epub tool, v0.0'),
+            E.meta(name='generator', content='abbyy to epub tool, v0.1'),
             E.link(rel='stylesheet',
                    href='stylesheet.css',
                    type='text/css'),
