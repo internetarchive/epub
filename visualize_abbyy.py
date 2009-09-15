@@ -135,19 +135,6 @@ def box_from_par(par):
 
 import os
 
-# get python string with image data - from .jp2 image in zip
-def get_png(zipf, image_path, width, height, quality=90):
-    z = zipfile.ZipFile(zipf, 'r')
-    info = z.getinfo(image_path) # for to check it exists
-    z.close()
-    
-    output = os.popen('unzip -p ' + zipf + ' ' + image_path +
-        ' | kdu_expand -reduce ' + str(kdu_reduce) +
-           ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
-#     + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
-    return output.read()
-
-
 import StringIO
 import font
 def scan_pages(context, scandata, iabook):
