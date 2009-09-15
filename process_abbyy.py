@@ -74,9 +74,17 @@ def process_book(iabook, ebook):
     aby_file = iabook.get_abbyy()
 
     bookData = scandata.find('bookData')
+    # XXX should fix below and similar by ensuring that scandata is always the same fmt...
+    # scandata.zip/scandata.xml parses different?
+    if bookData is None:
+        bookData = scandata.bookData
     scanLog = scandata.find('scanLog')
+    if scanLog is None:
+        scanLog = scandata.scanLog
     scandata_pages = scandata.xpath('/book/pageData/page')
-    
+    if scandata_pages is None or len(scandata_pages) == 0:
+        scandata_pages = scandata.pageData.page
+
     paragraphs = []
     i = 0
     part_number = 0
@@ -87,7 +95,8 @@ def process_book(iabook, ebook):
                               resolve_entities=False)
     found_title = False
     for page_scandata in scandata_pages: #scan thru to make sure title exists
-        if page_scandata.pageType.text == 'Title':
+        t = page_scandata.pageType.text
+        if t == 'Title' or t == 'Title Page':
             found_title = True
             break
     # True if no title found, else False now, True later.
@@ -98,6 +107,8 @@ def process_book(iabook, ebook):
             if page is None:
                 return False
             add = page.find('addToAccessFormats')
+            if add is None:
+                add = page.addToAccessFormats
             if add is not None and add.text == 'true':
                 return True
             else:
@@ -105,7 +116,8 @@ def process_book(iabook, ebook):
         if not include_page(page_scandata):
             i += 1
             continue
-        if page_scandata.pageType.text == 'Cover':
+        page_type = page_scandata.pageType.text.lower()
+        if page_type == 'cover':
             (id, filename) = make_html_page_image(i, iabook, ebook)
             if cover_number == 0:
                 cover_title = 'Front Cover'
@@ -130,26 +142,26 @@ def process_book(iabook, ebook):
 
             cover_number += 1
 
-        elif page_scandata.pageType.text == 'Title':
+        elif page_type == 'title' or page_type == 'title page':
             before_title_page = False
             (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Title Page', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'title-page',
                                     'title':'Title Page' } )
-        elif page_scandata.pageType.text == 'Copyright':
+        elif page_type == 'copyright':
             (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Copyright', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'copyright-page',
                                     'title':'Title Page' } )
-        elif page_scandata.pageType.text == 'Contents':
+        elif page_type == 'contents':
             (id, filename) = make_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Contents', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'toc',
                                     'title':'Title Page' } )
-        elif page_scandata.pageType.text == 'Normal':
+        elif page_type == 'normal':
 #             if i == 10:
 #                 debug()
             if before_title_page:
@@ -254,9 +266,8 @@ def process_book(iabook, ebook):
                                      'content':part_str + 'html' })
             part_number += 1
             paragraphs = []
-    # MAKE CHUNK FROM LAST PARAGRAPHS!!!
+    # make chunk from last paragraphs
     if len(paragraphs) > 100:
-        # make a chunk!
         part_str = 'part' + str(part_number).zfill(4)
         tree = make_html('sample title', paragraphs)
         ebook.add_content({ 'id':part_str,

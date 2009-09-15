@@ -38,9 +38,10 @@ import ImageFont
 import color
 from color import color as c
 def visualize(iabook):
-    scandata = objectify.parse(iabook.get_scandata_path()).getroot()
+#    scandata = objectify.parse(iabook.get_scandata_path()).getroot()
+    scandata = iabook.get_scandata()
     context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
-    info = scan_pages(context, scandata, iabook.get_book_id())
+    info = scan_pages(context, scandata, iabook)
 
 def draw_rect(draw, el, sty, use_coords=None):
     if sty['width'] == 0:
@@ -136,6 +137,10 @@ import os
 
 # get python string with image data - from .jp2 image in zip
 def get_png(zipf, image_path, width, height, quality=90):
+    z = zipfile.ZipFile(zipf, 'r')
+    info = z.getinfo(image_path) # for to check it exists
+    z.close()
+    
     output = os.popen('unzip -p ' + zipf + ' ' + image_path +
         ' | kdu_expand -reduce ' + str(kdu_reduce) +
            ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm')
@@ -145,13 +150,15 @@ def get_png(zipf, image_path, width, height, quality=90):
 
 import StringIO
 import font
-def scan_pages(context, scandata, id):
+def scan_pages(context, scandata, iabook):
+    book_id = iabook.get_book_id()
     scandata_pages = scandata.pageData.page
     dpi = int(scandata.bookData.dpi.text)
     i = 0
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
     for event, page in context:
+        print i
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
         width = orig_width / s
@@ -159,19 +166,24 @@ def scan_pages(context, scandata, id):
         
         image = Image.new('RGB', (width, height))
 
-        zipf = id + '_jp2.zip'
-        image_path = id + '_jp2/' + id + '_' + str(i).zfill(4) + '.jp2'
-        page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path, width, height)))
+#         zipf = book_id + '_jp2.zip'
+#         image_path = book_id + '_jp2/' + book_id + '_' + str(i).zfill(4) + '.jp2'
+        page_image = None
+#        page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path, width, height)))
 
-        (nw, nh) = page_image.size
-        if nw != width or nh != height:
-            page_image = page_image.resize((width, height))
+        image_str = iabook.get_image(i, width, height, img_type='ppm')
+        if image_str is not None:
+            page_image = Image.open(StringIO.StringIO(image_str))
+            
+            (nw, nh) = page_image.size
+            if nw != width or nh != height:
+                page_image = page_image.resize((width, height))
 #        image.paste(page_image, None)
-        image = Image.blend(image, page_image, .2)
+            image = Image.blend(image, page_image, .2)
         draw = ImageDraw.Draw(image)
 
         for block in page:
-            if block.get('blockType') == 'Picture':
+            if block.get('blockType') == 'Picture' and page_image is not None:
                 cropped = page_image.crop(four_coords(block, scale))
                 image.paste(cropped, four_coords(block, scale))
                 
