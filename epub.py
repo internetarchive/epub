@@ -63,6 +63,7 @@ class Book(object):
 
     def add_spine_item(self, info):
         # info is e.g. { 'idref':'title' }
+        # ... or { 'idref':'copyright', 'linear':'no' }
         self.spine_items.append(info)
 
     def add_guide_item(self, info):
@@ -184,7 +185,7 @@ def make_ncx(navpoints):
 
 def make_stylesheet():
     return '''body {
-    font-family: sans-serif;
+    font-family: serif;
 }
 h1,h2,h3,h4 {
     font-family: serif;
