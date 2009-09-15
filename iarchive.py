@@ -69,7 +69,7 @@ class Book(object):
                                       self.book_id + '_abbyy.gz'), 'rb')
 
     def get_image(self, i, region='{0.0,0.0},{1.0,1.0}',
-                  width=600, height=780, quality=90):
+                  width=700, height=900, quality=90):
         zipf = os.path.join(self.book_path,
                             self.book_id + '_jp2.zip')
         image_path = (self.book_id + '_jp2/' + self.book_id + '_'
@@ -82,7 +82,7 @@ if not os.path.exists('/tmp/stdout.ppm'):
  
 # get python string with image data - from .jp2 image in zip
 def image_from_zip(zipf, image_path, region,
-                   width=600, height=780, quality=80):
+                   width=700, height=900, quality=90):
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
 
