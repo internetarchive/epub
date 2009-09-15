@@ -101,14 +101,16 @@ def image_from_zip(zipf, image_path,
                       + ' | kdu_expand -region "' + region + '"'
                       +   ' -reduce 2 '
                       +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
-                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
+#                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
+                      + ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
                       + ' | pnmtojpeg -quality ' + str(quality))
     elif img_type == 'ppm':
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                       + ' | kdu_expand -region "' + region + '"'
                       +   ' -reduce 2 '
                       +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
-                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
+#                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
+                      + ' | pnmscale -xysize ' + str(width) + ' ' + str(height))
     else:
         raise 'unrecognized image type'
     return output.read()
