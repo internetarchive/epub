@@ -78,9 +78,11 @@ def process_book(iabook, ebook):
     # scandata.zip/scandata.xml parses different?
     if bookData is None:
         bookData = scandata.bookData
-    scanLog = scandata.find('scanLog')
-    if scanLog is None:
-        scanLog = scandata.scanLog
+
+    # some books no scanlog
+#     scanLog = scandata.find('scanLog')
+#     if scanLog is None:
+#         scanLog = scandata.scanLog
     scandata_pages = scandata.xpath('/book/pageData/page')
     if scandata_pages is None or len(scandata_pages) == 0:
         scandata_pages = scandata.pageData.page
@@ -263,7 +265,7 @@ def process_book(iabook, ebook):
                                         'type':'text',
                                         'title':'Book' } )
                 ebook.add_navpoint({ 'text':'Pages',
-                                     'content':part_str + 'html' })
+                                     'content':part_str + '.html' })
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
@@ -283,7 +285,7 @@ def process_book(iabook, ebook):
                                  'content':part_str + 'html' })
 
 def make_html_page_image(i, iabook, ebook):
-    image = iabook.get_image(i, width=1200, height=1500, quality=90)
+    image = iabook.get_image(i, width=600, height=800, quality=90)
     leaf_id = 'leaf' + str(i).zfill(4)
     leaf_image_id = 'leaf-image' + str(i).zfill(4)
     ebook.add_content({ 'id':leaf_image_id,
@@ -309,7 +311,7 @@ def make_page_image(i, iabook, ebook):
                          'media-type':'image/jpeg' },
                        image);
     ebook.add_spine_item({ 'idref':leaf_image_id, 'linear':'no' })
-    return leaf_image_id, leaf_image_id + '.jpg'
+    return leaf_image_id, 'images/' + leaf_image_id + '.jpg'
 
 def make_html(title, body_elems):
     html = E.html(
