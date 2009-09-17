@@ -17,6 +17,8 @@ from lxml.builder import E
 import epub
 import common
 
+import iarchive
+
 from debug import debug, debugging, assert_d
 # 'some have optional attributes'
 #     *  creator, contributor
@@ -53,10 +55,7 @@ def get_meta_items(iabook):
             elif tagname == 'language':
                 # "use a RFC3066 language code"
                 # try to translate to standard notation
-                lang_map = {} # { 'eng':'en-US' }
-                lang = (lang_map[md.language.text]
-                        if md.language.text in lang_map
-                        else md.language.text)
+                lang = iarchive.iso_639_23_to_iso_639_1(md.language.text)
                 result.append({ 'item':dc_ns+tagname, 'text':lang })
             elif tagname == 'type' and tag.text == 'Text':
                 # already included above
@@ -146,19 +145,19 @@ def process_book(iabook, ebook):
 
         elif page_type == 'title' or page_type == 'title page':
             before_title_page = False
-            (id, filename) = make_page_image(i, iabook, ebook)
+            (id, filename) = make_html_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Title Page', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'title-page',
                                     'title':'Title Page' } )
         elif page_type == 'copyright':
-            (id, filename) = make_page_image(i, iabook, ebook)
+            (id, filename) = make_html_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Copyright', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'copyright-page',
                                     'title':'Title Page' } )
         elif page_type == 'contents':
-            (id, filename) = make_page_image(i, iabook, ebook)
+            (id, filename) = make_html_page_image(i, iabook, ebook)
             ebook.add_navpoint( { 'text':'Contents', 'content':filename } )
             ebook.add_guide_item( { 'href':filename,
                                     'type':'toc',
@@ -169,7 +168,7 @@ def process_book(iabook, ebook):
             if before_title_page:
                 # XXX consider skipping if blank + no words?
                 # make page image
-                (id, filename) = make_page_image(i, iabook, ebook)
+                (id, filename) = make_html_page_image(i, iabook, ebook)
             else:
                 first_par = True
                 for block in page:
@@ -278,7 +277,7 @@ def process_book(iabook, ebook):
                           common.tree_to_str(tree, xml_declaration=False))
         ebook.add_spine_item({ 'idref':part_str })
         if part_number == 0:
-            ebook.add_guide_item( { 'href':part_str + '.html',
+            book.add_guide_item( { 'href':part_str + '.html',
                                     'type':'text',
                                     'title':'Book' } )
             ebook.add_navpoint({ 'text':'Pages',
