@@ -331,5 +331,5 @@ def iso_639_23_to_iso_639_1(marc_code):
         return marc_code
         
 if __name__ == '__main__':
-    sys.stderr.write('I\'m a module.  Don''t run me directly!')
+    sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)
