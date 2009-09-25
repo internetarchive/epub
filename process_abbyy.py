@@ -253,35 +253,38 @@ def process_book(iabook, ebook):
         if len(paragraphs) > 100:
             # make a chunk!
             part_str = 'part' + str(part_number).zfill(4)
+            part_str_href = part_str + '.html'
             tree = make_html('sample title', paragraphs)
             ebook.add_content({ 'id':part_str,
-                                'href':part_str + '.html',
+                                'href':part_str_href,
                                 'media-type':'application/xhtml+xml' },
                               common.tree_to_str(tree, xml_declaration=False))
             ebook.add_spine_item({ 'idref':part_str })
+            ebook.add_page_map_item(i, part_str_href)
             if part_number == 0:
-                ebook.add_guide_item( { 'href':part_str + '.html',
+                ebook.add_guide_item( { 'href':part_str_href,
                                         'type':'text',
                                         'title':'Book' } )
                 ebook.add_navpoint({ 'text':'Pages',
-                                     'content':part_str + '.html' })
+                                     'content':part_str_href })
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
     if len(paragraphs) > 100:
         part_str = 'part' + str(part_number).zfill(4)
+        part_str_href = part_str + '.html'
         tree = make_html('sample title', paragraphs)
         ebook.add_content({ 'id':part_str,
-                            'href':part_str + '.html',
+                            'href':part_str_href,
                             'media-type':'application/xhtml+xml' },
                           common.tree_to_str(tree, xml_declaration=False))
         ebook.add_spine_item({ 'idref':part_str })
         if part_number == 0:
-            book.add_guide_item( { 'href':part_str + '.html',
+            book.add_guide_item( { 'href':part_str_href,
                                     'type':'text',
                                     'title':'Book' } )
             ebook.add_navpoint({ 'text':'Pages',
-                                 'content':part_str + 'html' })
+                                 'content':part_str_href })
 
 def make_html_page_image(i, iabook, ebook):
     image = iabook.get_image(i, width=600, height=800, quality=90)

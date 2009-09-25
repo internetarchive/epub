@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 from lxml import etree
 from lxml import objectify
@@ -44,9 +43,14 @@ class Book(object):
               'href':'page-template.xpgt',
               'media-type':'application/vnd.adobe-page-template+xml'
               },
+            { 'id':'page-map',
+              'href':'page-map.xml',
+              'media-type':'application/oebps-page-map+xml'
+              },
             ]
         self.spine_items = []
         self.guide_items = []
+        self.page_map_items = []
         self.navpoints = []
         self.cover_id = None
 
@@ -79,6 +83,11 @@ class Book(object):
         # id and playOrder are generated.
         self.navpoints.append(info)
 
+    def add_page_map_item(self, name, href):
+        # e.g. name="xii", page="intro.xml#xii"
+        # -or- name="42", page="part0042.xhtml"
+        self.page_map_items.append({ 'name':str(name), 'href':href })
+
     def add(self, path, content_str, deflate=True):
         info = zipfile.ZipInfo(path)
         info.compress_type = (zipfile.ZIP_DEFLATED if deflate
@@ -98,6 +107,9 @@ class Book(object):
         
         tree_str = make_ncx(self.navpoints)
         self.add('OEBPS/toc.ncx', tree_str)
+
+        tree_str = make_page_map(self.page_map_items)
+        self.add('OEBPS/page-map.xml', tree_str)
 
         self.z.close()
 
@@ -137,13 +149,21 @@ def make_opf(meta_info_items,
 #         etree.SubElement(manifest, 'meta', name='cover',
 #                          content=cover_id)
     if len(spine_items) > 0:    
-        spine = etree.SubElement(root, 'spine', toc='ncx')
+        spine = etree.SubElement(root, 'spine',
+        { 'toc':'ncx', 'page-map':'page-map' })
     for item in spine_items:
         etree.SubElement(spine, 'itemref', item)
     if len(guide_items) > 0:
         guide = etree.SubElement(root, 'guide')
     for item in guide_items:
         etree.SubElement(guide, 'reference', item)
+    return common.tree_to_str(root)
+
+def make_page_map(page_map_items):
+    root = etree.Element('page-map',
+                         xmlns='http://www.idpf.org/2007/opf')
+    for item in page_map_items:
+        etree.SubElement(root, 'page', item)
     return common.tree_to_str(root)
 
 navpoints = [
