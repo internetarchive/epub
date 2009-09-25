@@ -25,6 +25,34 @@ def usage():
     sys.stderr.write("  Output defaults to book_id.epub.")
 
 def main(argv):
+
+#     try:
+#         opts, args = getopt.getopt(argv, "hf:b",
+#                                    ["help", "food="])
+#     except getopt.GetoptError:
+#         usage()
+#         sys.exit(2)
+#     for opt, arg in opts:
+#         if opt in ("-h", "--help"):
+#             usage()
+#             sys.exit()
+#         elif opt == "-b":
+#             print "beautiful"
+#         elif opt in ("-f", "--food"):
+#             print "food: " + arg
+#     for name in args:
+#         print "arg: " + name
+
+#     if len(args) != 3:
+#         usage()
+#         sys.exit(-1)
+
+#     a = args[0]
+#     b = args[1]
+#     c = args[2]
+
+#     do_stuff(a, b, c)
+
     if len(argv) != 2 and len(argv) != 3:
         usage()
         sys.exit(-1)
