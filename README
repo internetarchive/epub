@@ -6,6 +6,7 @@ The project as a whole is currently oriented towards converting
 creating .epub files from Internet Archive book 'items', consisting of
 metadata, 'abbyy' OCR output files, and page images.
 
+
 Entry points -
 
 * abbyy_to_epub.py      - main Internet Archive book converter
