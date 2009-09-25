@@ -12,7 +12,7 @@ def get_book_id():
     for fname in files:
         if re.match('.*_abbyy.gz$', fname):
             return re.sub('_abbyy.gz$', '', fname)
-    print 'couldn''t get book id'
+    print "couldn't get book id"
 
 def tree_to_str(tree, xml_declaration=True):
     return etree.tostring(tree,
@@ -21,5 +21,5 @@ def tree_to_str(tree, xml_declaration=True):
                           encoding='utf-8')
 
 if __name__ == '__main__':
-    sys.stderr.write('I\'m a module.  Don''t run me directly!')
+    sys.stderr.write("I'm a module.  Don't run me directly!")
     sys.exit(-1)
