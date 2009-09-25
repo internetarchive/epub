@@ -1,3 +1,14 @@
-Code for creating epub files
+Code for creating epub files.
 
-This only on the working branch.
+'epub.py' may be of general use.
+
+The project as a whole is currently oriented towards converting
+creating .epub files from Internet Archive book 'items', consisting of
+metadata, 'abbyy' OCR output files, and page images.
+
+Entry points -
+
+* abbyy_to_epub.py      - main Internet Archive book converter
+* condense_abbyy.py     - create slightly-more-human-readable version of abbyy
+* visualize_abbyy.py    - create a directory of page images, marked with OCR
+                          (Needs currently un-checked-in fonts)
