@@ -13,8 +13,12 @@ import common
 from debug import debug, debugging, assert_d
 
 def usage():
-    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]")
-    sys.stderr.write("  Output defaults to book_id.epub.")
+    sys.stderr.write("\n")
+    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]\n")
+    sys.stderr.write("  Output defaults to book_id.epub.\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("  -d calls epubcheck-1.0.3.jar to check output.\n")
+    sys.stderr.write("  (epubcheck jar is assumed to be in the script directory)\n")
 
 debug_output = False
 def main(argv):
@@ -79,6 +83,11 @@ def main(argv):
 
     meta_info_items = process_abbyy.get_meta_items(iabook)
     ebook.finish(meta_info_items)
+
+    if debug_output:
+        epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
+        output = os.popen('java -jar ' + epubcheck + ' ' + epub_out)
+        print output.read()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
