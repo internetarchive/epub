@@ -3,15 +3,7 @@
 
 import sys
 import getopt
-import re
 import os
-import gzip
-import zipfile
-
-from lxml import etree
-from lxml import objectify
-from lxml import html
-import lxml
 
 import epub
 import iarchive
@@ -24,47 +16,61 @@ def usage():
     sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]")
     sys.stderr.write("  Output defaults to book_id.epub.")
 
+debug_output = False
 def main(argv):
-
-#     try:
-#         opts, args = getopt.getopt(argv, "hf:b",
-#                                    ["help", "food="])
-#     except getopt.GetoptError:
-#         usage()
-#         sys.exit(2)
-#     for opt, arg in opts:
-#         if opt in ("-h", "--help"):
-#             usage()
-#             sys.exit()
-#         elif opt == "-b":
-#             print "beautiful"
-#         elif opt in ("-f", "--food"):
-#             print "food: " + arg
-#     for name in args:
-#         print "arg: " + name
-
-#     if len(args) != 3:
-#         usage()
-#         sys.exit(-1)
-
-#     a = args[0]
-#     b = args[1]
-#     c = args[2]
-
-#     do_stuff(a, b, c)
-
-    if len(argv) != 2 and len(argv) != 3:
+    epub_out = None
+    import getopt
+    try:
+        opts, args = getopt.getopt(argv,
+                                   "dho:",
+                                   ["debug", "help", "outfile="])
+    except getopt.GetoptError:
         usage()
         sys.exit(-1)
-    book_id = argv[0]
-    book_path = argv[1]
-    if len(argv) == 3:
-        if argv[2] == '-':
-            epub_out = sys.stdout
-        else:
-            epub_out = argv[2]
+    for opt, arg in opts:
+        if opt in ('-h', '--help'):
+            usage()
+            sys.exit()
+        elif opt in ('-d', '--debug'):
+            debug_output = True
+        elif opt in ('-o', '--outfile'):
+            epub_out = arg
+    if len(args) == 0:
+        book_id = common.get_book_id()
+        if book_id is None:
+            print 'No args given and no book found in current directory'
+            usage()
+            sys.exit(-1)
+        book_path = '.'
+    elif len(args) == 1:
+        book_id = args[0]
+        if not os.path.exists(book_id):
+            print 'Only book_id arg given, and no corresponding book dir found'
+            usage()
+            sys.exit(-1)
+        book_path = book_id
+    elif len(args) == 2:
+        book_id = args[0]
+        book_path = args[1]
+    elif len(args) == 3:
+        if epub_out is not None:
+            print 'outfile found as 3rd argument, but outfile is already specified via -o'
+            usage()
+            sys.exit(-1)
+        book_id = args[0]
+        book_path = args[1]
+        epub_out = args[2]
     else:
+        print 'unrecognized extra arguments ' + args[3:]
+        usage()
+        sys.exit(-1)
+
+    if epub_out is None:
         epub_out = book_id + '.epub'
+
+# probably busted due to getopt
+#     if epub_out == '-':
+#         epub_out = sys.stdout
 
     iabook = iarchive.Book(book_id, book_path)
     ebook = epub.Book(epub_out)
