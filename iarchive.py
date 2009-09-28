@@ -19,6 +19,14 @@ class Book(object):
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
+        self.images_type = 'unknown'
+        if os.path.exists(os.path.join(book_path, book_id + '_jp2.zip')):
+            self.images_type = 'jp2.zip'
+        elif os.path.exists(os.path.join(book_path, book_id + '_tif.zip')):
+            self.images_type = 'tif.zip'
+#         else:
+#             raise Exception('Can\'t find book images')
+        
 
     def get_book_id(self):
         return self.book_id
@@ -73,11 +81,22 @@ class Book(object):
     def get_image(self, i, width=700, height=900,
                   quality=90,
                   region='{0.0,0.0},{1.0,1.0}',
-                  img_type='jpg'):
-        zipf = os.path.join(self.book_path,
-                            self.book_id + '_jp2.zip')
-        image_path = (self.book_id + '_jp2/' + self.book_id + '_'
-                      + str(i).zfill(4) + '.jp2')
+                  out_img_type='jpg'):
+#         debug()
+        if self.images_type == 'jp2.zip':
+            zipf = os.path.join(self.book_path,
+                                self.book_id + '_jp2.zip')
+            image_path = (self.book_id + '_jp2/' + self.book_id + '_'
+                          + str(i).zfill(4) + '.jp2')
+            in_img_type = 'jp2'
+        elif self.images_type == 'tif.zip':
+            zipf  = os.path.join(self.book_path,
+                                 self.book_id + '_tif.zip')
+            image_path = (self.book_id + '_tif/' + self.book_id + '_'
+                          + str(i).zfill(4) + '.tif')
+            in_img_type = 'tif'
+        else:
+            return None
         try:
             z = zipfile.ZipFile(zipf, 'r')
             info = z.getinfo(image_path) # for to check it exists
@@ -85,34 +104,50 @@ class Book(object):
         except KeyError:
             return None
         return image_from_zip(zipf, image_path,
-                              width, height, quality, region, img_type)
+                              width, height, quality, region,
+                              in_img_type, out_img_type)
 
 if not os.path.exists('/tmp/stdout.ppm'):
     os.symlink('/dev/stdout', '/tmp/stdout.ppm')
  
 # get python string with image data - from .jp2 image in zip
 def image_from_zip(zipf, image_path,
-                   width, height, quality, region, img_type):
+                   width, height, quality, region,
+                   in_img_type, out_img_type):
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
+    if region != '{0.0,0.0},{1.0,1.0}':
+        raise Exception('Um, only whole image grabbage supported 4 now')
 
-    if img_type == 'jpg':
-        output = os.popen('unzip -p ' + zipf + ' ' + image_path
-                      + ' | kdu_expand -region "' + region + '"'
-                      +   ' -reduce 2 '
-                      +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
-#                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
-                      + ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
-                      + ' | pnmtojpeg -quality ' + str(quality))
-    elif img_type == 'ppm':
-        output = os.popen('unzip -p ' + zipf + ' ' + image_path
-                      + ' | kdu_expand -region "' + region + '"'
-                      +   ' -reduce 2 '
-                      +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
-#                      + ' | pamscale -xyfit ' + str(width) + ' ' + str(height))
-                      + ' | pnmscale -xysize ' + str(width) + ' ' + str(height))
+    scale = ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
+#     scale = ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
+    if out_img_type == 'jpg':
+        cvt_to_out = ' | pnmtojpeg -quality ' + str(quality)
+    elif out_img_type == 'ppm':
+        cvt_to_out = ' | ppmtoppm'
     else:
-        raise 'unrecognized image type'
+        raise Exception('unrecognized out img type')
+    if in_img_type == 'jp2':
+        output = os.popen('unzip -p ' + zipf + ' ' + image_path
+                        + ' | kdu_expand -region "' + region + '"'
+                        +   ' -reduce 2 '
+                        +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
+                        + ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
+                        + scale
+                        + cvt_to_out)
+    elif in_img_type == 'tif':
+        import tempfile
+        t_handle, t_path = tempfile.mkstemp()
+#         t_handle.close()
+        output = os.popen('unzip -p ' + zipf + ' ' + image_path
+                        + ' > ' + t_path)
+        output.read()
+        output = os.popen('tifftopnm ' + t_path
+#                         + ' | pamcut <blah> '
+                        + scale
+                        + cvt_to_out)
+    else:
+        raise Exception('unrecognized in img type')
     return output.read()
 
 # ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
