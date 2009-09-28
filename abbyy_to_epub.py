@@ -77,7 +77,7 @@ def main(argv):
 #         epub_out = sys.stdout
 
     iabook = iarchive.Book(book_id, book_path)
-    ebook = epub.Book(epub_out, make_page_map=False)
+    ebook = epub.Book(epub_out, include_page_map=False)
 
     process_abbyy.process_book(iabook, ebook)
 

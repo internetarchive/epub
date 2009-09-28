@@ -10,8 +10,8 @@ from datetime import datetime
 from debug import debug, debugging
 
 class Book(object):
-    def __init__(self, epub_out, make_page_map=False):
-        self.make_page_map = make_page_map
+    def __init__(self, epub_out, include_page_map=False):
+        self.include_page_map = include_page_map
         self.dt = datetime.now()
         self.z = zipfile.ZipFile(epub_out, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
@@ -44,11 +44,14 @@ class Book(object):
               'href':'page-template.xpgt',
               'media-type':'application/vnd.adobe-page-template+xml'
               },
+            ]
+        if self.include_page_map:
+            self.manifest_items.append(
             { 'id':'page-map',
               'href':'page-map.xml',
               'media-type':'application/oebps-page-map+xml'
-              },
-            ]
+              }
+            )
         self.spine_items = []
         self.guide_items = []
         self.page_map_items = []
@@ -103,13 +106,14 @@ class Book(object):
                             self.manifest_items,
                             self.spine_items,
                             self.guide_items,
+                            self.include_page_map,
                             self.cover_id)
         self.add('OEBPS/content.opf', tree_str)
         
         tree_str = make_ncx(self.navpoints)
         self.add('OEBPS/toc.ncx', tree_str)
 
-        if self.make_page_map:
+        if self.include_page_map:
             tree_str = make_page_map(self.page_map_items)
             self.add('OEBPS/page-map.xml', tree_str)
 
@@ -131,6 +135,7 @@ def make_opf(meta_info_items,
              manifest_items,
              spine_items,
              guide_items,
+             include_page_map,
              cover_id=None):
     root = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
@@ -152,7 +157,7 @@ def make_opf(meta_info_items,
 #                          content=cover_id)
     if len(spine_items) > 0:
         spine_attrs = { 'toc':'ncx' }
-        if self.make_page_map:
+        if include_page_map:
             spine_attrs['page-map'] = 'page-map'
         spine = etree.SubElement(root, 'spine',
                                  spine_attrs)
