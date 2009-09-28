@@ -10,7 +10,8 @@ from datetime import datetime
 from debug import debug, debugging
 
 class Book(object):
-    def __init__(self, epub_out):
+    def __init__(self, epub_out, make_page_map=False):
+        self.make_page_map = make_page_map
         self.dt = datetime.now()
         self.z = zipfile.ZipFile(epub_out, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
@@ -108,8 +109,9 @@ class Book(object):
         tree_str = make_ncx(self.navpoints)
         self.add('OEBPS/toc.ncx', tree_str)
 
-        tree_str = make_page_map(self.page_map_items)
-        self.add('OEBPS/page-map.xml', tree_str)
+        if self.make_page_map:
+            tree_str = make_page_map(self.page_map_items)
+            self.add('OEBPS/page-map.xml', tree_str)
 
         self.z.close()
 
@@ -148,9 +150,12 @@ def make_opf(meta_info_items,
 #     if cover_id is not None:
 #         etree.SubElement(manifest, 'meta', name='cover',
 #                          content=cover_id)
-    if len(spine_items) > 0:    
+    if len(spine_items) > 0:
+        spine_attrs = { 'toc':'ncx' }
+        if self.make_page_map:
+            spine_attrs['page-map'] = 'page-map'
         spine = etree.SubElement(root, 'spine',
-        { 'toc':'ncx', 'page-map':'page-map' })
+                                 spine_attrs)
     for item in spine_items:
         etree.SubElement(spine, 'itemref', item)
     if len(guide_items) > 0:
