@@ -20,7 +20,6 @@ def usage():
     sys.stderr.write("  -d calls epubcheck-1.0.3.jar to check output.\n")
     sys.stderr.write("  (epubcheck jar is assumed to be in the script directory)\n")
 
-debug_output = False
 def main(argv):
     epub_out = None
     import getopt
@@ -31,6 +30,7 @@ def main(argv):
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
+    debug_output = False
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
