@@ -149,21 +149,6 @@ def scan_pages(context, scandata, iabook):
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
     for event, page in context:
-        page_scandata = iabook.get_page_data(i)
-        def include_page(page):
-            if page is None:
-                return False
-            add = page.find('addToAccessFormats')
-            if add is None:
-                add = page.addToAccessFormats
-            if add is not None and add.text == 'true':
-                return True
-            else:
-                return False
-        if not include_page(page_scandata):
-            i += 1
-            continue
-
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
         width = orig_width / s
@@ -173,7 +158,7 @@ def scan_pages(context, scandata, iabook):
 
         page_image = None
 
-        image_str = iabook.get_image(i, width, height, out_img_type='ppm')
+        image_str = iabook.get_page_image(i, width, height, out_img_type='ppm')
         if image_str is not None:
             page_image = Image.open(StringIO.StringIO(image_str))
             (nw, nh) = page_image.size
@@ -263,7 +248,7 @@ def scan_pages(context, scandata, iabook):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
         
         image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
-        print i
+        print 'page index: ' + str(i)
         page.clear()
         i += 1
     return None

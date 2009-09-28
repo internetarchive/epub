@@ -54,21 +54,35 @@ class Book(object):
                 scandata_str = z.read('scandata.xml')
                 z.close()
                 self.scandata = objectify.fromstring(scandata_str)
-                scandata_pages = self.scandata.pageData.page
+                self.scandata_pages = self.scandata.pageData.page
             else:
                 self.scandata = objectify.parse(self.
                                                 get_scandata_path()).getroot()
-                scandata_pages = self.scandata.xpath('/book/pageData/page')
+                self.scandata_pages = self.scandata.xpath('/book/pageData/page')
             self.leaves = {}
-            for page in scandata_pages:
+            for page in self.scandata_pages:
                 self.leaves[int(page.get('leafNum'))] = page
         return self.scandata
 
-    def get_page_data(self, leaf):
+    def get_scandata_pages(self):
+        self.get_scandata()
+        return self.scandata_pages
+
+    def get_page_scandata(self, i):
+        self.get_scandata()
+        return self.scandata_pages[int(i)]
+#     scandata_pages = scandata.xpath('/book/pageData/page')
+#     if scandata_pages is None or len(scandata_pages) == 0:
+#         scandata_pages = scandata.pageData.page
+
+    def get_page_data_from_leafno(self, leaf):
         if leaf in self.leaves:
             return self.leaves[leaf]
         else:
             return None
+
+    def get_leafno_for_page(self, i):
+        return int(self.get_page_scandata(i).get('leafNum'))
 
     def get_metadata_path(self):
         return os.path.join(self.book_path, self.book_id + '_meta.xml')
@@ -78,22 +92,24 @@ class Book(object):
                                       self.book_id + '_abbyy.gz'), 'rb')
 
     # get python string with image data - from .jp2 image in zip
-    def get_image(self, i, width=700, height=900,
-                  quality=90,
-                  region='{0.0,0.0},{1.0,1.0}',
-                  out_img_type='jpg'):
+    # finds appropriate leaf number for supplied page index
+    def get_page_image(self, i, width=700, height=900,
+                       quality=90,
+                       region='{0.0,0.0},{1.0,1.0}',
+                       out_img_type='jpg'):
+        leafno = self.get_leafno_for_page(i)
 #         debug()
         if self.images_type == 'jp2.zip':
             zipf = os.path.join(self.book_path,
                                 self.book_id + '_jp2.zip')
             image_path = (self.book_id + '_jp2/' + self.book_id + '_'
-                          + str(i).zfill(4) + '.jp2')
+                          + str(leafno).zfill(4) + '.jp2')
             in_img_type = 'jp2'
         elif self.images_type == 'tif.zip':
             zipf  = os.path.join(self.book_path,
                                  self.book_id + '_tif.zip')
             image_path = (self.book_id + '_tif/' + self.book_id + '_'
-                          + str(i).zfill(4) + '.tif')
+                          + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
         else:
             return None
