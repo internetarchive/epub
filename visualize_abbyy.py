@@ -20,7 +20,7 @@ s = scale
 from debug import debug, debugging, assert_d
 
 def usage():
-    print 'usage: visualize_abbyy.py abbyy.xml scandata.xml'
+    print 'usage: visualize_abbyy.py'
 
 def main(argv):
     if not os.path.isdir('./' + outdir+ '/'):
@@ -140,12 +140,15 @@ import font
 def scan_pages(context, scandata, iabook):
     book_id = iabook.get_book_id()
     scandata_pages = scandata.pageData.page
-    dpi = int(scandata.bookData.dpi.text)
+    try:
+        # dpi isn't always there
+        dpi = int(scandata.bookData.dpi.text)
+    except AttributeError:
+        dpi = 300
     i = 0
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
     for event, page in context:
-        print i
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
         width = orig_width / s
@@ -153,20 +156,22 @@ def scan_pages(context, scandata, iabook):
         
         image = Image.new('RGB', (width, height))
 
-#         zipf = book_id + '_jp2.zip'
-#         image_path = book_id + '_jp2/' + book_id + '_' + str(i).zfill(4) + '.jp2'
         page_image = None
-#        page_image = Image.open(StringIO.StringIO(get_png(zipf, image_path, width, height)))
 
-        image_str = iabook.get_image(i, width, height, img_type='ppm')
+        image_str = iabook.get_page_image(i, width, height, out_img_type='ppm')
         if image_str is not None:
             page_image = Image.open(StringIO.StringIO(image_str))
-            
             (nw, nh) = page_image.size
             if nw != width or nh != height:
                 page_image = page_image.resize((width, height))
 #        image.paste(page_image, None)
-            image = Image.blend(image, page_image, .2)
+            try:
+                image = Image.blend(image, page_image, .2)
+            except ValueError:
+                print 'blending - images didn\'t match'
+                debug()
+                pass
+                
         draw = ImageDraw.Draw(image)
 
         for block in page:
@@ -243,17 +248,22 @@ def scan_pages(context, scandata, iabook):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
         
         image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
-        print i
+        print 'page index: ' + str(i)
         page.clear()
         i += 1
     return None
 
 def include_page(page):
+    if page is None:
+        return False
     add = page.find('addToAccessFormats')
+    if add is None:
+        add = page.addToAccessFormats
     if add is not None and add.text == 'true':
         return True
     else:
         return False
+
 
 
 if __name__ == '__main__':

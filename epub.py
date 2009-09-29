@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 from lxml import etree
 from lxml import objectify
@@ -11,7 +10,9 @@ from datetime import datetime
 from debug import debug, debugging
 
 class Book(object):
-    def __init__(self, epub_out, content_dir='OEBPS/'):
+
+    def __init__(self, epub_out, content_dir='OEBPS/', include_page_map=False):
+        self.include_page_map = include_page_map
         self.dt = datetime.now()
         self.z = zipfile.ZipFile(epub_out, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
@@ -41,8 +42,16 @@ class Book(object):
               'media-type':'text/css'
               },
             ]
+        if self.include_page_map:
+            self.manifest_items.append(
+            { 'id':'page-map',
+              'href':'page-map.xml',
+              'media-type':'application/oebps-page-map+xml'
+              }
+            )
         self.spine_items = []
         self.guide_items = []
+        self.page_map_items = []
         self.navpoints = []
         self.cover_id = None
 
@@ -75,6 +84,11 @@ class Book(object):
         # id and playOrder are generated.
         self.navpoints.append(info)
 
+    def add_page_map_item(self, name, href):
+        # e.g. name="xii", page="intro.xml#xii"
+        # -or- name="42", page="part0042.xhtml"
+        self.page_map_items.append({ 'name':str(name), 'href':href })
+
     def add(self, path, content_str, deflate=True):
         info = zipfile.ZipInfo(path)
         info.compress_type = (zipfile.ZIP_DEFLATED if deflate
@@ -89,11 +103,16 @@ class Book(object):
                             self.manifest_items,
                             self.spine_items,
                             self.guide_items,
+                            self.include_page_map,
                             self.cover_id)
         self.add(self.content_dir + 'content.opf', tree_str)
 
         tree_str = make_ncx(self.navpoints)
         self.add(self.content_dir + 'toc.ncx', tree_str)
+
+        if self.include_page_map:
+            tree_str = make_page_map(self.page_map_items)
+            self.add(self.content_dir + 'page-map.xml', tree_str)
 
         self.z.close()
 
@@ -113,6 +132,7 @@ def make_opf(meta_info_items,
              manifest_items,
              spine_items,
              guide_items,
+             include_page_map,
              cover_id=None):
     root = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
@@ -130,14 +150,25 @@ def make_opf(meta_info_items,
 #     if cover_id is not None:
 #         etree.SubElement(manifest, 'meta', name='cover',
 #                          content=cover_id)
-    if len(spine_items) > 0:    
-        spine = etree.SubElement(root, 'spine', toc='ncx')
+    if len(spine_items) > 0:
+        spine_attrs = { 'toc':'ncx' }
+        if include_page_map:
+            spine_attrs['page-map'] = 'page-map'
+        spine = etree.SubElement(root, 'spine',
+                                 spine_attrs)
     for item in spine_items:
         etree.SubElement(spine, 'itemref', item)
     if len(guide_items) > 0:
         guide = etree.SubElement(root, 'guide')
     for item in guide_items:
         etree.SubElement(guide, 'reference', item)
+    return common.tree_to_str(root)
+
+def make_page_map(page_map_items):
+    root = etree.Element('page-map',
+                         xmlns='http://www.idpf.org/2007/opf')
+    for item in page_map_items:
+        etree.SubElement(root, 'page', item)
     return common.tree_to_str(root)
 
 navpoints = [

@@ -82,9 +82,6 @@ def process_book(iabook, ebook):
 #     scanLog = scandata.find('scanLog')
 #     if scanLog is None:
 #         scanLog = scandata.scanLog
-    scandata_pages = scandata.xpath('/book/pageData/page')
-    if scandata_pages is None or len(scandata_pages) == 0:
-        scandata_pages = scandata.pageData.page
 
     paragraphs = []
     i = 0
@@ -95,7 +92,7 @@ def process_book(iabook, ebook):
                               tag=aby_ns+'page',
                               resolve_entities=False)
     found_title = False
-    for page_scandata in scandata_pages: #scan thru to make sure title exists
+    for page_scandata in iabook.get_scandata_pages(): #confirm title exists
         t = page_scandata.pageType.text
         if t == 'Title' or t == 'Title Page':
             found_title = True
@@ -103,13 +100,13 @@ def process_book(iabook, ebook):
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
-        page_scandata = iabook.get_page_data(i)
-        def include_page(page):
-            if page is None:
+        page_scandata = iabook.get_page_scandata(i)
+        def include_page(page_scandata):
+            if page_scandata is None:
                 return False
-            add = page.find('addToAccessFormats')
+            add = page_scandata.find('addToAccessFormats')
             if add is None:
-                add = page.addToAccessFormats
+                add = page_scandata.addToAccessFormats
             if add is not None and add.text == 'true':
                 return True
             else:
@@ -253,38 +250,41 @@ def process_book(iabook, ebook):
         if len(paragraphs) > 100:
             # make a chunk!
             part_str = 'part' + str(part_number).zfill(4)
+            part_str_href = part_str + '.html'
             tree = make_html('sample title', paragraphs)
             ebook.add_content({ 'id':part_str,
-                                'href':part_str + '.html',
+                                'href':part_str_href,
                                 'media-type':'application/xhtml+xml' },
                               common.tree_to_str(tree, xml_declaration=False))
             ebook.add_spine_item({ 'idref':part_str })
+            ebook.add_page_map_item(i, part_str_href)
             if part_number == 0:
-                ebook.add_guide_item( { 'href':part_str + '.html',
+                ebook.add_guide_item( { 'href':part_str_href,
                                         'type':'text',
                                         'title':'Book' } )
                 ebook.add_navpoint({ 'text':'Pages',
-                                     'content':part_str + '.html' })
+                                     'content':part_str_href })
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
     if len(paragraphs) > 100:
         part_str = 'part' + str(part_number).zfill(4)
+        part_str_href = part_str + '.html'
         tree = make_html('sample title', paragraphs)
         ebook.add_content({ 'id':part_str,
-                            'href':part_str + '.html',
+                            'href':part_str_href,
                             'media-type':'application/xhtml+xml' },
                           common.tree_to_str(tree, xml_declaration=False))
         ebook.add_spine_item({ 'idref':part_str })
         if part_number == 0:
-            book.add_guide_item( { 'href':part_str + '.html',
+            book.add_guide_item( { 'href':part_str_href,
                                     'type':'text',
                                     'title':'Book' } )
             ebook.add_navpoint({ 'text':'Pages',
-                                 'content':part_str + 'html' })
+                                 'content':part_str_href })
 
 def make_html_page_image(i, iabook, ebook):
-    image = iabook.get_image(i, width=600, height=800, quality=90)
+    image = iabook.get_page_image(i, width=600, height=800, quality=90)
     leaf_id = 'leaf' + str(i).zfill(4)
     leaf_image_id = 'leaf-image' + str(i).zfill(4)
     ebook.add_content({ 'id':leaf_image_id,
