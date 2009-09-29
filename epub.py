@@ -29,7 +29,7 @@ class Book(object):
         # http://www.adobe.com/devnet/digitalpublishing/epubs/EPUBBestPractices-1_0_3.epub
         # ... link from
         # http://www.adobe.com/devnet/digitalpublishing/
-        self.add('OEBPS/page-template.xpgt', make_ade_stylesheet())
+        #self.add(self.content_dir + 'page-template.xpgt', make_ade_stylesheet())
 
         self.manifest_items = [
             { 'id':'ncx',
@@ -39,10 +39,6 @@ class Book(object):
             { 'id':'css',
               'href':'stylesheet.css',
               'media-type':'text/css'
-              },
-            { 'id':'ade-page-template',
-              'href':'page-template.xpgt',
-              'media-type':'application/vnd.adobe-page-template+xml'
               },
             ]
         self.spine_items = []
