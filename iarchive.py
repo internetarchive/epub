@@ -135,8 +135,8 @@ def image_from_zip(zipf, image_path,
     if region != '{0.0,0.0},{1.0,1.0}':
         raise Exception('Um, only whole image grabbage supported 4 now')
 
-    scale = ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
-#     scale = ' | pamscale -xyfit ' + str(width) + ' ' + str(height)
+    scale = ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
+#     scale = ' | pamscale -quiet -xyfit ' + str(width) + ' ' + str(height)
     if out_img_type == 'jpg':
         cvt_to_out = ' | pnmtojpeg -quality ' + str(quality)
     elif out_img_type == 'ppm':
@@ -148,7 +148,8 @@ def image_from_zip(zipf, image_path,
                         + ' | kdu_expand -region "' + region + '"'
                         +   ' -reduce 2 '
                         +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
-                        + ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
+                        + ' | pnmscale -quiet '
+                        +   ' -xysize ' + str(width) + ' ' + str(height)
                         + scale
                         + cvt_to_out)
     elif in_img_type == 'tif':
@@ -166,7 +167,7 @@ def image_from_zip(zipf, image_path,
         raise Exception('unrecognized in img type')
     return output.read()
 
-# ' | pnmscale -xysize ' + str(width) + ' ' + str(height)
+# ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
 
 # Adapted from http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 def iso_639_23_to_iso_639_1(marc_code):
