@@ -140,7 +140,7 @@ def image_from_zip(zipf, image_path,
     if out_img_type == 'jpg':
         cvt_to_out = ' | pnmtojpeg -quality ' + str(quality)
     elif out_img_type == 'ppm':
-        cvt_to_out = ' | ppmtoppm'
+        cvt_to_out = ' | ppmtoppm -quiet'
     else:
         raise Exception('unrecognized out img type')
     if in_img_type == 'jp2':
@@ -158,7 +158,7 @@ def image_from_zip(zipf, image_path,
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                         + ' > ' + t_path)
         output.read()
-        output = os.popen('tifftopnm ' + t_path
+        output = os.popen('tifftopnm -quiet ' + t_path
 #                         + ' | pamcut <blah> '
                         + scale
                         + cvt_to_out)
