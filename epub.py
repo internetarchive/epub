@@ -11,16 +11,16 @@ from datetime import datetime
 from debug import debug, debugging
 
 class Book(object):
-    def __init__(self, epub_out):
+    def __init__(self, epub_out, content_dir='OEBPS/'):
         self.dt = datetime.now()
         self.z = zipfile.ZipFile(epub_out, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
-
-        tree_str = make_container_info()
+        self.content_dir = content_dir
+        tree_str = make_container_info(content_dir)
         self.add('META-INF/container.xml', tree_str)
 
         # style sheet
-        self.add('OEBPS/stylesheet.css', make_stylesheet())
+        self.add(self.content_dir + 'stylesheet.css', make_stylesheet())
 
         # This file enables Adobe Digital Editions features,
         # if referenced by a content file.
@@ -55,7 +55,7 @@ class Book(object):
         #                'href':'title.html',
         #                'media-type':'application/xhtml+xml' },
         self.manifest_items.append(info)
-        self.add('OEBPS/'+info['href'], content)
+        self.add(self.content_dir + ''+info['href'], content)
 
     def add_cover_id(self, cover_id):
         # used for meta tag to flag
@@ -94,20 +94,20 @@ class Book(object):
                             self.spine_items,
                             self.guide_items,
                             self.cover_id)
-        self.add('OEBPS/content.opf', tree_str)
-        
+        self.add(self.content_dir + 'content.opf', tree_str)
+
         tree_str = make_ncx(self.navpoints)
-        self.add('OEBPS/toc.ncx', tree_str)
+        self.add(self.content_dir + 'toc.ncx', tree_str)
 
         self.z.close()
 
-def make_container_info():
+def make_container_info(content_dir='OEBPS/'):
     root = etree.Element('container',
                      version='1.0',
                      xmlns='urn:oasis:names:tc:opendocument:xmlns:container')
     rootfiles = etree.SubElement(root, 'rootfiles')
     etree.SubElement(rootfiles, 'rootfile',
-                     { 'full-path' : 'OEBPS/content.opf',
+                     { 'full-path' : content_dir + 'content.opf',
                        'media-type' : 'application/oebps-package+xml' } )
     return common.tree_to_str(root)
 
