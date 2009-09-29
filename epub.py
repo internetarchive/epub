@@ -121,9 +121,7 @@ def make_opf(meta_info_items,
                          nsmap={'dc' : dc })
     metadata = etree.SubElement(root, 'metadata')
     for item in meta_info_items:
-        el = etree.SubElement(metadata, item['item'], item['atts']
-                              if 'atts' in item
-                              else None)
+        el = etree.SubElement(metadata, item['item'], item.get('atts'))
         if 'text' in item:
             el.text = item['text']
     manifest = etree.SubElement(root, 'manifest')
