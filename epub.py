@@ -41,6 +41,10 @@ class Book(object):
               'href':'stylesheet.css',
               'media-type':'text/css'
               },
+#             { 'id':'ade-page-template',
+#               'href':'page-template.xpgt',
+#               'media-type':'application/vnd.adobe-page-template+xml'
+#               },
             ]
         if self.include_page_map:
             self.manifest_items.append(
