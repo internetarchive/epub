@@ -1,0 +1,10 @@
+To do:
+images (cf. best practices?)
+etc.
+
+Maybe someday:
+
+- Small-caps font emulation
+- Auto portrait/landscape scaling/rotation of images
+- fix 'sample title' in process_abbyy
+- Add code to iarchive.py to make sense of page numbers, e.g. unnumbered start pages, pages that start at '2', etc.  Romance is an initial example.  Also pageNumBox
