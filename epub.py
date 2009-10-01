@@ -17,6 +17,8 @@ class Book(object):
         self.z = zipfile.ZipFile(epub_out, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
         self.content_dir = content_dir
+        self.nav_number = 1
+
         tree_str = make_container_info(content_dir)
         self.add('META-INF/container.xml', tree_str)
 
@@ -25,7 +27,6 @@ class Book(object):
 
         # This file enables Adobe Digital Editions features,
         # if referenced by a content file.
-        #
         # Source:
         # http://www.adobe.com/devnet/digitalpublishing/epubs/EPUBBestPractices-1_0_3.epub
         # ... link from
@@ -55,7 +56,7 @@ class Book(object):
             )
         self.spine_items = []
         self.guide_items = []
-        self.page_map_items = []
+        self.page_items = []
         self.navpoints = []
         self.cover_id = None
 
@@ -86,12 +87,16 @@ class Book(object):
         #                'content':'title.html' }
         # navpoints added thru this interface are sequential -
         # id and playOrder are generated.
+        info['playOrder'] = self.nav_number
         self.navpoints.append(info)
+        self.nav_number += 1
 
-    def add_page_map_item(self, name, href):
-        # e.g. name="xii", page="intro.xml#xii"
-        # -or- name="42", page="part0042.xhtml"
-        self.page_map_items.append({ 'name':str(name), 'href':href })
+    def add_page_item(self, name, value, href, type='normal'):
+        # name='iii', value='3', href='part032.html#pgiii', type='front'
+        # name='3', value='3', href='part042.html#pg3', type='normal'
+        self.page_items.append({ 'name':name, 'value':value, 'href':href,
+                                 'type':type, 'playOrder':self.nav_number })
+        self.nav_number += 1
 
     def add(self, path, content_str, deflate=True):
         info = zipfile.ZipInfo(path)
@@ -111,11 +116,11 @@ class Book(object):
                             self.cover_id)
         self.add(self.content_dir + 'content.opf', tree_str)
 
-        tree_str = make_ncx(self.navpoints)
+        tree_str = make_ncx(self.navpoints, self.page_items)
         self.add(self.content_dir + 'toc.ncx', tree_str)
 
         if self.include_page_map:
-            tree_str = make_page_map(self.page_map_items)
+            tree_str = make_page_map(self.page_items)
             self.add(self.content_dir + 'page-map.xml', tree_str)
 
         self.z.close()
@@ -168,18 +173,14 @@ def make_opf(meta_info_items,
         etree.SubElement(guide, 'reference', item)
     return common.tree_to_str(root)
 
-def make_page_map(page_map_items):
+def make_page_map(page_items):
     root = etree.Element('page-map',
                          xmlns='http://www.idpf.org/2007/opf')
     for item in page_map_items:
-        etree.SubElement(root, 'page', item)
+        etree.SubElement(root, 'page', name=item['name'], href=item['href'])
     return common.tree_to_str(root)
 
-navpoints = [
-    { 'id':'navpoint-1', 'playOrder':'1',
-      'text':'Book', 'content':'book.html' },
-    ]
-def make_ncx(navpoints):
+def make_ncx(navpoints, page_items):
     import StringIO
     xml = """<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
@@ -199,16 +200,35 @@ def make_ncx(navpoints):
         etree.SubElement(head, 'meta', item)
     doctitle = etree.SubElement(root, 'docTitle')
     etree.SubElement(doctitle, 'text').text = 'Hello World';
+
+    # navMap element
     navmap = etree.SubElement(root, 'navMap')
-    nav_number = 0
     for item in navpoints:
         navpoint = etree.SubElement(navmap, 'navPoint',
-                                    id=('navpoint' + str(nav_number)),
-                                    playOrder=str(nav_number))
+                                    { 'id':'navpoint-' + str(item['playOrder']),
+                                      'playOrder':str(item['playOrder']) })
         navlabel = etree.SubElement(navpoint, 'navLabel')
         etree.SubElement(navlabel, 'text').text = item['text']
+         # XXX 'content' should be 'href'
         etree.SubElement(navpoint, 'content', src=item['content'])
-        nav_number = nav_number + 1
+
+    # pageList element
+    if len(page_items) > 0:
+        pagelist = etree.SubElement(root, 'pageList',
+                                    { 'id':'page-mapping', 'class':'pagelist' })
+        navlabel = etree.SubElement(pagelist, 'navLabel')
+        text = etree.SubElement(navlabel, 'text')
+        text.text = 'Pages'
+        for item in page_items:
+            id = 'page-' + item['name']
+            pagetarget = etree.SubElement(pagelist, 'pageTarget',
+                                          { 'id':id, 'value':str(item['value']),
+                                            'type':item['type'],
+                                            'playOrder':item['playOrder'] })
+            navlabel = etree.SubElement(pageTarget, 'navLabel')
+            etree.SubElement(navlabel, 'text').text = 'Page ' + item['name']
+            etree.SubElement(pagetarget, 'content', src=item['href'])
+
     tree = etree.ElementTree(root)
     return common.tree_to_str(tree)
 
