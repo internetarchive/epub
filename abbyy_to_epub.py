@@ -26,17 +26,21 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,
                                    "dho:",
-                                   ["debug", "help", "outfile="])
+                                   ["debug", "help", "outfile=",
+                                    "page-map"])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
     debug_output = False
+    include_page_map = False
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
             sys.exit()
         elif opt in ('-d', '--debug'):
             debug_output = True
+        elif opt in ('--page-map'):
+            include_page_map = True
         elif opt in ('-o', '--outfile'):
             epub_out = arg
     if len(args) == 0:
@@ -77,7 +81,7 @@ def main(argv):
 #         epub_out = sys.stdout
 
     iabook = iarchive.Book(book_id, book_path)
-    ebook = epub.Book(epub_out, include_page_map=False)
+    ebook = epub.Book(epub_out, include_page_map=include_page_map)
 
     process_abbyy.process_book(iabook, ebook)
 
