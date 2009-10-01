@@ -101,6 +101,16 @@ def process_book(iabook, ebook):
     before_title_page = found_title
     for event, page in context:
         page_scandata = iabook.get_page_scandata(i)
+
+        pageno = page_scandata.find('pageNumber')
+        if pageno:
+            part_str = 'part' + str(part_number).zfill(4)
+            id = 'page-' + str(pageno)
+            page_mark_href = part_str + '.html#' + id
+            pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
+            paragraphs.append(pdiv)
+            ebook.add_page_item(str(pageno), pageno, page_mark_href)
+
         def include_page(page_scandata):
             if page_scandata is None:
                 return False
@@ -257,7 +267,6 @@ def process_book(iabook, ebook):
                                 'media-type':'application/xhtml+xml' },
                               common.tree_to_str(tree, xml_declaration=False))
             ebook.add_spine_item({ 'idref':part_str })
-            ebook.add_page_map_item(i, part_str_href)
             if part_number == 0:
                 ebook.add_guide_item( { 'href':part_str_href,
                                         'type':'text',

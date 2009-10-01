@@ -176,7 +176,7 @@ def make_opf(meta_info_items,
 def make_page_map(page_items):
     root = etree.Element('page-map',
                          xmlns='http://www.idpf.org/2007/opf')
-    for item in page_map_items:
+    for item in page_items:
         etree.SubElement(root, 'page', name=item['name'], href=item['href'])
     return common.tree_to_str(root)
 
@@ -224,8 +224,8 @@ def make_ncx(navpoints, page_items):
             pagetarget = etree.SubElement(pagelist, 'pageTarget',
                                           { 'id':id, 'value':str(item['value']),
                                             'type':item['type'],
-                                            'playOrder':item['playOrder'] })
-            navlabel = etree.SubElement(pageTarget, 'navLabel')
+                                            'playOrder':str(item['playOrder']) })
+            navlabel = etree.SubElement(pagetarget, 'navLabel')
             etree.SubElement(navlabel, 'text').text = 'Page ' + item['name']
             etree.SubElement(pagetarget, 'content', src=item['href'])
 
