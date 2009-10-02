@@ -146,8 +146,7 @@ def process_book(iabook, ebook):
                                     'media-type':'application/xhtml+xml' },
                                   common.tree_to_str(tree,
                                                      xml_declaration=False))
-                ebook.add_spine_item({ 'idref':'intro' })
-
+                ebook.add_spine_item({ 'idref':'intro', 'linear':'no' })
             cover_number += 1
 
         elif page_type == 'title' or page_type == 'title page':
@@ -279,7 +278,7 @@ def process_book(iabook, ebook):
     if len(paragraphs) > 100:
         part_str = 'part' + str(part_number).zfill(4)
         part_str_href = part_str + '.html'
-        tree = make_html('sample title', paragraphs)
+        tree = make_html('Book part ' + str(part_number), paragraphs)
         ebook.add_content({ 'id':part_str,
                             'href':part_str_href,
                             'media-type':'application/xhtml+xml' },
