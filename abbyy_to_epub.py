@@ -33,6 +33,7 @@ def main(argv):
         sys.exit(-1)
     debug_output = False
     include_page_map = False
+    make_daisy = False
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
@@ -41,6 +42,8 @@ def main(argv):
             debug_output = True
         elif opt in ('--page-map'):
             include_page_map = True
+        elif opt in ('--daisy'):
+            make_daisy = True
         elif opt in ('-o', '--outfile'):
             epub_out = arg
     if len(args) == 0:
@@ -74,18 +77,21 @@ def main(argv):
         sys.exit(-1)
 
     if epub_out is None:
-        epub_out = book_id + '.epub'
-
-# probably busted due to getopt
-#     if epub_out == '-':
-#         epub_out = sys.stdout
+        if make_daisy:
+            epub_out = book_id + '_daisy.zip'
+        else:
+            epub_out = book_id + '.epub'
 
     iabook = iarchive.Book(book_id, book_path)
-    ebook = epub.Book(epub_out, include_page_map=include_page_map)
+    if make_daisy:
+        ebook = daisy.Book(epub_out)
+        daisyfy_abbyy.process_book(iabook, ebook)
+        meta_info_items = daisyfy_abbyy.get_meta_items(iabook)
+    else:
+        ebook = epub.Book(epub_out, include_page_map=include_page_map)
+        process_abbyy.process_book(iabook, ebook)
+        meta_info_items = process_abbyy.get_meta_items(iabook)
 
-    process_abbyy.process_book(iabook, ebook)
-
-    meta_info_items = process_abbyy.get_meta_items(iabook)
     ebook.finish(meta_info_items)
 
     if debug_output:
