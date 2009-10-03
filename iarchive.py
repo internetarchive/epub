@@ -84,8 +84,17 @@ class Book(object):
     def get_leafno_for_page(self, i):
         return int(self.get_page_scandata(i).get('leafNum'))
 
-    def get_metadata_path(self):
-        return os.path.join(self.book_path, self.book_id + '_meta.xml')
+    def get_metadata(self):
+        md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
+        md = objectify.parse(md_path).getroot()
+        result = {}
+        for el in md.iterchildren():
+            if el.tag == 'language':
+                result_text = iso_639_23_to_iso_639_1(el.text)
+            else:
+                result_text = el.text
+            result[el.tag] = result_text
+        return result
 
     def get_abbyy(self):
         return gzip.open(os.path.join(self.book_path,

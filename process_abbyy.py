@@ -69,7 +69,6 @@ def get_meta_items(iabook):
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
-    metadata = objectify.parse(iabook.get_metadata_path()).getroot()
     aby_file = iabook.get_abbyy()
 
     bookData = scandata.find('bookData')

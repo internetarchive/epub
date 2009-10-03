@@ -6,6 +6,8 @@ import getopt
 import os
 
 import epub
+import daisy
+import daisyfy_abbyy
 import iarchive
 import process_abbyy
 import common
@@ -27,7 +29,7 @@ def main(argv):
         opts, args = getopt.getopt(argv,
                                    "dho:",
                                    ["debug", "help", "outfile=",
-                                    "page-map"])
+                                    "page-map", "daisy"])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -45,7 +47,7 @@ def main(argv):
         elif opt in ('--daisy'):
             make_daisy = True
         elif opt in ('-o', '--outfile'):
-            epub_out = arg
+            out_name = arg
     if len(args) == 0:
         book_id = common.get_book_id()
         if book_id is None:
@@ -64,39 +66,38 @@ def main(argv):
         book_id = args[0]
         book_path = args[1]
     elif len(args) == 3:
-        if epub_out is not None:
+        if out_name is not None:
             print 'outfile found as 3rd argument, but outfile is already specified via -o'
             usage()
             sys.exit(-1)
         book_id = args[0]
         book_path = args[1]
-        epub_out = args[2]
+        out_name = args[2]
     else:
         print 'unrecognized extra arguments ' + args[3:]
         usage()
         sys.exit(-1)
 
-    if epub_out is None:
+    if out_name is None:
         if make_daisy:
-            epub_out = book_id + '_daisy.zip'
+            out_name = book_id + '_daisy.zip'
         else:
-            epub_out = book_id + '.epub'
+            out_name = book_id + '.epub'
 
     iabook = iarchive.Book(book_id, book_path)
     if make_daisy:
-        ebook = daisy.Book(epub_out)
+        ebook = daisy.Book(out_name, book_id=book_id)
         daisyfy_abbyy.process_book(iabook, ebook)
-        meta_info_items = daisyfy_abbyy.get_meta_items(iabook)
     else:
-        ebook = epub.Book(epub_out, include_page_map=include_page_map)
+        ebook = epub.Book(out_name, include_page_map=include_page_map)
         process_abbyy.process_book(iabook, ebook)
         meta_info_items = process_abbyy.get_meta_items(iabook)
 
-    ebook.finish(meta_info_items)
+    ebook.finish(iabook.get_metadata())
 
     if debug_output:
         epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
-        output = os.popen('java -jar ' + epubcheck + ' ' + epub_out)
+        output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
         print output.read()
 
 if __name__ == '__main__':

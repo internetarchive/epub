@@ -6,15 +6,18 @@ from lxml import objectify
 import common
 import zipfile
 from datetime import datetime
+import os
+import sys
+import StringIO
 
 from debug import debug, debugging
 
 class Book(object):
 
-    def __init__(self, epub_out, content_dir='OEBPS/', include_page_map=False):
+    def __init__(self, out_name, content_dir='OEBPS/', include_page_map=False):
         self.include_page_map = include_page_map
         self.dt = datetime.now()
-        self.z = zipfile.ZipFile(epub_out, 'w')
+        self.z = zipfile.ZipFile(out_name, 'w')
         self.add('mimetype', 'application/epub+zip', deflate=False)
         self.content_dir = content_dir
         self.nav_number = 1
@@ -181,7 +184,6 @@ def make_page_map(page_items):
     return common.tree_to_str(root)
 
 def make_ncx(navpoints, page_items):
-    import StringIO
     xml = """<?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
 "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
