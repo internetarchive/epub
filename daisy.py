@@ -115,25 +115,25 @@ unique-identifier="bookid"/>
             'oebpackage':'http://openebook.org/namespaces/oeb-package/1.0/' })
     el = etree.SubElement(dc_metadata_el, dcb + 'Format')
     el.text = 'ANSI/NISO Z39.86-2005'
-    for tagname in [ 'title', 'creator', 'subject', 'description',
-                     'publisher', 'contributor', 'date', 'type',
-                     'format', 'identifier', 'source', 'language',
-                     'relation','coverage', 'rights' ]:
-        # XXX should make sure req'd is present somehow
-        if not tagname in metadata:
+    for md in metadata:
+        tagname = md['tag']
+        if not tagname in [ 'title', 'creator', 'subject', 'description',
+                           'publisher', 'contributor', 'date', 'type',
+                           'format', 'identifier', 'source', 'language',
+                           'relation','coverage', 'rights' ]:
             continue
+        # XXX should make sure req'd is present somehow
         dctag = dcb + tagname[:1].upper() + tagname[1:]
-
         if tagname == 'identifier':
             dt = datetime.now()
             xtra = (str(dt.year) + str(dt.month) + str(dt.day) +
                     str(dt.hour) + str(dt.minute) + str(dt.second))
             el = etree.SubElement(dc_metadata_el, dctag,
                                   { 'id':'bookid' })
-            el.text = metadata[tagname] + xtra
+            el.text = md['text'] + xtra
         else:
             el = etree.SubElement(dc_metadata_el, dctag)
-            el.text = metadata[tagname]
+            el.text = md['text']
     x_metadata_el = etree.SubElement(metadata_el, 'x-metadata')
     el = etree.SubElement(x_metadata_el, 'meta',
                           { 'name':'dtb:multimediaType', 'content':'textNCX' })

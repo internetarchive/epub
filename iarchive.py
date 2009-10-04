@@ -87,13 +87,13 @@ class Book(object):
     def get_metadata(self):
         md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
         md = objectify.parse(md_path).getroot()
-        result = {}
+        result = []
         for el in md.iterchildren():
             if el.tag == 'language':
                 result_text = iso_639_23_to_iso_639_1(el.text)
             else:
                 result_text = el.text
-            result[el.tag] = result_text
+            result.append({ 'tag':el.tag, 'text':result_text })
         return result
 
     def get_abbyy(self):

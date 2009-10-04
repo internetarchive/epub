@@ -156,23 +156,24 @@ def make_opf(metadata,
     etree.SubElement(metadata_el, 'meta',
                      { 'name':'cover', 'content':'cover-image1' })
     etree.SubElement(metadata_el, dcb+'type').text = 'Text'
-    for tagname in [ 'title', 'creator', 'subject', 'description',
-                     'publisher', 'contributor', 'date', 'type',
-                     'format', 'identifier', 'source', 'language',
-                     'relation','coverage', 'rights' ]:
-        # XXX should make sure req'd is present somehow
-        if not tagname in metadata:
+    for md in metadata:
+        tagname = md['tag']
+        if not tagname in [ 'title', 'creator', 'subject', 'description',
+                           'publisher', 'contributor', 'date', 'type',
+                           'format', 'identifier', 'source', 'language',
+                           'relation','coverage', 'rights' ]:
             continue
+        # XXX should make sure req'd is present somehow
         if tagname == 'identifier':
             dt = datetime.now()
             xtra = (str(dt.year) + str(dt.month) + str(dt.day) +
                     str(dt.hour) + str(dt.minute) + str(dt.second))
             el = etree.SubElement(metadata_el, dcb + tagname,
                                   { 'id':'bookid' })
-            el.text = metadata[tagname] + xtra
+            el.text = md['text'] + xtra
         else:
             el = etree.SubElement(metadata_el, dcb + tagname)
-            el.text = metadata[tagname]
+            el.text = md['text']
 
     manifest_el = etree.SubElement(root_el, 'manifest')
     for item in manifest_items:
