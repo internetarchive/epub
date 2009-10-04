@@ -23,7 +23,7 @@ def usage():
     sys.stderr.write("  (epubcheck jar is assumed to be in the script directory)\n")
 
 def main(argv):
-    epub_out = None
+    out_name = None
     import getopt
     try:
         opts, args = getopt.getopt(argv,
@@ -91,14 +91,16 @@ def main(argv):
     else:
         ebook = epub.Book(out_name, include_page_map=include_page_map)
         process_abbyy.process_book(iabook, ebook)
-        meta_info_items = process_abbyy.get_meta_items(iabook)
 
     ebook.finish(iabook.get_metadata())
 
     if debug_output:
-        epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
-        output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
-        print output.read()
+        if make_daisy:
+            pass
+        else:
+            epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
+            output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
+            print output.read()
 
 if __name__ == '__main__':
     main(sys.argv[1:])

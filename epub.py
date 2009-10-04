@@ -110,8 +110,8 @@ class Book(object):
                           self.dt.hour, self.dt.minute, self.dt.second)
         self.z.writestr(info, content_str)
 
-    def finish(self, meta_info_items):
-        tree_str = make_opf(meta_info_items,
+    def finish(self, metadata):
+        tree_str = make_opf(metadata,
                             self.manifest_items,
                             self.spine_items,
                             self.guide_items,
@@ -140,25 +140,43 @@ def make_container_info(content_dir='OEBPS/'):
 
 dc = 'http://purl.org/dc/elements/1.1/'
 dcb = '{' + dc + '}'
-def make_opf(meta_info_items,
+def make_opf(metadata,
              manifest_items,
              spine_items,
              guide_items,
              include_page_map,
              cover_id=None):
-    root = etree.Element('package',
+    root_el = etree.Element('package',
                          { 'xmlns' : 'http://www.idpf.org/2007/opf',
                            'unique-identifier' : 'bookid',
                            'version' : '2.0' },
                          nsmap={'dc' : dc })
-    metadata = etree.SubElement(root, 'metadata')
-    for item in meta_info_items:
-        el = etree.SubElement(metadata, item['item'], item.get('atts'))
-        if 'text' in item:
-            el.text = item['text']
-    manifest = etree.SubElement(root, 'manifest')
+
+    metadata_el = etree.SubElement(root_el, 'metadata')
+    etree.SubElement(metadata_el, 'meta',
+                     { 'name':'cover', 'content':'cover-image1' })
+    etree.SubElement(metadata_el, dcb+'type').text = 'Text'
+    for tagname in [ 'title', 'creator', 'subject', 'description',
+                     'publisher', 'contributor', 'date', 'type',
+                     'format', 'identifier', 'source', 'language',
+                     'relation','coverage', 'rights' ]:
+        # XXX should make sure req'd is present somehow
+        if not tagname in metadata:
+            continue
+        if tagname == 'identifier':
+            dt = datetime.now()
+            xtra = (str(dt.year) + str(dt.month) + str(dt.day) +
+                    str(dt.hour) + str(dt.minute) + str(dt.second))
+            el = etree.SubElement(metadata_el, dcb + tagname,
+                                  { 'id':'bookid' })
+            el.text = metadata[tagname] + xtra
+        else:
+            el = etree.SubElement(metadata_el, dcb + tagname)
+            el.text = metadata[tagname]
+
+    manifest_el = etree.SubElement(root_el, 'manifest')
     for item in manifest_items:
-        etree.SubElement(manifest, 'item', item)
+        etree.SubElement(manifest_el, 'item', item)
 #     if cover_id is not None:
 #         etree.SubElement(manifest, 'meta', name='cover',
 #                          content=cover_id)
@@ -166,15 +184,15 @@ def make_opf(meta_info_items,
         spine_attrs = { 'toc':'ncx' }
         if include_page_map:
             spine_attrs['page-map'] = 'page-map'
-        spine = etree.SubElement(root, 'spine',
-                                 spine_attrs)
+        spine_el = etree.SubElement(root_el, 'spine',
+                                    spine_attrs)
     for item in spine_items:
-        etree.SubElement(spine, 'itemref', item)
+        etree.SubElement(spine_el, 'itemref', item)
     if len(guide_items) > 0:
-        guide = etree.SubElement(root, 'guide')
+        guide_el = etree.SubElement(root_el, 'guide')
     for item in guide_items:
-        etree.SubElement(guide, 'reference', item)
-    return common.tree_to_str(root)
+        etree.SubElement(guide_el, 'reference', item)
+    return common.tree_to_str(root_el)
 
 def make_page_map(page_items):
     root = etree.Element('page-map',
@@ -352,4 +370,3 @@ def make_ade_stylesheet():
 if __name__ == '__main__':
     sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)
-

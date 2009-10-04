@@ -20,51 +20,6 @@ import common
 import iarchive
 
 from debug import debug, debugging, assert_d
-# 'some have optional attributes'
-#     *  creator, contributor
-#           o opf:role — see http://www.loc.gov/marc/relators/ for values
-#     * date
-#           o opf:event — unstandardised: use something sensible
-#     * identifier
-#           o opf:scheme — unstandardised: use something sensible
-#     * date, format, identifier, language, type
-#           o xsi:type — use an appropriate standard term
-#               (such as W3CDTF for date)
-#     * contributor, coverage, creator, description, publisher, relation,
-#       rights, source, subject, title
-#           o xml:lang — use RFC-3066 format
-def get_meta_items(iabook):
-    md = objectify.parse(iabook.get_metadata_path()).getroot()
-    dc_ns = '{http://purl.org/dc/elements/1.1/}'
-    result = [{ 'item':'meta', 'atts':{ 'name':'cover',
-                                        'content':'cover-image1' } },
-              { 'item':dc_ns+'type', 'text':'Text' }]
-    # catch dublin core stragglers
-    for tagname in [ 'title', 'creator', 'subject', 'description',
-                     'publisher', 'contributor', 'date', 'type',
-                     'format', 'identifier', 'source', 'language',
-                     'relation','coverage', 'rights' ]:
-        for tag in md.findall(tagname):
-            if tagname == 'identifier':
-                from datetime import datetime
-                dt = datetime.now()
-                xtra = (str(dt.year) + str(dt.month) + str(dt.day) +
-                        str(dt.hour) + str(dt.minute) + str(dt.second))
-                result.append({ 'item':dc_ns+tagname, 'text':tag.text + xtra,
-                                'atts':{ 'id':'bookid' } })
-            elif tagname == 'language':
-                # "use a RFC3066 language code"
-                # try to translate to standard notation
-                lang = iarchive.iso_639_23_to_iso_639_1(md.language.text)
-                result.append({ 'item':dc_ns+tagname, 'text':lang })
-            elif tagname == 'type' and tag.text == 'Text':
-                # already included above
-                continue
-#             elif tagname == 'date':
-#                 dc:date xsi:type="dcterms:W3CDTF">2007-12-28</dc:date>
-            else:
-                result.append({ 'item':dc_ns+tagname, 'text':tag.text })
-    return result
 
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
