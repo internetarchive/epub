@@ -2,9 +2,13 @@ To do:
 epub:
 - images (cf. best practices?)
 - switch to incremental content generation
+- make sure temp files get deleted!
+
 
 daisy:
 - Generate content!
+- stylesheet decls get dropped from dtbook xml
+
 
 Maybe someday:
 
@@ -12,3 +16,7 @@ Maybe someday:
 - Auto portrait/landscape scaling/rotation of images
 - fix 'sample title' in process_abbyy
 - Add code to iarchive.py to make sense of page numbers, e.g. unnumbered start pages, pages that start at '2', etc.  Romance is an initial example.  Also pageNumBox
+
+- make sure required epub, daisy metadata is actually present
+
+- get rid of common.py?
