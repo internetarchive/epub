@@ -32,6 +32,19 @@ def process_book(iabook, ebook):
     if bookData is None:
         bookData = scandata.bookData
 
+
+    ebook.push_tag('frontmatter')
+    ebook.add_tag('doctitle', 'sample doc title')
+    ebook.add_tag('covertitle', 'sample cover title')
+    ebook.add_tag('docauthor', 'doc author')
+    ebook.push_tag('level1')
+    ebook.add_tag('p', 'sample text')
+    ebook.pop_tag()
+    ebook.pop_tag()
+    ebook.push_tag('bodymatter')
+    ebook.push_tag('level1')
+    
+
     # some books no scanlog
 #     scanLog = scandata.find('scanLog')
 #     if scanLog is None:
@@ -61,8 +74,9 @@ def process_book(iabook, ebook):
             id = 'page-' + str(pageno)
             page_mark_href = part_str + '.html#' + id
             pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
+            if i < 20:
+                ebook.add_page_item(str(pageno), pageno, page_mark_href)
 #             paragraphs.append(pdiv)
-            ebook.add_page_item(str(pageno), pageno, page_mark_href)
 
         def include_page(page_scandata):
             if page_scandata is None:
@@ -168,7 +182,8 @@ def process_book(iabook, ebook):
                                                 lines.append(' ')
                                             prev_line = fmt_text
                                 lines.append(prev_line)
-#                                 paragraphs.append(E.p(''.join(lines)))
+                                if i < 20:
+                                    ebook.add_tag('p', ''.join(lines))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:
@@ -177,6 +192,14 @@ def process_book(iabook, ebook):
 
         page.clear()
         i += 1
+
+    ebook.pop_tag()
+    ebook.pop_tag()
+    ebook.push_tag('rearmatter')
+    ebook.push_tag('level1')
+    ebook.add_tag('p', 'Sample rearmatter text')
+    ebook.pop_tag()
+    ebook.pop_tag()
 
 if __name__ == '__main__':
     sys.stderr.write('I\'m a module.  Don\'t run me directly!')

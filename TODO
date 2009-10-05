@@ -8,7 +8,7 @@ epub:
 daisy:
 - Generate content!
 - stylesheet decls get dropped from dtbook xml
-
+- extract proper metadata (or pass it elseways)
 
 Maybe someday:
 

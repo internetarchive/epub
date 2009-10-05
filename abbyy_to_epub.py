@@ -85,14 +85,15 @@ def main(argv):
             out_name = book_id + '.epub'
 
     iabook = iarchive.Book(book_id, book_path)
+    metadata = iabook.get_metadata()
     if make_daisy:
-        ebook = daisy.Book(out_name, book_id=book_id)
+        ebook = daisy.Book(out_name, metadata)
         daisyfy_abbyy.process_book(iabook, ebook)
     else:
         ebook = epub.Book(out_name, include_page_map=include_page_map)
         process_abbyy.process_book(iabook, ebook)
 
-    ebook.finish(iabook.get_metadata())
+    ebook.finish(metadata)
 
     if debug_output:
         if make_daisy:
