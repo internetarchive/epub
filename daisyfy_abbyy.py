@@ -42,8 +42,7 @@ def process_book(iabook, ebook):
     ebook.pop_tag()
     ebook.pop_tag()
     ebook.push_tag('bodymatter')
-    ebook.push_tag('level1')
-    
+    ebook.add_navpoint('level', 'h', 'Book here')
 
     # some books no scanlog
 #     scanLog = scandata.find('scanLog')
@@ -53,7 +52,6 @@ def process_book(iabook, ebook):
     i = 0
     part_number = 0
     cover_number = 0
-    nav_number = 0
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
@@ -75,7 +73,7 @@ def process_book(iabook, ebook):
             page_mark_href = part_str + '.html#' + id
             pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
             if i < 20:
-                ebook.add_page_item(str(pageno), pageno, page_mark_href)
+                ebook.add_pagetarget(str(pageno), pageno)
 #             paragraphs.append(pdiv)
 
         def include_page(page_scandata):

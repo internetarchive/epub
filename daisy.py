@@ -19,14 +19,23 @@ class Book(object):
         self.content_dir = content_dir
         self.book_id = common.get_metadata_tag_data(metadata, 'identifier')
         self.title = common.get_metadata_tag_data(metadata, 'title')
+        self.author = common.get_metadata_tag_data(metadata, 'author')
         self.nav_number = 1
+
+        self.opf_file = self.book_id + '_daisy.opf'
 
         self.dtbook_file = self.book_id + '_daisy.xml'
         self.dtbook, self.dtbook_book_el = make_dtbook(self.book_id, self.title)
-        self.tag_stack = [self.dtbook_book_el]
 
         self.smil_file = self.book_id + '_daisy.smil'
         self.smil, self.smil_seq_el = make_smil(self.book_id)
+
+        self.ncx_file = self.book_id + '_daisy.ncx'
+        self.ncx, self.ncx_navmap_el, self.ncx_pagelist_el = make_ncx(
+            self.book_id, self.title, self.author)
+
+        self.tag_stack = [self.dtbook_book_el]
+        self.navpoint_stack = [self.ncx_navmap_el]
 
         self.id_index = 1
 
@@ -47,7 +56,7 @@ class Book(object):
               'media-type':'text/xml'
               },
             { 'id':'ncx',
-              'href':self.book_id + '_daisy.ncx',
+              'href':self.ncx_file,
               'media-type':'application/x-dtbncx+xml'
               },
             { 'id':'smil',
@@ -71,10 +80,12 @@ class Book(object):
         self.page_items = []
         self.navpoints = []
 
-        
+
     def push_tag(self, tag, text='', attrs={}):
-        self.tag_stack.append(self.add_tag(tag, text, attrs))
         # tag is e.g. frontmatter, bodymatter, rearmatter, level, etc.
+        id_str, dtb_el = self.add_tag(tag, text, attrs)
+        self.tag_stack.append(dtb_el)
+        return id_str
 
 
     def pop_tag(self):
@@ -91,30 +102,55 @@ class Book(object):
                              { 'src':self.dtbook_file + '#' + id_str,
                                'region':'textRegion' })
             attrs['smilref'] = self.smil_file + '#' + id_str
-        el = etree.SubElement(self.tag_stack[-1], tag, attrs)
+        current_dtb_el = self.tag_stack[-1]
+
+        dtb_el = etree.SubElement(current_dtb_el, tag, attrs)
         if len(text) > 0:
-            el.text = text
+            dtb_el.text = text
 
         self.id_index += 1
-        return el
+        return id_str, dtb_el
 
 
-    def add_navpoint(self, text, content):
-        # text='text':'Title Page',
-        # content='title.html' }
-        # navpoints added thru this interface are sequential -
-        # id and playOrder are generated.
-        self.navpoints.append({ 'text':text, 'content':content,
-                                'playOrder':self.nav_number })
+    def add_navpoint(self, ltag, htag, text):
+        level = str(len(self.navpoint_stack))
+        level_id_str = self.push_tag(ltag + level)
+        htag_id_str, htag_dtb_el = self.add_tag(htag + level, text)
+        current_navpoint_el = self.navpoint_stack[-1]
+        navpoint_el = etree.SubElement(current_navpoint_el, 'navPoint',
+                                       { 'id':level_id_str,
+                                         'class':'navpoint-level-level' + level,
+                                         'playOrder':str(self.nav_number) })
+        navlabel_el = etree.SubElement(navpoint_el, 'navLabel')
+        etree.SubElement(navlabel_el, 'text').text = text
+        etree.SubElement(navpoint_el, 'content',
+                         { 'src':self.smil_file + '#' + htag_id_str })
         self.nav_number += 1
+        return navpoint_el
 
 
-    def add_page_item(self, name, value, href, type='normal'):
-        # name='iii', value='3', href='part032.html#pgiii', type='front'
-        # name='3', value='3', href='part042.html#pg3', type='normal'
-        self.page_items.append({ 'name':name, 'value':value, 'href':href,
-                                 'type':type, 'playOrder':self.nav_number })
-        self.add_tag('pagenum', name, { 'page':type })
+    def push_navpoint(self, ltag, htag, text):
+        navpoint_el = self.add_navpoint(ltag, htag, text)
+        self.navpoint_stack.append(navpoint_el)
+
+
+    def pop_navpoint(self):
+        return self.navpoint_stack.pop()
+
+
+    def add_pagetarget(self, name, value, type='normal'):
+        pagenum_id, pagenum_el = self.add_tag('pagenum', name, { 'page':type })
+
+        pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
+                                         'pageTarget',
+                                         { 'id':pagenum_id,
+                                           'value':str(value),
+                                           'type':type,
+                                           'playOrder':str(self.nav_number) })
+        navlabel_el = etree.SubElement(pagetarget_el, 'navLabel')
+        etree.SubElement(navlabel_el, 'text').text = name
+        etree.SubElement(pagetarget_el, 'content',
+                         { 'src':self.smil_file + '#' + pagenum_id })
         self.nav_number += 1
 
 
@@ -130,13 +166,13 @@ class Book(object):
 
     def finish(self, metadata):
         tree_str = make_opf(metadata, self.manifest_items)
-        self.add(self.content_dir + self.book_id + '_daisy.opf', tree_str)
-
-        tree_str = make_ncx(self.navpoints, self.page_items, self.book_id)
-        self.add(self.content_dir + self.book_id + '_daisy.ncx', tree_str)
+        self.add(self.content_dir + self.opf_file, tree_str)
+        
+        tree_str = common.tree_to_str(self.ncx)
+        self.add(self.content_dir + self.ncx_file, tree_str)
 
         tree_str = common.tree_to_str(self.dtbook)
-        self.add(self.content_dir + self.book_id + '_daisy.xml', tree_str)
+        self.add(self.content_dir + self.dtbook_file, tree_str)
 
         tree_str = common.tree_to_str(self.smil)
         self.add(self.content_dir + self.smil_file, tree_str)
@@ -184,7 +220,7 @@ unique-identifier="bookid"/>
     el = etree.SubElement(x_metadata_el, 'meta',
                           { 'name':'dtb:multimediaContent', 'content':'text' })
     el = etree.SubElement(x_metadata_el, 'meta',
-                          { 'name':'dtb:totalElapsedTime', 'content':'0' })
+                          { 'name':'dtb:totalTime', 'content':'0' })
 
     manifest_el = etree.SubElement(root_el, 'manifest')
     for item in manifest_items:
@@ -242,7 +278,13 @@ def make_smil(book_id):
                      { 'name':'dtb:generator', 'content':'archive.org' }) # XXX
     etree.SubElement(head_el, 'meta',
                      { 'name':'dtb:totalElapsedTime', 'content':'0' })
-    # 'layout' el = required?
+    layout_el = etree.SubElement(head_el, 'layout')
+    etree.SubElement(layout_el, 'region',
+                     { 'id':'textRegion', 'fit':'hidden',
+                       'showBackground':'always',
+                       'height':'auto', 'width':'auto',
+                       'bottom':'auto', 'top':'auto',
+                       'left':'auto', 'right':'auto' })
     # 'customAttributes' el = required?
     body_el = etree.SubElement(root_el, 'body')
     seq_el = etree.SubElement(body_el, 'seq',
@@ -250,15 +292,15 @@ def make_smil(book_id):
     return tree, seq_el
 
 
-def make_ncx(navpoints, page_items, book_id):
+def make_ncx(book_id, title, author):
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN"
 "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"/>
 """
     tree = etree.parse(StringIO(xml))
-    root = tree.getroot()
-    head = etree.SubElement(root, 'head')
+    root_el = tree.getroot()
+    head = etree.SubElement(root_el, 'head')
     metas = [
         { 'name' : 'dtb:uid',
           'content':book_id },
@@ -268,39 +310,38 @@ def make_ncx(navpoints, page_items, book_id):
         ]
     for item in metas:
         etree.SubElement(head, 'meta', item)
-    doctitle = etree.SubElement(root, 'docTitle')
-    etree.SubElement(doctitle, 'text').text = 'Hello World';
+    doctitle = etree.SubElement(root_el, 'docTitle')
+    etree.SubElement(doctitle, 'text').text = title;
+    doctitle = etree.SubElement(root_el, 'docAuthor')
+    etree.SubElement(doctitle, 'text').text = author;
 
-    # navMap element
-    navmap = etree.SubElement(root, 'navMap')
-    for item in navpoints:
-        navpoint = etree.SubElement(navmap, 'navPoint',
-                                    { 'id':'navpoint-' + str(item['playOrder']),
-                                      'playOrder':str(item['playOrder']) })
-        navlabel = etree.SubElement(navpoint, 'navLabel')
-        etree.SubElement(navlabel, 'text').text = item['text']
-         # XXX 'content' should be 'href'
-        etree.SubElement(navpoint, 'content', src=item['content'])
+    navmap_el = etree.SubElement(root_el, 'navMap')
+    navinfo_el = etree.SubElement(navmap_el, 'navInfo')
+    etree.SubElement(navinfo_el, 'text').text = 'Book navigation'
 
-    # pageList element
-    if len(page_items) > 0:
-        pagelist = etree.SubElement(root, 'pageList',
-                                    { 'id':'page-mapping', 'class':'pagelist' })
-        navlabel = etree.SubElement(pagelist, 'navLabel')
-        text = etree.SubElement(navlabel, 'text')
-        text.text = 'Pages'
-        for item in page_items:
-            id = 'page-' + item['name']
-            pagetarget = etree.SubElement(pagelist, 'pageTarget',
-                                          { 'id':id, 'value':str(item['value']),
-                                            'type':item['type'],
-                                            'playOrder':str(item['playOrder']) })
-            navlabel = etree.SubElement(pagetarget, 'navLabel')
-            etree.SubElement(navlabel, 'text').text = 'Page ' + item['name']
-            etree.SubElement(pagetarget, 'content', src=item['href'])
+    pagelist_el = etree.SubElement(root_el, 'pageList')
+    navlabel_el = etree.SubElement(pagelist_el, 'navLabel')
+    etree.SubElement(navlabel_el, 'text').text = 'Pages'
 
-    tree = etree.ElementTree(root)
-    return common.tree_to_str(tree)
+
+#     # pageList element
+#     if len(page_items) > 0:
+#         pagelist = etree.SubElement(root_el, 'pageList',
+#                                     { 'id':'page-mapping', 'class':'pagelist' })
+#         navlabel = etree.SubElement(pagelist, 'navLabel')
+#         text = etree.SubElement(navlabel, 'text')
+#         text.text = 'Pages'
+#         for item in page_items:
+#             id = 'page-' + item['name']
+#             pagetarget = etree.SubElement(pagelist, 'pageTarget',
+#                                           { 'id':id, 'value':str(item['value']),
+#                                             'type':item['type'],
+#                                             'playOrder':str(item['playOrder']) })
+#             navlabel = etree.SubElement(pagetarget, 'navLabel')
+#             etree.SubElement(navlabel, 'text').text = 'Page ' + item['name']
+#             etree.SubElement(pagetarget, 'content', src=item['href'])
+
+    return tree, navmap_el, pagelist_el
 
 
 if __name__ == '__main__':
