@@ -3,7 +3,12 @@
 
 import os
 import re
-from lxml import etree
+
+try:
+    from lxml import etree
+except ImportError:
+    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
+    from lxml import etree
 
 def get_book_id():
     files=os.listdir(".")
