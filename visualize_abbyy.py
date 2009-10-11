@@ -173,7 +173,6 @@ def scan_pages(context, scandata, iabook):
                 pass
                 
         draw = ImageDraw.Draw(image)
-
         for block in page:
             if block.get('blockType') == 'Picture' and page_image is not None:
                 cropped = page_image.crop(four_coords(block, scale))
@@ -222,6 +221,20 @@ def scan_pages(context, scandata, iabook):
                         par_coords = box_from_par(par)
                         if par_coords is not None:
                             render(draw, par, 'par', par_coords)
+                            tl, rb = par_coords
+
+                            t = ''
+                            for att, nick in [ ('align', 'ta'),
+                                               ('leftIndent', 'li'),
+                                               ('rightIndent', 'ri'),
+                                               ('startIndent', 'si'),
+                                               ('lineSpacing', 'ls') ]:
+                                att_txt = par.get(att)
+                                if att_txt is not None:
+                                    t += nick + ':' + att_txt + ' '
+                            if len(t) > 0:
+                                f = font.get_font("Courier", dpi / scale, 12)
+                                draw.text(tl, t, font=f, fill=color.green)
                         for line in par:
                             render(draw, line, 'line');
                             for fmt in line:
@@ -233,11 +246,11 @@ def scan_pages(context, scandata, iabook):
                                 f = font.get_font(font_name, dpi / scale, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
-                                    draw.text((int(cp.get('l'))/s,
-                                               int(cp.get('b'))/s),
-                                              cp.text.encode('utf-8'),
-                                              font=f,
-                                              fill=color.yellow)
+#                                     draw.text((int(cp.get('l'))/s,
+#                                                int(cp.get('b'))/s),
+#                                               cp.text.encode('utf-8'),
+#                                               font=f,
+#                                               fill=color.yellow)
                 elif (el.tag == abyns+'row'):
                     pass
                 else:
@@ -246,7 +259,18 @@ def scan_pages(context, scandata, iabook):
 
         if not include_page(scandata_pages[i]):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
-        
+
+        page_scandata = iabook.get_page_scandata(i)
+        if page_scandata is not None:
+            t = page_scandata.pageType.text
+            f = font.get_font("Courier", dpi / scale, 48)
+            page_w, page_h = image.size
+            draw.text((.1 * dpi,
+                       .1 * dpi),
+                      t.encode('utf-8'),
+                      font=f,
+                      fill=color.green)
+
         image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
         print 'page index: ' + str(i)
         page.clear()
