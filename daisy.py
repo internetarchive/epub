@@ -54,7 +54,8 @@ class Book(object):
 
         # style sheet
         for content in ['daisy.css', 'daisyTransform.xsl',
-                        'dtbook-2005-3.dtd', 'html.css']:
+                        'dtbook-2005-3.dtd', 'html.css',
+                        'resource.res']:
             content_src = os.path.join(sys.path[0], 'daisy', content)
             content_str = open(content_src, 'r').read()
             self.add(self.content_dir + content, content_str)
@@ -87,6 +88,10 @@ class Book(object):
             { 'id':'htmlCss',
               'href':'html.css',
               'media-type':'text/css'
+              },
+            { 'id':'resource',
+              'href':'resource.res',
+              'media-type':'application/x-dtbresource+xml'
               },
             ]
 
