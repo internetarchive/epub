@@ -12,6 +12,14 @@ from StringIO import StringIO
 
 from debug import debug, debugging
 
+# This becomes the dtb:generator meta in the generated book
+content_generator = 'Internet Archive - archive.org'
+
+# Whether 'pagenum' tags in dtbook should have content
+# ... as some reading systems don't understand requests to
+# not display them.
+hide_content_pagenums = False
+
 class Book(object):
     def __init__(self, out_name, metadata, content_dir=''):
         self.dt = datetime.now()
@@ -19,7 +27,7 @@ class Book(object):
         self.content_dir = content_dir
         self.book_id = common.get_metadata_tag_data(metadata, 'identifier')
         self.title = common.get_metadata_tag_data(metadata, 'title')
-        self.author = common.get_metadata_tag_data(metadata, 'author')
+        self.author = common.get_metadata_tag_data(metadata, 'creator')
         self.nav_number = 1
 
         self.opf_file = self.book_id + '_daisy.opf'
@@ -31,13 +39,18 @@ class Book(object):
         self.smil, self.smil_seq_el = make_smil(self.book_id)
 
         self.ncx_file = self.book_id + '_daisy.ncx'
-        self.ncx, self.ncx_navmap_el, self.ncx_pagelist_el = make_ncx(
+        self.ncx, self.ncx_head_el, self.ncx_navmap_el, self.ncx_pagelist_el = make_ncx(
             self.book_id, self.title, self.author)
 
         self.tag_stack = [self.dtbook_book_el]
         self.navpoint_stack = [self.ncx_navmap_el]
 
         self.id_index = 1
+
+        self.depth = 0
+        self.current_depth = 0
+        self.total_page_count = 0
+        self.max_page_number = 0
 
         # style sheet
         for content in ['daisy.css', 'daisyTransform.xsl',
@@ -92,12 +105,13 @@ class Book(object):
         self.tag_stack.pop()
 
 
-    def add_tag(self, tag, text='', attrs={}):
+    def add_tag(self, tag, text='', attrs={}, smil_attrs={}):
         id_str = tag + '_' + (str(self.id_index).zfill(5))
         attrs['id'] = id_str
         if len(text) > 0:
+            smil_attrs.update({ 'id':id_str, 'class':tag })
             smil_par_el = etree.SubElement(self.smil_seq_el, 'par',
-                                           { 'id':id_str, 'class':tag } )
+                                           smil_attrs)
             etree.SubElement(smil_par_el, 'text',
                              { 'src':self.dtbook_file + '#' + id_str,
                                'region':'textRegion' })
@@ -115,7 +129,8 @@ class Book(object):
     def add_navpoint(self, ltag, htag, text):
         level = str(len(self.navpoint_stack))
         level_id_str = self.push_tag(ltag + level)
-        htag_id_str, htag_dtb_el = self.add_tag(htag + level, text)
+        htag_id_str, htag_dtb_el = self.add_tag(htag + level, text,
+                                                smil_attrs={'customTest':'headerCustomTest'})
         current_navpoint_el = self.navpoint_stack[-1]
         navpoint_el = etree.SubElement(current_navpoint_el, 'navPoint',
                                        { 'id':level_id_str,
@@ -130,16 +145,29 @@ class Book(object):
 
 
     def push_navpoint(self, ltag, htag, text):
+        self.current_depth += 1
+        if self.current_depth > self.depth:
+            self.depth = self.current_depth
         navpoint_el = self.add_navpoint(ltag, htag, text)
         self.navpoint_stack.append(navpoint_el)
 
 
     def pop_navpoint(self):
+        self.current_depth -= 1
+        self.pop_tag()
         return self.navpoint_stack.pop()
 
 
     def add_pagetarget(self, name, value, type='normal'):
-        pagenum_id, pagenum_el = self.add_tag('pagenum', name, { 'page':type })
+        self.total_page_count += 1
+        if value > self.max_page_number:
+            self.max_page_number += 1
+        dtbook_page_name = name
+        if hide_content_pagenums:
+            dtbook_page_name = ' '
+        pagenum_id, pagenum_el = self.add_tag('pagenum', dtbook_page_name,
+                              attrs={ 'page':type },
+                              smil_attrs={'customTest':'pagenumCustomTest' })
 
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
@@ -167,6 +195,14 @@ class Book(object):
     def finish(self, metadata):
         tree_str = make_opf(metadata, self.manifest_items)
         self.add(self.content_dir + self.opf_file, tree_str)
+
+        metas = [
+            { 'name':'dtb:depth', 'content':str(self.depth) },
+            { 'name':'dtb:totalPageCount', 'content':str(self.total_page_count) },
+            { 'name':'dtb:maxPageNumber', 'content':str(self.max_page_number) },
+            ]
+        for item in metas:
+            etree.SubElement(self.ncx_head_el, 'meta', item)
         
         tree_str = common.tree_to_str(self.ncx)
         self.add(self.content_dir + self.ncx_file, tree_str)
@@ -285,6 +321,16 @@ def make_smil(book_id):
                        'height':'auto', 'width':'auto',
                        'bottom':'auto', 'top':'auto',
                        'left':'auto', 'right':'auto' })
+    customattributes_el = etree.SubElement(head_el, 'customAttributes')
+    etree.SubElement(customattributes_el, 'customTest',
+                     { 'id':'pagenumCustomTest',
+                       'defaultState':'false',
+                       'override':'visible' })
+    etree.SubElement(customattributes_el, 'customTest',
+                     { 'id':'headerCustomTest',
+                       'defaultState':'false',
+                       'override':'visible' })
+
     # 'customAttributes' el = required?
     body_el = etree.SubElement(root_el, 'body')
     seq_el = etree.SubElement(body_el, 'seq',
@@ -300,16 +346,23 @@ def make_ncx(book_id, title, author):
 """
     tree = etree.parse(StringIO(xml))
     root_el = tree.getroot()
-    head = etree.SubElement(root_el, 'head')
+    head_el = etree.SubElement(root_el, 'head')
+    etree.SubElement(head_el, 'smilCustomTest',
+                     { 'id':'pagenumCustomTest',
+                       'defaultState':'false',
+                       'override':'visible',
+                       'bookStruct':'PAGE_NUMBER' })
+    etree.SubElement(head_el, 'smilCustomTest',
+                     { 'id':'headerCustomTest',
+                       'defaultState':'false',
+                       'override':'visible',
+                       'bookStruct':'PAGE_NUMBER' })
     metas = [
-        { 'name' : 'dtb:uid',
-          'content':book_id },
-        { 'name' : 'dtb:depth', 'content' : '1' },
-        { 'name' : 'dtb:totalPageCount', 'content' : '0' },
-        { 'name' : 'dtb:maxPageNumber', 'content' : '0' },
+        { 'name':'dtb:uid', 'content':book_id },
+        { 'name':'dtb:generator', 'content':content_generator },
         ]
     for item in metas:
-        etree.SubElement(head, 'meta', item)
+        etree.SubElement(head_el, 'meta', item)
     doctitle = etree.SubElement(root_el, 'docTitle')
     etree.SubElement(doctitle, 'text').text = title;
     doctitle = etree.SubElement(root_el, 'docAuthor')
@@ -323,25 +376,7 @@ def make_ncx(book_id, title, author):
     navlabel_el = etree.SubElement(pagelist_el, 'navLabel')
     etree.SubElement(navlabel_el, 'text').text = 'Pages'
 
-
-#     # pageList element
-#     if len(page_items) > 0:
-#         pagelist = etree.SubElement(root_el, 'pageList',
-#                                     { 'id':'page-mapping', 'class':'pagelist' })
-#         navlabel = etree.SubElement(pagelist, 'navLabel')
-#         text = etree.SubElement(navlabel, 'text')
-#         text.text = 'Pages'
-#         for item in page_items:
-#             id = 'page-' + item['name']
-#             pagetarget = etree.SubElement(pagelist, 'pageTarget',
-#                                           { 'id':id, 'value':str(item['value']),
-#                                             'type':item['type'],
-#                                             'playOrder':str(item['playOrder']) })
-#             navlabel = etree.SubElement(pagetarget, 'navLabel')
-#             etree.SubElement(navlabel, 'text').text = 'Page ' + item['name']
-#             etree.SubElement(pagetarget, 'content', src=item['href'])
-
-    return tree, navmap_el, pagelist_el
+    return tree, head_el, navmap_el, pagelist_el
 
 
 if __name__ == '__main__':
