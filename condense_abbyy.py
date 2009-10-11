@@ -139,7 +139,7 @@ to_keep = {
     ns+'rect':([ 'indent' ], [ ]),
     ns+'text':(['indent'], [ ]),
     ns+'line':(['indent'], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
-    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'lineSpacing', 'align']),
+    ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'rightIndent', 'lineSpacing', 'align']),
     ns+'formatting':(['indent'], [ 'ff', 'fs', 'italic', 'smallcaps' ]),
     ns+'cell':(['indent', 'showall'], [ ]),
     ns+'row':(['indent', 'showall'], [ ]),
