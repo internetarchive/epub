@@ -6,7 +6,11 @@ import re
 import os
 import gzip
 
-from lxml import etree
+try:
+    from lxml import etree
+except ImportError:
+    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
+    from lxml import etree
 
 import common
 
