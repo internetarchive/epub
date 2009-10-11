@@ -32,17 +32,23 @@ def process_book(iabook, ebook):
     if bookData is None:
         bookData = scandata.bookData
 
+    import common
+    metadata = iabook.get_metadata()
+    title = common.get_metadata_tag_data(metadata, 'title')
+    author = common.get_metadata_tag_data(metadata, 'creator')
+    title = common.get_metadata_tag_data(metadata, 'title')
 
     ebook.push_tag('frontmatter')
-    ebook.add_tag('doctitle', 'sample doc title')
-    ebook.add_tag('covertitle', 'sample cover title')
-    ebook.add_tag('docauthor', 'doc author')
+    ebook.add_tag('doctitle', title)
+    ebook.add_tag('covertitle', title)
+    ebook.add_tag('docauthor', author)
     ebook.push_tag('level1')
     ebook.add_tag('p', 'sample text')
     ebook.pop_tag()
     ebook.pop_tag()
     ebook.push_tag('bodymatter')
-    ebook.add_navpoint('level', 'h', 'Book here')
+
+    contents = iabook.get_toc()
 
     # some books no scanlog
 #     scanLog = scandata.find('scanLog')
@@ -52,6 +58,7 @@ def process_book(iabook, ebook):
     i = 0
     part_number = 0
     cover_number = 0
+    pushed_navpoint = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
@@ -69,12 +76,16 @@ def process_book(iabook, ebook):
         pageno = page_scandata.find('pageNumber')
         if pageno:
             part_str = 'part' + str(part_number).zfill(4)
-            id = 'page-' + str(pageno)
-            page_mark_href = part_str + '.html#' + id
-            pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
-            if i < 20:
-                ebook.add_pagetarget(str(pageno), pageno)
-#             paragraphs.append(pdiv)
+
+            if contents is not None and str(pageno) in contents:
+                if pushed_navpoint:
+                    ebook.pop_navpoint()
+                ebook.push_navpoint('level', 'h', contents[str(pageno)])
+                pushed_navpoint = True
+
+            ebook.add_pagetarget(str(pageno), pageno)
+
+            
 
         def include_page(page_scandata):
             if page_scandata is None:
@@ -180,8 +191,7 @@ def process_book(iabook, ebook):
                                                 lines.append(' ')
                                             prev_line = fmt_text
                                 lines.append(prev_line)
-                                if i < 20:
-                                    ebook.add_tag('p', ''.join(lines))
+                                ebook.add_tag('p', ''.join(lines))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:
@@ -195,7 +205,7 @@ def process_book(iabook, ebook):
     ebook.pop_tag()
     ebook.push_tag('rearmatter')
     ebook.push_tag('level1')
-    ebook.add_tag('p', 'Sample rearmatter text')
+    ebook.add_tag('p', 'End of book')
     ebook.pop_tag()
     ebook.pop_tag()
 

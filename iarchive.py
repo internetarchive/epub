@@ -96,6 +96,16 @@ class Book(object):
             result.append({ 'tag':el.tag, 'text':result_text })
         return result
 
+    def get_toc(self):
+        toc_path = os.path.join(self.book_path, self.book_id + '_toc.xml')
+        if not os.path.exists(toc_path):
+            return None
+        toc = objectify.parse(toc_path).getroot()
+        result = {}
+        for el in toc.iterchildren():
+            result[el.get('page')] = el.get('title')
+        return result
+
     def get_abbyy(self):
         return gzip.open(os.path.join(self.book_path,
                                       self.book_id + '_abbyy.gz'), 'rb')
