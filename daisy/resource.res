@@ -5,12 +5,12 @@
   <scope nsuri="http://www.daisy.org/z3986/2005/ncx/">
     <nodeSet id="ns006" select="//smilCustomTest[@bookStruct='PAGE_NUMBER']">
       <resource xml:lang="en" id="r1">
-        <text>Page Hack</text>
+        <text>Page</text>
       </resource>
     </nodeSet>
     <nodeSet id="ns007" select="//smilCustomTest[@bookStruct='PAGE_NUMBER']">
       <resource xml:lang="en" id="r2">
-        <text>Header Hack</text>
+        <text>Header</text>
       </resource>
     </nodeSet>
   </scope>
