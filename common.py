@@ -36,7 +36,7 @@ def get_metadata_tag_data(metadata, tag):
     for el in metadata:
         if el['tag'] == tag:
             return el['text']
-    return None
+    return 'Unknown'
 
 
 def get_dt_str():
