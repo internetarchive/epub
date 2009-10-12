@@ -145,7 +145,7 @@ def image_from_zip(zipf, image_path,
     scale = ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
 #     scale = ' | pamscale -quiet -xyfit ' + str(width) + ' ' + str(height)
     if out_img_type == 'jpg':
-        cvt_to_out = ' | pnmtojpeg -quality ' + str(quality)
+        cvt_to_out = ' | pnmtojpeg -quiet -quality ' + str(quality)
     elif out_img_type == 'ppm':
         cvt_to_out = ' | ppmtoppm -quiet'
     else:
