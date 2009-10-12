@@ -20,3 +20,4 @@ Maybe someday:
 - make sure required epub, daisy metadata is actually present
 
 - get rid of common.py?
+Skip line if too many chars are suspicious?
