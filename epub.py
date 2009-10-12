@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 try:
+    from lxml import html # only in newer lxml
     from lxml import etree
 except ImportError:
     sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
