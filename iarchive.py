@@ -111,8 +111,15 @@ class Book(object):
         return result
 
     def get_abbyy(self):
-        return gzip.open(os.path.join(self.book_path,
-                                      self.book_id + '_abbyy.gz'), 'rb')
+        abbyy_gz = os.path.join(self.book_path, self.book_id + '_abbyy.gz')
+        if os.path.exists(abbyy_gz):
+            return gzip.open(abbyy_gz, 'rb')
+        abbyy_zip = os.path.join(self.book_path, self.book_id + '_abbyy.zip')
+        if os.path.exists(abbyy_zip):
+            return os.popen('unzip -p ' + abbyy_zip + ' ' + self.book_id + '_abbyy.xml')
+#             z = zipfile.ZipFile(abbyy_zip, 'r')
+#             return z.open(self.book_id + '_abbyy.xml') # only in 2.6
+        raise 'No abbyy file found'
 
     # get python string with image data - from .jp2 image in zip
     # finds appropriate leaf number for supplied page index
@@ -161,7 +168,7 @@ def image_from_zip(zipf, image_path,
     scale = ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
 #     scale = ' | pamscale -quiet -xyfit ' + str(width) + ' ' + str(height)
     if out_img_type == 'jpg':
-        cvt_to_out = ' | pnmtojpeg -quality ' + str(quality)
+        cvt_to_out = ' | pnmtojpeg -quiet -quality ' + str(quality)
     elif out_img_type == 'ppm':
         cvt_to_out = ' | ppmtoppm -quiet'
     else:
