@@ -88,8 +88,15 @@ class Book(object):
         return os.path.join(self.book_path, self.book_id + '_meta.xml')
 
     def get_abbyy(self):
-        return gzip.open(os.path.join(self.book_path,
-                                      self.book_id + '_abbyy.gz'), 'rb')
+        abbyy_gz = os.path.join(self.book_path, self.book_id + '_abbyy.gz')
+        if os.path.exists(abbyy_gz):
+            return gzip.open(abbyy_gz, 'rb')
+        abbyy_zip = os.path.join(self.book_path, self.book_id + '_abbyy.zip')
+        if os.path.exists(abbyy_zip):
+            return os.popen('unzip -p ' + abbyy_zip + ' ' + self.book_id + '_abbyy.xml')
+#             z = zipfile.ZipFile(abbyy_zip, 'r')
+#             return z.open(self.book_id + '_abbyy.xml') # only in 2.6
+        raise 'No abbyy file found'
 
     # get python string with image data - from .jp2 image in zip
     # finds appropriate leaf number for supplied page index
