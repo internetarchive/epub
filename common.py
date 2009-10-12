@@ -3,6 +3,7 @@
 
 import os
 import re
+import sys
 
 try:
     from lxml import html # only in newer lxml

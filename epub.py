@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import sys
+
 try:
     from lxml import html # only in newer lxml
     from lxml import etree
