@@ -40,7 +40,6 @@ def process_book(iabook, ebook):
     metadata = iabook.get_metadata()
     title = common.get_metadata_tag_data(metadata, 'title')
     author = common.get_metadata_tag_data(metadata, 'creator')
-    title = common.get_metadata_tag_data(metadata, 'title')
 
     ebook.push_tag('frontmatter')
     ebook.add_tag('doctitle', title)
