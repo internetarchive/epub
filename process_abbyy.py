@@ -160,8 +160,6 @@ def process_book(iabook, ebook):
                                     'type':'toc',
                                     'title':'Title Page' } )
         elif page_type == 'normal':
-#             if i == 10:
-#                 debug()
             if before_title_page:
                 # XXX consider skipping if blank + no words?
                 # make page image
@@ -209,9 +207,11 @@ def process_book(iabook, ebook):
                                                  'ix', 'x', 'xi', 'xii',
                                                  'xiii', 'xiv', 'xv', 'xvi',
                                                  'xvii', 'xviii', 'xix', 'xx',
-                                                 'xxi', 'xxii',
+                                                 'xxi', 'xxii', 'xxiii', 'xxiv',
+                                                 'xxv', 'xxvi', 'xxvii',
+                                                 'xxviii', 'xxix', 'xxx',
                                                  ]
-                                        if hdr_text in rnums:
+                                        if hdr_text.lower() in rnums:
                                             return True
                                     return False
                                 if first_par and par_is_header(par):
@@ -223,8 +223,8 @@ def process_book(iabook, ebook):
                                 for line in par:
                                     for fmt in line:
                                         fmt_text = etree.tostring(fmt,
-                                                                  method='text',
-                                                                  encoding=unicode)
+                                                              method='text',
+                                                              encoding=unicode)
                                         if len(fmt_text) > 0:
                                             if prev_line[-1:] == '-':
                                                 if fmt[0].get('wordStart') == 'false':
@@ -267,7 +267,7 @@ def process_book(iabook, ebook):
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
-    if len(paragraphs) > 100:
+    if len(paragraphs) > 0:
         part_str = 'part' + str(part_number).zfill(4)
         part_str_href = part_str + '.html'
         tree = make_html('sample title', paragraphs)
@@ -277,7 +277,7 @@ def process_book(iabook, ebook):
                           common.tree_to_str(tree, xml_declaration=False))
         ebook.add_spine_item({ 'idref':part_str })
         if part_number == 0:
-            book.add_guide_item( { 'href':part_str_href,
+            ebook.add_guide_item( { 'href':part_str_href,
                                     'type':'text',
                                     'title':'Book' } )
             ebook.add_navpoint({ 'text':'Pages',
