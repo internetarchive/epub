@@ -132,6 +132,8 @@ class Book(object):
 
 if not os.path.exists('/tmp/stdout.ppm'):
     os.symlink('/dev/stdout', '/tmp/stdout.ppm')
+if not os.path.exists('/tmp/stdout.bmp'):
+    os.symlink('/dev/stdout', '/tmp/stdout.bmp')
  
 # get python string with image data - from .jp2 image in zip
 def image_from_zip(zipf, image_path,
@@ -154,7 +156,8 @@ def image_from_zip(zipf, image_path,
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                         + ' | kdu_expand -region "' + region + '"'
                         +   ' -reduce 2 '
-                        +   ' -no_seek -i /dev/stdin -o /tmp/stdout.ppm'
+                        +   ' -no_seek -i /dev/stdin -o /tmp/stdout.bmp'
+                        + ' | bmptopnm -quiet '
                         + ' | pnmscale -quiet '
                         +   ' -xysize ' + str(width) + ' ' + str(height)
                         + scale
