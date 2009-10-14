@@ -6,9 +6,10 @@ epub:
 
 
 daisy:
-- Generate content!
 - stylesheet decls get dropped from dtbook xml
 - extract proper metadata (or pass it elseways)
+- Copyright, legalese - add!
+
 
 Maybe someday:
 
@@ -21,3 +22,50 @@ Maybe someday:
 
 - get rid of common.py?
 Skip line if too many chars are suspicious?
+
+
+
+
+rename things.
+
+convert_iabook
+
+--daisy (opts - mogrify)
+--epub (default) (opts -> -d)
+--condense
+--visualize
+
+
+http://ia301518.us.archive.org/2/items/whowillfeedthemi00amararch/
+
+do we have a test/real eventual "/nls" (only) book/item now/yet?  i could dark the non-xml files (item mgr) and i could setup some sudoer rules for mike's script to be able to "sudo up" from "www-data" to root to access the files.  (or we could delay that for later?)
+[10/13/09 5:21:04 PM] Tracey Jaquith: mike -- for books like that, a few simple lines in the script like this should get you close to the privs thing:
+[10/13/09 5:21:10 PM] Tracey Jaquith: require_once '/petabox/setup.inc';
+[10/13/09 5:21:17 PM] Tracey Jaquith: Auth::must_be_logged_in();
+[10/13/09 5:21:28 PM] Tracey Jaquith: if (Auth::hasPriv("/nls"))  ...
+
+
+
+
+get that to you in a sec...
+[10/13/09 8:39:35 PM] Hank Bromley: $_COOKIE['logged-in-user']
+
+will be the user id (email address)
+
+Auth::status() returns the current user's priv list (as an array), in a form suitable for being passed to the Auth::hasPriv() function tracey mentioned earlier. (you provide it no args; it looks up the current user via $_COOKIE['logged-in-user'])
+[10/13/09 8:40:33 PM] Hank Bromley: you can see how all this is defined, if you're interested, in petabox/www/common/Auth.inc
+
+
+
+
+
+
+[10/13/09 8:27:45 PM] Hank Bromley: which would you like for that third param name?
+[10/13/09 8:29:21 PM] Mike McCabe: (identifier, dir, doc?)
+[10/13/09 8:30:28 PM] Hank Bromley: sounds good. where "doc" may, on occasion, start with subdir(s).
+[10/13/09 8:31:05 PM] Mike McCabe: been considering also tool mods to support password-wrapping daisy.zip files for protected books
+
+
+
+doing: making epubs work again!
+

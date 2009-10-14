@@ -29,12 +29,11 @@ def main(argv):
         opts, args = getopt.getopt(argv,
                                    "dho:",
                                    ["debug", "help", "outfile=",
-                                    "page-map", "daisy"])
+                                    "daisy"])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
     debug_output = False
-    include_page_map = False
     make_daisy = False
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -42,8 +41,6 @@ def main(argv):
             sys.exit()
         elif opt in ('-d', '--debug'):
             debug_output = True
-        elif opt in ('--page-map'):
-            include_page_map = True
         elif opt in ('--daisy'):
             make_daisy = True
         elif opt in ('-o', '--outfile'):
@@ -90,7 +87,7 @@ def main(argv):
         ebook = daisy.Book(out_name, metadata)
         daisyfy_abbyy.process_book(iabook, ebook)
     else:
-        ebook = epub.Book(out_name, include_page_map=include_page_map)
+        ebook = epub.Book(out_name, metadata)
         process_abbyy.process_book(iabook, ebook)
 
     ebook.finish(metadata)

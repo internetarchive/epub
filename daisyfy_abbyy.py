@@ -18,7 +18,6 @@ from lxml import html
 import lxml
 from lxml.builder import E
 
-import epub
 import common
 
 import iarchive
@@ -36,7 +35,12 @@ def process_book(iabook, ebook):
     if bookData is None:
         bookData = scandata.bookData
 
-    import common
+    # some books no scanlog
+#     scanLog = scandata.find('scanLog')
+#     if scanLog is None:
+#         scanLog = scandata.scanLog
+
+    contents = iabook.get_toc()
     metadata = iabook.get_metadata()
     title = common.get_metadata_tag_data(metadata, 'title')
     author = common.get_metadata_tag_data(metadata, 'creator')
@@ -45,18 +49,8 @@ def process_book(iabook, ebook):
     ebook.add_tag('doctitle', title)
     ebook.add_tag('covertitle', title)
     ebook.add_tag('docauthor', author)
-    ebook.push_tag('level1')
-    ebook.add_tag('p', 'sample text')
-    ebook.pop_tag()
     ebook.pop_tag()
     ebook.push_tag('bodymatter')
-
-    contents = iabook.get_toc()
-
-    # some books no scanlog
-#     scanLog = scandata.find('scanLog')
-#     if scanLog is None:
-#         scanLog = scandata.scanLog
 
     i = 0
     part_number = 0
@@ -79,16 +73,13 @@ def process_book(iabook, ebook):
         pageno = page_scandata.find('pageNumber')
         if pageno:
             part_str = 'part' + str(part_number).zfill(4)
+            ebook.add_pagetarget(str(pageno), pageno)
 
             if contents is not None and str(pageno) in contents:
                 if pushed_navpoint:
                     ebook.pop_navpoint()
                 ebook.push_navpoint('level', 'h', contents[str(pageno)])
                 pushed_navpoint = True
-
-            ebook.add_pagetarget(str(pageno), pageno)
-
-            
 
         def include_page(page_scandata):
             if page_scandata is None:
@@ -100,9 +91,11 @@ def process_book(iabook, ebook):
                 return True
             else:
                 return False
+
         if not include_page(page_scandata):
             i += 1
             continue
+
         page_type = page_scandata.pageType.text.lower()
         if page_type == 'cover':
             pass

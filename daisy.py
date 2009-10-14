@@ -19,11 +19,6 @@ from debug import debug, debugging
 # This becomes the dtb:generator meta in the generated book
 content_generator = 'Internet Archive - archive.org'
 
-# Whether 'pagenum' tags in dtbook should have content
-# ... as some reading systems don't understand requests to
-# not display them.
-hide_content_pagenums = False
-
 class Book(object):
     def __init__(self, out_name, metadata, content_dir=''):
         self.dt = datetime.now()
@@ -56,11 +51,11 @@ class Book(object):
         self.total_page_count = 0
         self.max_page_number = 0
 
-        # style sheet
+        # style sheet, etc.
         for content in ['daisy.css', 'daisyTransform.xsl',
                         'dtbook-2005-3.dtd', 'html.css',
                         'resource.res']:
-            content_src = os.path.join(sys.path[0], 'daisy', content)
+            content_src = os.path.join(sys.path[0], 'daisy_files', content)
             content_str = open(content_src, 'r').read()
             self.add(self.content_dir + content, content_str)
 
@@ -98,9 +93,6 @@ class Book(object):
               'media-type':'application/x-dtbresource+xml'
               },
             ]
-
-        self.page_items = []
-        self.navpoints = []
 
 
     def push_tag(self, tag, text='', attrs={}):
@@ -171,13 +163,9 @@ class Book(object):
         self.total_page_count += 1
         if value > self.max_page_number:
             self.max_page_number += 1
-        dtbook_page_name = name
-        if hide_content_pagenums:
-            dtbook_page_name = ' '
-        pagenum_id, pagenum_el = self.add_tag('pagenum', dtbook_page_name,
+        pagenum_id, pagenum_el = self.add_tag('pagenum', name,
                               attrs={ 'page':type },
                               smil_attrs={'customTest':'pagenumCustomTest' })
-
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
                                          { 'id':pagenum_id,
@@ -320,7 +308,7 @@ def make_smil(book_id):
                      { 'name':'dtb:uid',
                        'content':book_id })
     etree.SubElement(head_el, 'meta',
-                     { 'name':'dtb:generator', 'content':'archive.org' }) # XXX
+                     { 'name':'dtb:generator', 'content':content_generator })
     etree.SubElement(head_el, 'meta',
                      { 'name':'dtb:totalElapsedTime', 'content':'0' })
     layout_el = etree.SubElement(head_el, 'layout')

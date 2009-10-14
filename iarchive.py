@@ -119,6 +119,9 @@ class Book(object):
             return os.popen('unzip -p ' + abbyy_zip + ' ' + self.book_id + '_abbyy.xml')
 #             z = zipfile.ZipFile(abbyy_zip, 'r')
 #             return z.open(self.book_id + '_abbyy.xml') # only in 2.6
+        abbyy_xml = os.path.join(self.book_path, self.book_id + '_abbyy.xml')
+        if os.path.exists(abbyy_xml):
+            return open(abbyy_xml, 'r')
         raise 'No abbyy file found'
 
     # get python string with image data - from .jp2 image in zip
