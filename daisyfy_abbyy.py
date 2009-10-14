@@ -197,7 +197,9 @@ def process_book(iabook, ebook):
         page.clear()
         i += 1
 
-    ebook.pop_tag()
+    if pushed_navpoint:
+        ebook.pop_navpoint()
+
     ebook.pop_tag()
     ebook.push_tag('rearmatter')
     ebook.push_tag('level1')
