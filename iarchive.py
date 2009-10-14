@@ -7,7 +7,11 @@ import gzip
 import os
 import zipfile
 
-from lxml import etree
+try:
+    from lxml import etree
+except ImportError:
+    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
+    from lxml import etree
 from lxml import objectify
 
 from debug import debug, debugging, assert_d
@@ -84,8 +88,27 @@ class Book(object):
     def get_leafno_for_page(self, i):
         return int(self.get_page_scandata(i).get('leafNum'))
 
-    def get_metadata_path(self):
-        return os.path.join(self.book_path, self.book_id + '_meta.xml')
+    def get_metadata(self):
+        md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
+        md = objectify.parse(md_path).getroot()
+        result = []
+        for el in md.iterchildren():
+            if el.tag == 'language':
+                result_text = iso_639_23_to_iso_639_1(el.text)
+            else:
+                result_text = el.text
+            result.append({ 'tag':el.tag, 'text':result_text })
+        return result
+
+    def get_toc(self):
+        toc_path = os.path.join(self.book_path, self.book_id + '_toc.xml')
+        if not os.path.exists(toc_path):
+            return None
+        toc = objectify.parse(toc_path).getroot()
+        result = {}
+        for el in toc.iterchildren():
+            result[el.get('page')] = el.get('title')
+        return result
 
     def get_abbyy(self):
         abbyy_gz = os.path.join(self.book_path, self.book_id + '_abbyy.gz')
@@ -96,6 +119,9 @@ class Book(object):
             return os.popen('unzip -p ' + abbyy_zip + ' ' + self.book_id + '_abbyy.xml')
 #             z = zipfile.ZipFile(abbyy_zip, 'r')
 #             return z.open(self.book_id + '_abbyy.xml') # only in 2.6
+        abbyy_xml = os.path.join(self.book_path, self.book_id + '_abbyy.xml')
+        if os.path.exists(abbyy_xml):
+            return open(abbyy_xml, 'r')
         raise 'No abbyy file found'
 
     # get python string with image data - from .jp2 image in zip

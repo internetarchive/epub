@@ -6,8 +6,10 @@ import getopt
 import os
 
 import epub
+import daisy
+import iabook_to_daisy
+import iabook_to_epub
 import iarchive
-import process_abbyy
 import common
 
 from debug import debug, debugging, assert_d
@@ -21,24 +23,28 @@ def usage():
     sys.stderr.write("  (epubcheck jar is assumed to be in the script directory)\n")
 
 def main(argv):
-    epub_out = None
+    out_name = None
     import getopt
     try:
         opts, args = getopt.getopt(argv,
                                    "dho:",
-                                   ["debug", "help", "outfile="])
+                                   ["debug", "help", "outfile=",
+                                    "daisy"])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
     debug_output = False
+    make_daisy = False
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
             sys.exit()
         elif opt in ('-d', '--debug'):
             debug_output = True
+        elif opt in ('--daisy'):
+            make_daisy = True
         elif opt in ('-o', '--outfile'):
-            epub_out = arg
+            out_name = arg
     if len(args) == 0:
         book_id = common.get_book_id()
         if book_id is None:
@@ -57,37 +63,42 @@ def main(argv):
         book_id = args[0]
         book_path = args[1]
     elif len(args) == 3:
-        if epub_out is not None:
+        if out_name is not None:
             print 'outfile found as 3rd argument, but outfile is already specified via -o'
             usage()
             sys.exit(-1)
         book_id = args[0]
         book_path = args[1]
-        epub_out = args[2]
+        out_name = args[2]
     else:
         print 'unrecognized extra arguments ' + args[3:]
         usage()
         sys.exit(-1)
 
-    if epub_out is None:
-        epub_out = book_id + '.epub'
-
-# probably busted due to getopt
-#     if epub_out == '-':
-#         epub_out = sys.stdout
+    if out_name is None:
+        if make_daisy:
+            out_name = book_id + '_daisy.zip'
+        else:
+            out_name = book_id + '.epub'
 
     iabook = iarchive.Book(book_id, book_path)
-    ebook = epub.Book(epub_out, include_page_map=False)
+    metadata = iabook.get_metadata()
+    if make_daisy:
+        ebook = daisy.Book(out_name, metadata)
+        iabook_to_daisy.process_book(iabook, ebook)
+    else:
+        ebook = epub.Book(out_name, metadata)
+        iabook_to_epub.process_book(iabook, ebook)
 
-    process_abbyy.process_book(iabook, ebook)
-
-    meta_info_items = process_abbyy.get_meta_items(iabook)
-    ebook.finish(meta_info_items)
+    ebook.finish(metadata)
 
     if debug_output:
-        epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
-        output = os.popen('java -jar ' + epubcheck + ' ' + epub_out)
-        print output.read()
+        if make_daisy:
+            pass
+        else:
+            epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
+            output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
+            print output.read()
 
 if __name__ == '__main__':
     main(sys.argv[1:])

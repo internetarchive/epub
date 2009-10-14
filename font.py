@@ -17,7 +17,7 @@ import Image
 import ImageDraw
 import ImageFont 
 
-def get_font(name, dpi, size, italic):
+def get_font(name, dpi, size, italic=False):
     size *= dpi/72
     if not name in fonts:
         fonts[name] = {}
