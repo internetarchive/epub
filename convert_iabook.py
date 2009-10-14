@@ -7,9 +7,9 @@ import os
 
 import epub
 import daisy
-import daisyfy_abbyy
+import iabook_to_daisy
+import iabook_to_epub
 import iarchive
-import process_abbyy
 import common
 
 from debug import debug, debugging, assert_d
@@ -85,10 +85,10 @@ def main(argv):
     metadata = iabook.get_metadata()
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)
-        daisyfy_abbyy.process_book(iabook, ebook)
+        iabook_to_daisy.process_book(iabook, ebook)
     else:
         ebook = epub.Book(out_name, metadata)
-        process_abbyy.process_book(iabook, ebook)
+        iabook_to_epub.process_book(iabook, ebook)
 
     ebook.finish(metadata)
 

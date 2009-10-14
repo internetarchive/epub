@@ -30,7 +30,8 @@ def process_book(iabook, ebook):
     aby_file = iabook.get_abbyy()
 
     bookData = scandata.find('bookData')
-    # XXX should fix below and similar by ensuring that scandata is always the same fmt...
+    # XXX should fix below and similar by ensuring that scandata
+    #   is always the same fmt...
     # scandata.zip/scandata.xml parses different?
     if bookData is None:
         bookData = scandata.bookData
