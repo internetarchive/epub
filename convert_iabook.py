@@ -16,7 +16,7 @@ from debug import debug, debugging, assert_d
 
 def usage():
     sys.stderr.write("\n")
-    sys.stderr.write("Usage: abbyy_to_epub.py book_id path_to_book_files [out.epub]\n")
+    sys.stderr.write("Usage: convert_iabook.py book_id path_to_book_files [out.epub]\n")
     sys.stderr.write("  Output defaults to book_id.epub.\n")
     sys.stderr.write("\n")
     sys.stderr.write("  -d calls epubcheck-1.0.3.jar to check output.\n")
@@ -27,14 +27,18 @@ def main(argv):
     import getopt
     try:
         opts, args = getopt.getopt(argv,
-                                   "dho:",
-                                   ["debug", "help", "outfile=",
-                                    "daisy"])
+                                   'dho:',
+                                   ['debug', 'help', 'outfile=',
+                                    'document=',
+                                    'daisy', 'epub'])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
     debug_output = False
+    found_output_opt = False
+    make_epub = False
     make_daisy = False
+    document = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
@@ -43,8 +47,16 @@ def main(argv):
             debug_output = True
         elif opt in ('--daisy'):
             make_daisy = True
+            found_output_opt = True
+        elif opt in ('--epub'):
+            make_epub = True
+            found_output_opt = True
         elif opt in ('-o', '--outfile'):
             out_name = arg
+        elif opt in ('--document'):
+            document = arg
+        if not found_output_opt:
+            make_epub = True
     if len(args) == 0:
         book_id = common.get_book_id()
         if book_id is None:
@@ -81,7 +93,7 @@ def main(argv):
         else:
             out_name = book_id + '.epub'
 
-    iabook = iarchive.Book(book_id, book_path)
+    iabook = iarchive.Book(book_id, document, book_path)
     metadata = iabook.get_metadata()
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)

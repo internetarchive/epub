@@ -17,8 +17,9 @@ from lxml import objectify
 from debug import debug, debugging, assert_d
 
 class Book(object):
-    def __init__(self, book_id, book_path):
+    def __init__(self, book_id, document, book_path):
         self.book_id = book_id
+        self.document = document
         self.book_path = book_path
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
