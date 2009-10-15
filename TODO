@@ -1,14 +1,20 @@
+Mini to do:
+
+Get it working on the web
+Get daisy download happy
+
+
 To do:
 epub:
 - images (cf. best practices?)
 - switch to incremental content generation
 - make sure temp files get deleted!
-
+- Better chapter structure
 
 daisy:
-- stylesheet decls get dropped from dtbook xml
 - extract proper metadata (or pass it elseways)
 - Copyright, legalese - add!
+- missing 1rst chapter headers
 
 
 Maybe someday:
