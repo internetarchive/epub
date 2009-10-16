@@ -17,17 +17,19 @@ from lxml import objectify
 from debug import debug, debugging, assert_d
 
 class Book(object):
-    def __init__(self, book_id, document, book_path):
+    def __init__(self, book_id, doc, book_path):
         self.book_id = book_id
-        self.document = document
+        self.doc = doc
+        if len(self.doc) == 0:
+            self.doc = self.book_id
         self.book_path = book_path
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
         self.images_type = 'unknown'
-        if os.path.exists(os.path.join(book_path, book_id + '_jp2.zip')):
+        if os.path.exists(os.path.join(book_path, doc + '_jp2.zip')):
             self.images_type = 'jp2.zip'
-        elif os.path.exists(os.path.join(book_path, book_id + '_tif.zip')):
+        elif os.path.exists(os.path.join(book_path, doc + '_tif.zip')):
             self.images_type = 'tif.zip'
 #         else:
 #             raise Exception('Can\'t find book images')
@@ -39,9 +41,12 @@ class Book(object):
     def get_book_path(self):
         return self.book_path
 
+    def get_doc(self):
+        return self.doc
+
     def get_scandata_path(self):
         paths = [
-            os.path.join(self.book_path, self.book_id + '_scandata.xml'),
+            os.path.join(self.book_path, self.doc + '_scandata.xml'),
             os.path.join(self.book_path, 'scandata.xml'),
             os.path.join(self.book_path, 'scandata.zip'),
             ]
@@ -90,6 +95,7 @@ class Book(object):
         return int(self.get_page_scandata(i).get('leafNum'))
 
     def get_metadata(self):
+        # metadata is by book_id, not by doc
         md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
         md = objectify.parse(md_path).getroot()
         result = []
@@ -102,7 +108,7 @@ class Book(object):
         return result
 
     def get_toc(self):
-        toc_path = os.path.join(self.book_path, self.book_id + '_toc.xml')
+        toc_path = os.path.join(self.book_path, self.doc + '_toc.xml')
         if not os.path.exists(toc_path):
             return None
         toc = objectify.parse(toc_path).getroot()
@@ -112,15 +118,15 @@ class Book(object):
         return result
 
     def get_abbyy(self):
-        abbyy_gz = os.path.join(self.book_path, self.book_id + '_abbyy.gz')
+        abbyy_gz = os.path.join(self.book_path, self.doc + '_abbyy.gz')
         if os.path.exists(abbyy_gz):
             return gzip.open(abbyy_gz, 'rb')
-        abbyy_zip = os.path.join(self.book_path, self.book_id + '_abbyy.zip')
+        abbyy_zip = os.path.join(self.book_path, self.doc + '_abbyy.zip')
         if os.path.exists(abbyy_zip):
-            return os.popen('unzip -p ' + abbyy_zip + ' ' + self.book_id + '_abbyy.xml')
+            return os.popen('unzip -p ' + abbyy_zip + ' ' + self.doc + '_abbyy.xml')
 #             z = zipfile.ZipFile(abbyy_zip, 'r')
-#             return z.open(self.book_id + '_abbyy.xml') # only in 2.6
-        abbyy_xml = os.path.join(self.book_path, self.book_id + '_abbyy.xml')
+#             return z.open(self.doc + '_abbyy.xml') # only in 2.6
+        abbyy_xml = os.path.join(self.book_path, self.doc + '_abbyy.xml')
         if os.path.exists(abbyy_xml):
             return open(abbyy_xml, 'r')
         raise 'No abbyy file found'
@@ -135,14 +141,14 @@ class Book(object):
 #         debug()
         if self.images_type == 'jp2.zip':
             zipf = os.path.join(self.book_path,
-                                self.book_id + '_jp2.zip')
-            image_path = (self.book_id + '_jp2/' + self.book_id + '_'
+                                self.doc + '_jp2.zip')
+            image_path = (self.doc + '_jp2/' + self.doc + '_'
                           + str(leafno).zfill(4) + '.jp2')
             in_img_type = 'jp2'
         elif self.images_type == 'tif.zip':
             zipf  = os.path.join(self.book_path,
-                                 self.book_id + '_tif.zip')
-            image_path = (self.book_id + '_tif/' + self.book_id + '_'
+                                 self.doc + '_tif.zip')
+            image_path = (self.doc + '_tif/' + self.doc + '_'
                           + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
         else:

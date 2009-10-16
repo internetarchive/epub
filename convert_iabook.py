@@ -38,7 +38,7 @@ def main(argv):
     found_output_opt = False
     make_epub = False
     make_daisy = False
-    document = ''
+    doc = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             usage()
@@ -54,7 +54,7 @@ def main(argv):
         elif opt in ('-o', '--outfile'):
             out_name = arg
         elif opt in ('--document'):
-            document = arg
+            doc = arg
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
@@ -88,12 +88,16 @@ def main(argv):
         sys.exit(-1)
 
     if out_name is None:
-        if make_daisy:
-            out_name = book_id + '_daisy.zip'
+        if len(doc) > 0:
+            out_root = doc
         else:
-            out_name = book_id + '.epub'
+            out_root = book_id
+        if make_daisy:
+            out_name = out_root + '_daisy.zip'
+        else:
+            out_name = out_root + '.epub'
 
-    iabook = iarchive.Book(book_id, document, book_path)
+    iabook = iarchive.Book(book_id, doc, book_path)
     metadata = iabook.get_metadata()
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)
