@@ -88,11 +88,11 @@ class Book(object):
         return navpoint_el
 
 
-    def push_navpoint(self, text):
+    def push_navpoint(self, text, href):
         self.current_depth += 1
         if self.current_depth > self.depth:
             self.depth = self.current_depth
-        navpoint_el = self.add_navpoint(text)
+        navpoint_el = self.add_navpoint(text, href)
         self.navpoint_stack.append(navpoint_el)
 
 
