@@ -17,7 +17,7 @@ import common
 
 outdir='viz'
 
-kdu_reduce = 2
+kdu_reduce = 0
 scale = 2 ** kdu_reduce
 s = scale
 
@@ -31,7 +31,7 @@ def main(argv):
         os.mkdir('./' + outdir + '/')
 
     id = common.get_book_id()
-    iabook = iarchive.Book(id, '.')
+    iabook = iarchive.Book(id, '', '.')
     visualize(iabook)
 
 abbyyns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
