@@ -27,9 +27,9 @@ class Book(object):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
         self.images_type = 'unknown'
-        if os.path.exists(os.path.join(book_path, doc + '_jp2.zip')):
+        if os.path.exists(os.path.join(book_path, self.doc + '_jp2.zip')):
             self.images_type = 'jp2.zip'
-        elif os.path.exists(os.path.join(book_path, doc + '_tif.zip')):
+        elif os.path.exists(os.path.join(book_path, self.doc + '_tif.zip')):
             self.images_type = 'tif.zip'
 #         else:
 #             raise Exception('Can\'t find book images')
@@ -138,7 +138,6 @@ class Book(object):
                        region='{0.0,0.0},{1.0,1.0}',
                        out_img_type='jpg'):
         leafno = self.get_leafno_for_page(i)
-#         debug()
         if self.images_type == 'jp2.zip':
             zipf = os.path.join(self.book_path,
                                 self.doc + '_jp2.zip')
