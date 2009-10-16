@@ -33,14 +33,13 @@ for row in table:
     if len(row[4]) > 0:
         coltext = etree.tostring(row[4], method='text', encoding=unicode)
         for name in coltext[:-1].split(', '):
-            lang_name[name] = abbrev
+            lang_name[name.lower()] = abbrev
     if row[5].text is not None:
         for name in row[5].text.split(', '):
-            native_name[name] = abbrev
+            native_name[name.lower()] = abbrev
 
-print 'iso639_2_T = ' + json.dumps(iso639_2_T, sort_keys=True, indent=4)
-print 'iso639_2_B = ' + json.dumps(iso639_2_B, sort_keys=True, indent=4)
-print 'iso639_3 = ' + json.dumps(iso639_3, sort_keys=True, indent=4)
-print 'lang_name = ' + json.dumps(lang_name, sort_keys=True, indent=4)
-print 'native_name = ' + json.dumps(native_name, sort_keys=True, indent=4)
-
+print 'mapping = ' + json.dumps([iso639_2_T,
+                                 iso639_2_B,
+                                 iso639_3,
+                                 lang_name,
+                                 native_name], sort_keys=True, indent=4)
