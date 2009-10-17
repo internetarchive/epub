@@ -25,8 +25,23 @@ from debug import debug, debugging, assert_d
 
 def usage():
     print 'usage: visualize_abbyy.py'
+    print ''
+    print 'legend:'
+    print '    ta - align'
+    print '    li - leftIndent'
+    print '    ri - rightIndent'
+    print '    si - startIndent'
+    print '    ls - lineSpacing'
+    print
+    print 'Colors:'
+    for sty_name in styles:
+        print '    ' + styles[sty_name]['col'] + '  -  ' + sty_name
 
 def main(argv):
+    if len(argv) > 0 and argv[0] == '-h':
+        usage()
+        sys.exit(0)
+    
     if not os.path.isdir('./' + outdir+ '/'):
         os.mkdir('./' + outdir + '/')
 
@@ -48,6 +63,7 @@ def visualize(iabook):
     info = scan_pages(context, scandata, iabook)
 
 def draw_rect(draw, el, sty, use_coords=None):
+    col = color.color[sty['col']]
     if sty['width'] == 0:
         return
     
@@ -78,7 +94,7 @@ def draw_rect(draw, el, sty, use_coords=None):
 #     x2 += sty['offset']
 #     y2 += sty['offset']
     draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)],
-              width=sty['width'], fill=sty['col'])
+              width=sty['width'], fill=col)
     
 def tag_coords(tag, s):
     t = int(tag.get('t'))/s
@@ -103,12 +119,12 @@ def enclosing_tag(tag):
     return tag_with_coords
 
 styles = {
-    'block_text' : { 'col':color.yellow, 'width':1, 'offset':0, 'margin':10 },
-    'block_picture' : { 'col':color.red, 'width':1, 'offset':7, 'margin':10 },
-    'block_table' : { 'col':color.purple, 'width':1, 'offset':7, 'margin':10 },
-    'rect' : { 'col':color.orange, 'width':0, 'offset':-4, 'margin':10 },
-    'par' : { 'col':color.green, 'width':2, 'offset':0, 'margin':10 },
-    'line' : { 'col':color.blue, 'width':1, 'offset':0, 'margin':10 },
+    'block_text' : { 'col':'yellow', 'width':1, 'offset':0, 'margin':10 },
+    'block_picture' : { 'col':'red', 'width':1, 'offset':7, 'margin':10 },
+    'block_table' : { 'col':'purple', 'width':1, 'offset':7, 'margin':10 },
+    'rect' : { 'col':'orange', 'width':0, 'offset':-4, 'margin':10 },
+    'par' : { 'col':'green', 'width':2, 'offset':0, 'margin':10 },
+    'line' : { 'col':'blue', 'width':1, 'offset':0, 'margin':10 },
     }
 
 def nons(tag):
@@ -267,10 +283,10 @@ def scan_pages(context, scandata, iabook):
         page_scandata = iabook.get_page_scandata(i)
         if page_scandata is not None:
             t = page_scandata.pageType.text
-            f = font.get_font("Courier", dpi / scale, 48)
+            f = font.get_font("Courier", dpi / scale, 12)
             page_w, page_h = image.size
-            draw.text((.1 * dpi,
-                       .1 * dpi),
+            draw.text((.02 * dpi,
+                       .02 * dpi),
                       t.encode('utf-8'),
                       font=f,
                       fill=color.green)
