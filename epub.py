@@ -33,9 +33,10 @@ class Book(object):
          self.opf_spine_el, self.opf_guide_el) = make_opf(metadata)
         
         (self.ncx, self.ncx_head_el,
-         self.ncx_navmap_el, self.ncx_pagelist_el) = make_ncx(self.book_id,
-                                                              self.title,
-                                                              self.author)
+         self.ncx_navmap_el) = make_ncx(self.book_id,
+                                        self.title,
+                                        self.author)
+        self.ncx_pagelist_el = None
 
         self.tag_stack = []
         self.navpoint_stack = [self.ncx_navmap_el]
@@ -104,6 +105,10 @@ class Book(object):
     def add_pagetarget(self, name, value, page_href, type='normal'):
         pagetarget_id = 'pagetarget' + str(self.id_index).zfill(6)
         self.id_index += 1
+        
+        if self.ncx_pagelist_el is None:
+            self.ncx_pagelist_el = make_pagelist_el(self.ncx)
+        
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
                                          { 'id':pagetarget_id,
@@ -211,12 +216,16 @@ def make_ncx(book_id, title, author):
     navinfo_el = etree.SubElement(navmap_el, 'navInfo')
     etree.SubElement(navinfo_el, 'text').text = 'Book navigation'
 
+    # defer pagelist_el, as some books lack pages
+
+    return tree, head_el, navmap_el
+
+def make_pagelist_el(ncx):
+    root_el = ncx.getroot()
     pagelist_el = etree.SubElement(root_el, 'pageList')
     navlabel_el = etree.SubElement(pagelist_el, 'navLabel')
     etree.SubElement(navlabel_el, 'text').text = 'Pages'
-
-    return tree, head_el, navmap_el, pagelist_el
-
+    return pagelist_el
 
 if __name__ == '__main__':
     sys.stderr.write('I\'m a module.  Don\'t run me directly!')
