@@ -19,6 +19,8 @@ epub:
 - switch to incremental content generation
 - Better chapter structure
 - link to streaming / details page / etc.
+- 'width', 'height' tags for images.  (pamfile + tee? temp files?)
+
 
 daisy:
 - extract proper metadata (or pass it elseways)
