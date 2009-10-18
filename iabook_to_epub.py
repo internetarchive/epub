@@ -161,6 +161,8 @@ def process_book(iabook, ebook):
                     (id, filename) = make_html_page_image(i, iabook, ebook)
             else:
                 first_par = True
+                saw_pageno_header_footer = False
+                
                 for block in page:
                     if block.get('blockType') == 'Text':
                         pass
@@ -172,7 +174,7 @@ def process_book(iabook, ebook):
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
-                                def par_is_header(par):
+                                def par_is_pageno_header_footer(par):
                                     # if:
                                     #   it's the first on the page
                                     #   there's only one line
@@ -210,14 +212,27 @@ def process_book(iabook, ebook):
                                         if hdr_text in rnums:
                                             return True
                                         # common OCR errors
-                                        if re.match('[0-9afhiklmnou^]+',
+                                        if re.match('[0-9afhiklmnouvx^]+',
                                                     hdr_text):
                                             return True
                                     return False
-                                if first_par and par_is_header(par):
+
+                                # skip if its the first line and it could be a header
+                                if first_par and par_is_pageno_header_footer(par):
+                                    saw_pageno_header_footer = True
                                     first_par = False
                                     continue
                                 first_par = False
+
+                                # skip if it's the last par and it could be a header
+                                if (not saw_pageno_header_footer
+                                    and block == page[-1]
+                                    and el == block[-1]
+                                    and par == el[-1]
+                                    and par_is_pageno_header_footer(par)):
+                                    saw_pageno_header_footer = True
+                                    continue
+                                        
                                 lines = []
                                 prev_line = ''
                                 for line in par:
