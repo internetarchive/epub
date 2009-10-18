@@ -154,7 +154,11 @@ def process_book(iabook, ebook):
             if before_title_page:
                 # XXX consider skipping if blank + no words?
                 # make page image
-                (id, filename) = make_html_page_image(i, iabook, ebook)
+                page_text = etree.tostring(page,
+                                           method='text',
+                                           encoding=unicode)
+                if len(page_text) >= 10:
+                    (id, filename) = make_html_page_image(i, iabook, ebook)
             else:
                 first_par = True
                 for block in page:
