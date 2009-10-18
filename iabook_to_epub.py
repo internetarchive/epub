@@ -51,6 +51,7 @@ def process_book(iabook, ebook):
     part_number = 0
     cover_number = 0
     toc_item_number = 0
+    picture_number = 0
     pushed_chapters = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
@@ -65,8 +66,9 @@ def process_book(iabook, ebook):
     before_title_page = found_title
     for event, page in context:
         page_scandata = iabook.get_page_scandata(i)
-
-        pageno = page_scandata.find('pageNumber')
+        pageno = None
+        if page_scandata is not None:
+            pageno = page_scandata.find('pageNumber')
         if pageno:
             part_str = 'part' + str(part_number).zfill(4)
             id = 'page-' + str(pageno)
@@ -164,10 +166,34 @@ def process_book(iabook, ebook):
                 saw_pageno_header_footer = False
                 
                 for block in page:
-                    if block.get('blockType') == 'Text':
-                        pass
-                    else:
-                        pass
+                    if block.get('blockType') == 'Picture':
+                        region = ((int(block.get('l')),
+                                   int(block.get('t'))),
+                                  (int(block.get('r')),
+                                   int(block.get('b'))))
+                        (l, t), (r, b) = region
+                        region_width = r - l
+                        region_height = b - t
+                        orig_page_size = (int(page.get('width')),
+                                     int(page.get('height')))
+                        page_width, page_height = orig_page_size
+                        
+                        req_width = int(600 * (region_width / float(page_width)))
+                        req_height = int(800 * (region_height / float(page_height)))
+                        image = iabook.get_page_image(i, (req_width, req_height),
+                                                      orig_page_size,
+                                                      kdu_reduce=2,
+                                                      region=region)
+                        pic_id = 'picture' + str(picture_number)
+                        pic_href = 'images/' + pic_id + '.jpg'
+                        picture_number += 1
+                        ebook.add_content(pic_id, pic_href,
+                                          'image/jpeg', image)
+                        el = E.p({ 'class':'illus' },
+                                 E.img(src=pic_href,
+                                       alt=pic_id))
+                        paragraphs.append(el)
+                        continue
                     for el in block:
                         if el.tag == aby_ns+'region':
                             for rect in el:
@@ -266,7 +292,7 @@ def process_book(iabook, ebook):
             # make a chunk!
             part_str = 'part' + str(part_number).zfill(4)
             part_str_href = part_str + '.html'
-            tree = make_html('sample title', paragraphs)
+            tree = make_html('Book part ' + str(part_number), paragraphs)
             ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
                               common.tree_to_str(tree, xml_declaration=False))
             ebook.add_spine_item({ 'idref':part_str })
@@ -299,7 +325,7 @@ def process_book(iabook, ebook):
 
 
 def make_html_page_image(i, iabook, ebook, cover=False):
-    image = iabook.get_page_image(i, width=600, height=800, quality=90)
+    image = iabook.get_page_image(i, (600, 800))
     leaf_id = 'leaf' + str(i).zfill(4)
     if not cover:
         leaf_image_id = 'leaf-image' + str(i).zfill(4)
@@ -313,17 +339,7 @@ def make_html_page_image(i, iabook, ebook, cover=False):
     ebook.add_content(leaf_id, leaf_id + '.html', 'application/xhtml+xml',
                       common.tree_to_str(tree, xml_declaration=False))
     ebook.add_spine_item({ 'idref':leaf_id, 'linear':'no' })
-
     return leaf_id, leaf_id + '.html'
-
-
-def make_page_image(i, iabook, ebook):
-    image = iabook.get_image(i, width=600, height=800, quality=90)
-    leaf_image_id = 'leaf-image' + str(i).zfill(4)
-    ebook.add_content(leaf_image_id, 'images/' + leaf_image_id + '.jpg',
-                      'image/jpeg', image);
-    ebook.add_spine_item({ 'idref':leaf_image_id, 'linear':'no' })
-    return leaf_image_id, 'images/' + leaf_image_id + '.jpg'
 
 
 def make_html(title, body_elems):

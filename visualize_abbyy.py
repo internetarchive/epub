@@ -17,9 +17,10 @@ import common
 
 outdir='viz'
 
-kdu_reduce = 0
+kdu_reduce = 0 # 0 to 4 or so - is powers of 2
 scale = 2 ** kdu_reduce
-s = scale
+top_page = 19
+#top_page = None # 49
 
 from debug import debug, debugging, assert_d
 
@@ -45,7 +46,7 @@ def main(argv):
     if not os.path.isdir('./' + outdir+ '/'):
         os.mkdir('./' + outdir + '/')
 
-    id = common.get_book_id()
+    id = iarchive.infer_book_id()
     iabook = iarchive.Book(id, '', '.')
     visualize(iabook)
 
@@ -67,7 +68,7 @@ def draw_rect(draw, el, sty, use_coords=None):
     if sty['width'] == 0:
         return
     
-    lt, rb = use_coords if use_coords is not None else tag_coords(el, s)
+    lt, rb = use_coords if use_coords is not None else tag_coords(el, scale)
 
     x1, y1 = lt
     x2, y2 = rb
@@ -142,9 +143,9 @@ def assert_tag(el, expected):
 
 def box_from_par(par):
     if len(par) > 0:
-        (o_l, o_t), (o_r, o_b) = tag_coords(par[0], s)
+        (o_l, o_t), (o_r, o_b) = tag_coords(par[0], scale)
         for line in par:
-            (l, t), (r, b) = tag_coords(line, s)
+            (l, t), (r, b) = tag_coords(line, scale)
             o_l = l if (l - o_l < 0) else o_l
             o_t = t if (t - o_t < 0) else o_t
             o_r = r if (o_r - r < 0) else o_r
@@ -171,20 +172,18 @@ def scan_pages(context, scandata, iabook):
     for event, page in context:
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
-        width = orig_width / s
-        height = orig_height / s
+        orig_size = (orig_width, orig_height)
+        requested_size = (orig_width / scale, orig_height / scale)
         
-        image = Image.new('RGB', (width, height))
-
+        image = Image.new('RGB', requested_size)
+        image_str = iabook.get_page_image(i, requested_size,
+                                          out_img_type='ppm',
+                                          kdu_reduce=kdu_reduce)
         page_image = None
-
-        image_str = iabook.get_page_image(i, width, height, out_img_type='ppm')
         if image_str is not None:
             page_image = Image.open(StringIO.StringIO(image_str))
-            (nw, nh) = page_image.size
-            if nw != width or nh != height:
-                page_image = page_image.resize((width, height))
-#        image.paste(page_image, None)
+            if requested_size != page_image.size:
+                page_image = page_image.resize(requested_size)
             try:
                 image = Image.blend(image, page_image, .2)
             except ValueError:
@@ -231,8 +230,8 @@ def scan_pages(context, scandata, iabook):
                                         f = font.get_font(font_name, dpi / scale, font_size, font_ital)
                                         for cp in fmt:
                                             assert_d(cp.tag == abyns+'charParams')
-                                            draw.text((int(cp.get('l'))/s,
-                                                       int(cp.get('b'))/s),
+                                            draw.text((int(cp.get('l'))/scale,
+                                                       int(cp.get('b'))/scale),
                                                       cp.text.encode('utf-8'),
                                                       font=f,
                                                       fill=color.yellow)
@@ -295,6 +294,9 @@ def scan_pages(context, scandata, iabook):
         print 'page index: ' + str(i)
         page.clear()
         i += 1
+        if top_page is not None:
+            if i > top_page:
+                sys.exit(0)
     return None
 
 def include_page(page):

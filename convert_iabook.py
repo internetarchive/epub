@@ -10,7 +10,6 @@ import daisy
 import iabook_to_daisy
 import iabook_to_epub
 import iarchive
-import common
 
 from debug import debug, debugging, assert_d
 
@@ -58,7 +57,7 @@ def main(argv):
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
-        book_id = common.get_book_id()
+        book_id = iarchive.infer_book_id()
         if book_id is None:
             print 'No args given and no book found in current directory'
             usage()
