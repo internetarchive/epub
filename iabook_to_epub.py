@@ -197,6 +197,7 @@ def process_book(iabook, ebook):
                                         hdr_text = etree.tostring(fmt,
                                                               method='text',
                                                               encoding=unicode)
+                                        hdr_text = hdr_text.lower()
                                         rnums = ['i', 'ii', 'iii', 'iv',
                                                  'v', 'vi', 'vii', 'viii',
                                                  'ix', 'x', 'xi', 'xii',
@@ -206,7 +207,11 @@ def process_book(iabook, ebook):
                                                  'xxv', 'xxvi', 'xxvii',
                                                  'xxviii', 'xxix', 'xxx',
                                                  ]
-                                        if hdr_text.lower() in rnums:
+                                        if hdr_text in rnums:
+                                            return True
+                                        # common OCR errors
+                                        if re.match('[0-9afhiklmnou^]+',
+                                                    hdr_text):
                                             return True
                                     return False
                                 if first_par and par_is_header(par):
