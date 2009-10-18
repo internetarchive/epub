@@ -238,15 +238,26 @@ def process_book(iabook, ebook):
                                         if hdr_text in rnums:
                                             return True
                                         # common OCR errors
-                                        if re.match('[0-9afhiklmnouvx^]+',
+                                        if re.match('[0-9io]+', hdr_text):
+                                            return True
+                                        if re.match('[0-9afhiklmnouvx^]*[0-9][0-9afhiklmnouvx^]*',
                                                     hdr_text):
                                             return True
                                     return False
 
+                                output_hfs = False
                                 # skip if its the first line and it could be a header
                                 if first_par and par_is_pageno_header_footer(par):
                                     saw_pageno_header_footer = True
                                     first_par = False
+                                    if output_hfs:
+                                        hf_txt = etree.tostring(par,
+                                                                method='text',
+                                                                encoding=unicode)
+                                        sys.stdout.write(iabook.get_book_id()
+                                                         + ' ----'
+                                                         + hf_txt.encode('utf-8'))
+                                        
                                     continue
                                 first_par = False
 
@@ -257,6 +268,13 @@ def process_book(iabook, ebook):
                                     and par == el[-1]
                                     and par_is_pageno_header_footer(par)):
                                     saw_pageno_header_footer = True
+                                    if output_hfs:
+                                        hf_txt = etree.tostring(par,
+                                                                method='text',
+                                                                encoding=unicode)
+                                        sys.stdout.write(iabook.get_book_id()
+                                                         + ' ----'
+                                                         + hf_txt.encode('utf-8'))
                                     continue
                                         
                                 lines = []
