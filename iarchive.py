@@ -137,7 +137,7 @@ class Book(object):
     # get python string with image data - from .jp2 image or tif in zip
     # finds appropriate leaf number for supplied page index
     def get_page_image(self, i, requested_size, orig_page_size=None,
-                       quality=90,
+                       quality=60,
                        region=None, # ((l,t)(r,b))
                        out_img_type='jpg',
                        kdu_reduce=2):
