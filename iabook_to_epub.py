@@ -53,6 +53,7 @@ def process_book(iabook, ebook):
     toc_item_number = 0
     picture_number = 0
     pushed_chapters = False
+    made_pages = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
@@ -114,6 +115,23 @@ def process_book(iabook, ebook):
             else:
                 cover_title = 'Back Cover' ## xxx detect back page?
                 front_cover = False
+                if len(paragraphs) > 0:
+                    part_str = 'part' + str(part_number).zfill(4)
+                    part_str_href = part_str + '.html'
+                    tree = make_html('Book part ' + str(part_number), paragraphs)
+                    ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
+                                      common.tree_to_str(tree, xml_declaration=False))
+                    ebook.add_spine_item({ 'idref':part_str })
+                    if part_number == 0:
+                        ebook.add_guide_item({ 'href':part_str_href,
+                                               'type':'text',
+                                               'title':'Book' })
+                    if not made_pages:
+                        made_pages = True
+                        if not pushed_chapters:
+                            ebook.add_navpoint('Pages', part_str_href)
+
+                    paragraphs = []
             
             (id, filename) = make_html_page_image(i, iabook, ebook,
                                                   cover=front_cover)
@@ -318,8 +336,11 @@ def process_book(iabook, ebook):
                 ebook.add_guide_item({ 'href':part_str_href,
                                        'type':'text',
                                        'title':'Book' })
-                if not pushed_chapters:
-                    ebook.add_navpoint('Pages', part_str_href)
+                if not made_pages:
+                    made_pages = True
+                    if not pushed_chapters:
+                        ebook.add_navpoint('Pages', part_str_href)
+
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
@@ -334,9 +355,12 @@ def process_book(iabook, ebook):
             ebook.add_guide_item({ 'href':part_str_href,
                                    'type':'text',
                                    'title':'Book' })
-            if not pushed_chapters:
-                ebook.add_navpoint('Pages', part_str_href)
+            if not made_pages:
+                made_pages = True
+                if not pushed_chapters:
+                    ebook.add_navpoint('Pages', part_str_href)
 
+        paragraphs = []
     if pushed_chapters:
         ebook.pop_navpoint()
 
