@@ -27,17 +27,13 @@ from debug import debug, debugging, assert_d
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
+    scandata_ns = iabook.get_scandata_ns()
+    bookData = iabook.get_bookdata()
+    
     aby_file = iabook.get_abbyy()
 
-    bookData = scandata.find('bookData')
-    # XXX should fix below and similar by ensuring that scandata
-    #   is always the same fmt...
-    # scandata.zip/scandata.xml parses different?
-    if bookData is None:
-        bookData = scandata.bookData
-
     # some books no scanlog
-#     scanLog = scandata.find('scanLog')
+#     scanLog = scandata.find(scandata_ns + 'scanLog')
 #     if scanLog is None:
 #         scanLog = scandata.scanLog
 
@@ -54,6 +50,7 @@ def process_book(iabook, ebook):
     picture_number = 0
     pushed_chapters = False
     made_pages = False
+    made_contents_navpoint = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
@@ -69,7 +66,7 @@ def process_book(iabook, ebook):
         page_scandata = iabook.get_page_scandata(i)
         pageno = None
         if page_scandata is not None:
-            pageno = page_scandata.find('pageNumber')
+            pageno = page_scandata.find(scandata_ns + 'pageNumber')
         if pageno:
             part_str = 'part' + str(part_number).zfill(4)
             id = 'page-' + str(pageno)
@@ -95,7 +92,7 @@ def process_book(iabook, ebook):
         def include_page(page_scandata):
             if page_scandata is None:
                 return False
-            add = page_scandata.find('addToAccessFormats')
+            add = page_scandata.find(scandata_ns + 'addToAccessFormats')
             if add is None:
                 add = page_scandata.addToAccessFormats
             if add is not None and add.text == 'true':
@@ -128,13 +125,17 @@ def process_book(iabook, ebook):
                                                'title':'Book' })
                     if not made_pages:
                         made_pages = True
-                        if not pushed_chapters:
+                        if not contents:
                             ebook.add_navpoint('Pages', part_str_href)
-
+                    part_number += 1
                     paragraphs = []
+                if pushed_chapters:
+                    ebook.pop_navpoint()
+                    pushed_chapters = False
             
             (id, filename) = make_html_page_image(i, iabook, ebook,
                                                   cover=front_cover)
+
             ebook.add_navpoint(cover_title, filename)
             if cover_number == 0:
                 ebook.add_guide_item({ 'href':filename,
@@ -165,11 +166,32 @@ def process_book(iabook, ebook):
                                    'type':'copyright-page',
                                    'title':'Title Page' })
         elif page_type == 'contents':
+            
             (id, filename) = make_html_page_image(i, iabook, ebook)
-            ebook.add_navpoint('Table of Contents', filename)
+            if not made_contents_navpoint:
+                ebook.add_navpoint('Table of Contents', filename)
+                made_contents_navpoint = True
             ebook.add_guide_item({ 'href':filename,
                                    'type':'toc',
                                    'title':'Title Page' })
+            if len(paragraphs) > 0:
+                part_str = 'part' + str(part_number).zfill(4)
+                part_str_href = part_str + '.html'
+                tree = make_html('Book part ' + str(part_number), paragraphs)
+                ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
+                                  common.tree_to_str(tree, xml_declaration=False))
+                ebook.add_spine_item({ 'idref':part_str })
+                if part_number == 0:
+                    ebook.add_guide_item({ 'href':part_str_href,
+                                           'type':'text',
+                                           'title':'Book' })
+                if not made_pages:
+                    made_pages = True
+                    if not contents:
+                        ebook.add_navpoint('Pages', part_str_href)
+                part_number += 1
+                paragraphs = []
+
         elif page_type == 'normal':
             if before_title_page:
                 # XXX consider skipping if blank + no words?
@@ -218,64 +240,10 @@ def process_book(iabook, ebook):
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
-                                def par_is_pageno_header_footer(par):
-                                    # if:
-                                    #   it's the first on the page
-                                    #   there's only one line
-                                    #   on that line, there's a formatting tag, s.t.
-                                    #   - it has < 6 charParam kids
-                                    #   - each is wordNumeric
-                                    # then:
-                                    #   Skip it!
-                                    if len(par) != 1:
-                                        return False
-                                    line = par[0]
-                                    for fmt in line:
-                                        if len(fmt) > 6:
-                                            continue
-                                        saw_non_num = False
-                                        for cp in fmt:
-                                            if cp.get('wordNumeric') != 'true':
-                                                saw_non_num = True
-                                                break
-                                        if not saw_non_num:
-                                            return True
-                                        hdr_text = etree.tostring(fmt,
-                                                              method='text',
-                                                              encoding=unicode)
-                                        hdr_text = hdr_text.lower()
-                                        rnums = ['i', 'ii', 'iii', 'iv',
-                                                 'v', 'vi', 'vii', 'viii',
-                                                 'ix', 'x', 'xi', 'xii',
-                                                 'xiii', 'xiv', 'xv', 'xvi',
-                                                 'xvii', 'xviii', 'xix', 'xx',
-                                                 'xxi', 'xxii', 'xxiii', 'xxiv',
-                                                 'xxv', 'xxvi', 'xxvii',
-                                                 'xxviii', 'xxix', 'xxx',
-                                                 ]
-                                        if hdr_text in rnums:
-                                            return True
-                                        # common OCR errors
-                                        if re.match('[0-9io]+', hdr_text):
-                                            return True
-                                        if re.match('[0-9afhiklmnouvx^]*[0-9][0-9afhiklmnouvx^]*',
-                                                    hdr_text):
-                                            return True
-                                    return False
-
-                                output_hfs = False
                                 # skip if its the first line and it could be a header
-                                if first_par and par_is_pageno_header_footer(par):
+                                if first_par and common.par_is_pageno_header_footer(par):
                                     saw_pageno_header_footer = True
                                     first_par = False
-                                    if output_hfs:
-                                        hf_txt = etree.tostring(par,
-                                                                method='text',
-                                                                encoding=unicode)
-                                        sys.stdout.write(iabook.get_book_id()
-                                                         + ' ----'
-                                                         + hf_txt.encode('utf-8'))
-                                        
                                     continue
                                 first_par = False
 
@@ -284,15 +252,8 @@ def process_book(iabook, ebook):
                                     and block == page[-1]
                                     and el == block[-1]
                                     and par == el[-1]
-                                    and par_is_pageno_header_footer(par)):
+                                    and common.par_is_pageno_header_footer(par)):
                                     saw_pageno_header_footer = True
-                                    if output_hfs:
-                                        hf_txt = etree.tostring(par,
-                                                                method='text',
-                                                                encoding=unicode)
-                                        sys.stdout.write(iabook.get_book_id()
-                                                         + ' ----'
-                                                         + hf_txt.encode('utf-8'))
                                     continue
                                         
                                 lines = []
@@ -324,7 +285,7 @@ def process_book(iabook, ebook):
         page.clear()
         i += 1
 
-        if len(paragraphs) > 100:
+        if len(paragraphs) > 80:
             # make a chunk!
             part_str = 'part' + str(part_number).zfill(4)
             part_str_href = part_str + '.html'
@@ -338,9 +299,8 @@ def process_book(iabook, ebook):
                                        'title':'Book' })
                 if not made_pages:
                     made_pages = True
-                    if not pushed_chapters:
+                    if not contents:
                         ebook.add_navpoint('Pages', part_str_href)
-
             part_number += 1
             paragraphs = []
     # make chunk from last paragraphs
@@ -357,9 +317,9 @@ def process_book(iabook, ebook):
                                    'title':'Book' })
             if not made_pages:
                 made_pages = True
-                if not pushed_chapters:
+                if not contents:
                     ebook.add_navpoint('Pages', part_str_href)
-
+        part_number += 1
         paragraphs = []
     if pushed_chapters:
         ebook.pop_navpoint()

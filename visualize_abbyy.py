@@ -17,10 +17,10 @@ import common
 
 outdir='viz'
 
-kdu_reduce = 0 # 0 to 4 or so - is powers of 2
+kdu_reduce = 2 # 0 to 4 or so - is powers of 2
 scale = 2 ** kdu_reduce
-top_page = 19
-#top_page = None # 49
+#top_page = 19
+top_page = None # 49
 
 from debug import debug, debugging, assert_d
 
@@ -161,6 +161,7 @@ import font
 def scan_pages(context, scandata, iabook):
     book_id = iabook.get_book_id()
     scandata_pages = scandata.pageData.page
+    scandata_ns = iabook.get_scandata_ns()
     try:
         # dpi isn't always there
         dpi = int(scandata.bookData.dpi.text)
@@ -282,6 +283,17 @@ def scan_pages(context, scandata, iabook):
         page_scandata = iabook.get_page_scandata(i)
         if page_scandata is not None:
             t = page_scandata.pageType.text
+
+#             pageno_string = page_scandata.pageNumber.text
+            pageno = page_scandata.find(scandata_ns + 'pageNumber')
+            if pageno:
+                pageno_string = pageno.text    
+                t += ' ' + pageno_string
+
+            handside_string = page_scandata.handSide.text
+            if handside_string:
+                t += ' ' + handside_string
+
             f = font.get_font("Courier", dpi / scale, 12)
             page_w, page_h = image.size
             draw.text((.02 * dpi,

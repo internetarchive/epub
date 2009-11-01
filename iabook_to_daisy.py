@@ -29,15 +29,11 @@ def process_book(iabook, ebook):
     scandata = iabook.get_scandata()
     aby_file = iabook.get_abbyy()
 
-    bookData = scandata.find('bookData')
-    # XXX should fix below and similar by ensuring that scandata
-    #   is always the same fmt...
-    # scandata.zip/scandata.xml parses different?
-    if bookData is None:
-        bookData = scandata.bookData
+    scandata_ns = iabook.get_scandata_ns()
+    bookData = iabook.get_bookdata()
 
     # some books no scanlog
-#     scanLog = scandata.find('scanLog')
+#     scanLog = scandata.find(scandata_ns + 'scanLog')
 #     if scanLog is None:
 #         scanLog = scandata.scanLog
 
@@ -73,8 +69,9 @@ def process_book(iabook, ebook):
     before_title_page = found_title
     for event, page in context:
         page_scandata = iabook.get_page_scandata(i)
-
-        pageno = page_scandata.find('pageNumber')
+        pageno = None
+        if page_scandata is not None:
+            pageno = page_scandata.find(scandata_ns + 'pageNumber')
         if pageno:
             if contents is not None and str(pageno) in contents:
                 if pushed_navpoint:
@@ -88,7 +85,7 @@ def process_book(iabook, ebook):
         def include_page(page_scandata):
             if page_scandata is None:
                 return False
-            add = page_scandata.find('addToAccessFormats')
+            add = page_scandata.find(scandata_ns + 'addToAccessFormats')
             if add is None:
                 add = page_scandata.addToAccessFormats
             if add is not None and add.text == 'true':
@@ -135,51 +132,8 @@ def process_book(iabook, ebook):
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
-                                def par_is_pageno_header_footer(par):
-                                    # if:
-                                    #   it's the first on the page
-                                    #   there's only one line
-                                    #   on that line, there's a formatting tag, s.t.
-                                    #   - it has < 6 charParam kids
-                                    #   - each is wordNumeric
-                                    # then:
-                                    #   Skip it!
-                                    if len(par) != 1:
-                                        return False
-                                    line = par[0]
-                                    for fmt in line:
-                                        if len(fmt) > 6:
-                                            continue
-                                        saw_non_num = False
-                                        for cp in fmt:
-                                            if cp.get('wordNumeric') != 'true':
-                                                saw_non_num = True
-                                                break
-                                        if not saw_non_num:
-                                            return True
-                                        hdr_text = etree.tostring(fmt,
-                                                              method='text',
-                                                              encoding=unicode)
-                                        hdr_text = hdr_text.lower()
-                                        rnums = ['i', 'ii', 'iii', 'iv',
-                                                 'v', 'vi', 'vii', 'viii',
-                                                 'ix', 'x', 'xi', 'xii',
-                                                 'xiii', 'xiv', 'xv', 'xvi',
-                                                 'xvii', 'xviii', 'xix', 'xx',
-                                                 'xxi', 'xxii', 'xxiii', 'xxiv',
-                                                 'xxv', 'xxvi', 'xxvii',
-                                                 'xxviii', 'xxix', 'xxx',
-                                                 ]
-                                        if hdr_text in rnums:
-                                            return True
-                                        # common OCR errors
-                                        if re.match('[0-9afhiklmnouvx^]+',
-                                                    hdr_text):
-                                            return True
-                                    return False
-
                                 # skip if its the first line and it could be a header
-                                if first_par and par_is_pageno_header_footer(par):
+                                if first_par and common.par_is_pageno_header_footer(par):
                                     saw_pageno_header_footer = True
                                     first_par = False
                                     continue
@@ -190,7 +144,7 @@ def process_book(iabook, ebook):
                                     and block == page[-1]
                                     and el == block[-1]
                                     and par == el[-1]
-                                    and par_is_pageno_header_footer(par)):
+                                    and common.par_is_pageno_header_footer(par)):
                                     saw_pageno_header_footer = True
                                     continue
                                         

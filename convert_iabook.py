@@ -29,7 +29,7 @@ def main(argv):
                                    'dho:',
                                    ['debug', 'help', 'outfile=',
                                     'document=',
-                                    'daisy', 'epub'])
+                                    'daisy', 'epub', 'test', 'report'])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -37,6 +37,8 @@ def main(argv):
     found_output_opt = False
     make_epub = False
     make_daisy = False
+    make_test = False
+    make_report = False
     doc = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -49,6 +51,12 @@ def main(argv):
             found_output_opt = True
         elif opt in ('--epub'):
             make_epub = True
+            found_output_opt = True
+        elif opt in ('--test'):
+            make_test = True
+            found_output_opt = True
+        elif opt in ('--report'):
+            make_report = True
             found_output_opt = True
         elif opt in ('-o', '--outfile'):
             out_name = arg
@@ -93,6 +101,10 @@ def main(argv):
             out_root = book_id
         if make_daisy:
             out_name = out_root + '_daisy.zip'
+        elif make_test:
+            out_name = out_root + '.test'
+        elif make_report:
+            out_name = out_root + '.report'
         else:
             out_name = out_root + '.epub'
 
@@ -101,6 +113,12 @@ def main(argv):
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)
         iabook_to_daisy.process_book(iabook, ebook)
+    elif make_test:
+        print iabook.analyze()
+        sys.exit(0)
+    elif make_report:
+        print iabook.report()
+        sys.exit(0)
     else:
         ebook = epub.Book(out_name, metadata)
         iabook_to_epub.process_book(iabook, ebook)

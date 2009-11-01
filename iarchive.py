@@ -44,6 +44,19 @@ class Book(object):
     def get_doc(self):
         return self.doc
 
+    def analyze(self):
+        import abbyy
+        return abbyy.analyze(self.get_abbyy(), self)
+
+    def report(self):
+        bookdata = self.get_bookdata()
+        result = ''
+        for name in 'leafCount', 'dpi':
+            result += (name + ': '
+                       + str(bookdata.find(self.get_scandata_ns() + name))
+                       + '\n')
+        return result
+
     def get_scandata_path(self):
         paths = [
             os.path.join(self.book_path, self.doc + '_scandata.xml'),
@@ -92,6 +105,22 @@ class Book(object):
             return self.leaves[leaf]
         else:
             return None
+
+    def get_bookdata(self):
+        scandata = self.get_scandata()
+        bookdata = scandata.find(self.get_scandata_ns() + 'bookData')
+        if bookdata is None:
+            raise 'why here?'
+            bookdata = scandata.bookData
+        return bookdata
+
+    def get_scandata_ns(self):
+        scandata = self.get_scandata()
+        bookData = scandata.find('bookData')
+        if bookData is None:
+            return '{http://archive.org/scribe/xml}'
+        else:
+            return ''
 
     def get_leafno_for_page(self, i):
         return int(self.get_page_scandata(i).get('leafNum'))
