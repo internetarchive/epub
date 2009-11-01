@@ -12,9 +12,6 @@ except ImportError:
 from lxml import objectify
 
 
-birdbook - problem with visualize
-
-
 To do:
 general:
 - handle books with disjoint/repeating page number ranges, 
@@ -22,10 +19,10 @@ general:
 
 - move all abbyy parsing into iabook; make json interface to same. (see booki)
 - make condense, visualize be output opts
-
+- infer [front, main] page types - maybe synthesize more types for repeated pages
+- handle catstorieshelen - seems to be compounded of multiple books
 
 epub:
-- switch to incremental content generation
 - Better chapter structure
 - link to streaming / details page / etc.
 - 'width', 'height' tags for images.  (pamfile + tee? temp files?)
