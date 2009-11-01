@@ -69,7 +69,7 @@ def par_is_pageno_header_footer(par):
     if result and debugging:
         line_text = etree.tostring(par,
                                    method='text',
-                                   encoding=unicode)
+                                   encoding='utf-8')
         print line_text
     return result
 
