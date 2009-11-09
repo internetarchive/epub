@@ -70,7 +70,7 @@ def par_is_pageno_header_footer(par):
         line_text = etree.tostring(par,
                                    method='text',
                                    encoding='utf-8')
-        print line_text
+        print line_text.strip()
     return result
 
 def db_par_hdr_ftr(par):
