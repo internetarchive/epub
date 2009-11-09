@@ -290,9 +290,9 @@ def scan_pages(context, scandata, iabook):
                 pageno_string = pageno.text    
                 t += ' ' + pageno_string
 
-            handside_string = page_scandata.handSide.text
-            if handside_string:
-                t += ' ' + handside_string
+            handside = page_scandata.find(scandata_ns + 'handSide')
+            if handside:
+                t += ' ' + handside.text
 
             f = font.get_font("Courier", dpi / scale, 12)
             page_w, page_h = image.size
