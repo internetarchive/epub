@@ -42,22 +42,20 @@ def process_book(iabook, ebook):
     title = common.get_metadata_tag_data(metadata, 'title')
     author = common.get_metadata_tag_data(metadata, 'creator')
 
-    paragraphs = []
     i = 0
-    part_number = 0
     cover_number = 0
     toc_item_number = 0
     picture_number = 0
     pushed_chapters = False
-    made_pages = False
     made_contents_navpoint = False
+    made_pages = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
     found_title = False
     for page_scandata in iabook.get_scandata_pages(): #confirm title exists
-        t = page_scandata.pageType.text
-        if t == 'Title' or t == 'Title Page':
+        t = page_scandata.pageType.text.lower()
+        if t == 'title' or t == 'title page':
             found_title = True
             break
     # True if no title found, else False now, True later.
@@ -68,26 +66,23 @@ def process_book(iabook, ebook):
         if page_scandata is not None:
             pageno = page_scandata.find(scandata_ns + 'pageNumber')
         if pageno:
-            part_str = 'part' + str(part_number).zfill(4)
-            id = 'page-' + str(pageno)
-            page_mark_href = part_str + '.html#' + id
-            pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
-            paragraphs.append(pdiv)
-            ebook.add_pagetarget(str(pageno), pageno, page_mark_href)
-
             if contents is not None and str(pageno) in contents:
+                ebook.flush_els()
                 if not pushed_chapters:
-                    chap_mark_href = part_str + '.html#chapters'
                     cdiv = E.div({ 'class':'newnav', 'id':'chapters' })
-                    paragraphs.append(cdiv)
-                    ebook.push_navpoint('Chapters', chap_mark_href)
+                    href = ebook.add_el(cdiv) + '#' + 'chapters'
+                    ebook.push_navpoint('Chapters', href)
                     pushed_chapters = True
                 id = 'toc-' + str(toc_item_number)
                 toc_item_number += 1
-                toc_mark_href = part_str + '.html#' + id
                 cdiv = E.div({ 'class':'newnav', 'id':id })
-                paragraphs.append(cdiv)
-                ebook.add_navpoint(contents[str(pageno)], toc_mark_href)
+                href = ebook.add_el(cdiv) + '#' + id
+                ebook.add_navpoint(contents[str(pageno)], href)
+
+            id = 'page-' + str(pageno)
+            pdiv = E.div({ 'class':'newpage', 'id':id })
+            href = ebook.add_el(pdiv) + '#' + id
+            ebook.add_pagetarget(str(pageno), pageno, href)
 
         def include_page(page_scandata):
             if page_scandata is None:
@@ -112,23 +107,7 @@ def process_book(iabook, ebook):
             else:
                 cover_title = 'Back Cover' ## xxx detect back page?
                 front_cover = False
-                if len(paragraphs) > 0:
-                    part_str = 'part' + str(part_number).zfill(4)
-                    part_str_href = part_str + '.html'
-                    tree = make_html('Book part ' + str(part_number), paragraphs)
-                    ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                                      common.tree_to_str(tree, xml_declaration=False))
-                    ebook.add_spine_item({ 'idref':part_str })
-                    if part_number == 0:
-                        ebook.add_guide_item({ 'href':part_str_href,
-                                               'type':'text',
-                                               'title':'Book' })
-                    if not made_pages:
-                        made_pages = True
-                        if not contents:
-                            ebook.add_navpoint('Pages', part_str_href)
-                    part_number += 1
-                    paragraphs = []
+                ebook.flush_els()
                 if pushed_chapters:
                     ebook.pop_navpoint()
                     pushed_chapters = False
@@ -166,7 +145,6 @@ def process_book(iabook, ebook):
                                    'type':'copyright-page',
                                    'title':'Title Page' })
         elif page_type == 'contents':
-            
             (id, filename) = make_html_page_image(i, iabook, ebook)
             if not made_contents_navpoint:
                 ebook.add_navpoint('Table of Contents', filename)
@@ -174,31 +152,13 @@ def process_book(iabook, ebook):
             ebook.add_guide_item({ 'href':filename,
                                    'type':'toc',
                                    'title':'Title Page' })
-            if len(paragraphs) > 0:
-                part_str = 'part' + str(part_number).zfill(4)
-                part_str_href = part_str + '.html'
-                tree = make_html('Book part ' + str(part_number), paragraphs)
-                ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                                  common.tree_to_str(tree, xml_declaration=False))
-                ebook.add_spine_item({ 'idref':part_str })
-                if part_number == 0:
-                    ebook.add_guide_item({ 'href':part_str_href,
-                                           'type':'text',
-                                           'title':'Book' })
-                if not made_pages:
-                    made_pages = True
-                    if not contents:
-                        ebook.add_navpoint('Pages', part_str_href)
-                part_number += 1
-                paragraphs = []
 
         elif page_type == 'normal':
             if before_title_page:
-                # XXX consider skipping if blank + no words?
-                # make page image
                 page_text = etree.tostring(page,
                                            method='text',
                                            encoding=unicode)
+                # Skip if not much text
                 if len(page_text) >= 10:
                     (id, filename) = make_html_page_image(i, iabook, ebook)
             else:
@@ -232,7 +192,7 @@ def process_book(iabook, ebook):
                         el = E.p({ 'class':'illus' },
                                  E.img(src=pic_href,
                                        alt=pic_id))
-                        paragraphs.append(el)
+                        ebook.add_el(el)
                         continue
                     for el in block:
                         if el.tag == aby_ns+'region':
@@ -275,7 +235,14 @@ def process_book(iabook, ebook):
                                                 lines.append(' ')
                                             prev_line = fmt_text
                                 lines.append(prev_line)
-                                paragraphs.append(E.p(''.join(lines)))
+
+                                if not made_pages:
+                                    made_pages = True
+                                    if not contents:
+                                        href = ebook.add_el(E.div({ 'class':'pages', 'id':'pages' }))
+                                        ebook.add_navpoint('Pages', href)
+                                to_add = ''.join(lines)
+                                ebook.add_el(E.p(to_add), len(to_add))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:
@@ -285,48 +252,14 @@ def process_book(iabook, ebook):
         page.clear()
         i += 1
 
-        if len(paragraphs) > 80:
-            # make a chunk!
-            part_str = 'part' + str(part_number).zfill(4)
-            part_str_href = part_str + '.html'
-            tree = make_html('Book part ' + str(part_number), paragraphs)
-            ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                              common.tree_to_str(tree, xml_declaration=False))
-            ebook.add_spine_item({ 'idref':part_str })
-            if part_number == 0:
-                ebook.add_guide_item({ 'href':part_str_href,
-                                       'type':'text',
-                                       'title':'Book' })
-                if not made_pages:
-                    made_pages = True
-                    if not contents:
-                        ebook.add_navpoint('Pages', part_str_href)
-            part_number += 1
-            paragraphs = []
-    # make chunk from last paragraphs
-    if len(paragraphs) > 0:
-        part_str = 'part' + str(part_number).zfill(4)
-        part_str_href = part_str + '.html'
-        tree = make_html('Book part ' + str(part_number), paragraphs)
-        ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                          common.tree_to_str(tree, xml_declaration=False))
-        ebook.add_spine_item({ 'idref':part_str })
-        if part_number == 0:
-            ebook.add_guide_item({ 'href':part_str_href,
-                                   'type':'text',
-                                   'title':'Book' })
-            if not made_pages:
-                made_pages = True
-                if not contents:
-                    ebook.add_navpoint('Pages', part_str_href)
-        part_number += 1
-        paragraphs = []
+    ebook.flush_els()
     if pushed_chapters:
         ebook.pop_navpoint()
 
 
 
 def make_html_page_image(i, iabook, ebook, cover=False):
+    ebook.flush_els()
     image = iabook.get_page_image(i, (600, 800))
     leaf_id = 'leaf' + str(i).zfill(4)
     if not cover:
@@ -352,9 +285,6 @@ def make_html(title, body_elems):
             E.link(rel='stylesheet',
                    href='stylesheet.css',
                    type='text/css'),
-#             E.link(rel='stylesheet',
-#                    href='page-template.xpgt',
-#                    type='application/vnd.adobe-page-template+xml'),
             E.meta({'http-equiv':'Content-Type',
                 'content':'application/xhtml+xml; charset=utf-8'})
         ),

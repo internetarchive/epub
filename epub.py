@@ -5,6 +5,7 @@ import sys
 
 from lxml import etree
 from lxml import objectify
+from lxml.builder import E
 
 import common
 import zipfile
@@ -13,7 +14,7 @@ import os
 import sys
 from StringIO import StringIO
 
-from debug import debug, debugging
+from debug import debug, debugging, assert_d
 
 class Book(object):
     def __init__(self, out_name, metadata, content_dir='OEBPS/'):
@@ -38,18 +39,81 @@ class Book(object):
                                         self.author)
         self.ncx_pagelist_el = None
 
-        self.tag_stack = []
         self.navpoint_stack = [self.ncx_navmap_el]
         self.id_index = 1
         self.nav_number = 1
         self.depth = 0
         self.current_depth = 0
 
+        self.el_stack = []
+        self.el_len_total = 0
+        self.max_el_len_total = 150000
+        self.part_number = 0
+        self.current_part = None
+
         # Add static extra files - style sheet, etc.
         for id, href, media_type in [('css', 'stylesheet.css', 'text/css')]:
             content_src = os.path.join(sys.path[0], 'epub_files', href)
             content_str = open(content_src, 'r').read()
             self.add_content(id, href, media_type, content_str)
+
+
+    def flush_els(self):
+        if self.current_part is None:
+            return
+        part_str = 'part' + str(self.part_number).zfill(4)
+        part_str_href = part_str + '.html'
+        self.add_content(part_str, part_str_href, 'application/xhtml+xml',
+                         common.tree_to_str(self.current_part, xml_declaration=False))
+        self.add_spine_item({ 'idref':part_str })
+        if self.part_number == 0:
+            self.add_guide_item({ 'href':part_str_href,
+                                   'type':'text',
+                                   'title':'Book' })
+        self.part_number += 1
+        self.el_stack = [] # xxx ? require popped?
+        self.el_len_total = 0
+        self.current_part = None
+
+
+    def add_el(self, el, el_len=100):
+        if self.el_len_total > self.max_el_len_total:
+            self.flush_els()
+        if len(self.el_stack) == 0:
+            assert_d(self.current_part == None)
+            self.current_part, body_el = self.make_xhtml()
+            self.el_stack.append(body_el)
+        self.el_stack[-1].append(el)
+        self.el_len_total += el_len
+        return 'part' + str(self.part_number).zfill(4) + '.html'
+
+
+    def push_el(self, el, el_len):
+        result = self.add_el(el)
+        self.el_stack.append(el)
+        return result
+    
+
+    def pop_el(self):
+        self.el_stack.pop()
+
+    def make_xhtml(self):
+        html = E.html(
+            E.head(
+                E.title('part' + str(self.part_number).zfill(4)),
+                E.meta(name='generator', content='abbyy to epub tool, v0.2'),
+                E.link(rel='stylesheet',
+                       href='stylesheet.css',
+                       type='text/css'),
+                E.meta({'http-equiv':'Content-Type',
+                        'content':'application/xhtml+xml; charset=utf-8'})
+                ),
+            E.body(
+                E.div({ 'class':'body' })
+            ),
+            xmlns='http://www.w3.org/1999/xhtml'
+            )
+        return etree.ElementTree(html), html.xpath('/html/body/div')[0]
 
 
     def add_content(self, id, href, media_type, content_str):
