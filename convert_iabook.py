@@ -127,11 +127,19 @@ def main(argv):
 
     if debug_output:
         if make_daisy:
-            pass
+            output = os.popen('rm -rf daisy_debug')
+            output.read()
+            output = os.popen('unzip -d daisy_debug ' + out_name)
+            output.read()
+            zedval = os.path.join(sys.path[0], 'Zedval/ZedVal.jar')
+            opf_file = os.path.join('daisy_debug',
+                                    iabook.get_book_id() + '_daisy.opf')
+            output = os.popen('java -Xms128m -Xmx256m -jar '
+                              + zedval + ' ' + opf_file)
         else:
             epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
             output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
-            print output.read()
+        print output.read()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
