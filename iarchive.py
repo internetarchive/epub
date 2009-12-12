@@ -162,6 +162,18 @@ class Book(object):
             return open(abbyy_xml, 'r')
         raise 'No abbyy file found'
 
+    def get_djvu_xml(self):
+        djvu_xml = os.path.join(self.book_path, self.doc + '_djvu.xml')
+        if os.path.exists(djvu_xml):
+            return open(djvu_xml, 'r')
+        raise 'No djvu.xml file found'
+
+
+    def get_pdfxml_xml(self):
+        pdfxml_xml = os.path.join(self.book_path, self.doc + '_pdfxml.xml')
+        if os.path.exists(pdfxml_xml):
+            return open(pdfxml_xml, 'r')
+        raise 'No pdfxml.xml file found'
 
     # get python string with image data - from .jp2 image or tif in zip
     # finds appropriate leaf number for supplied page index
