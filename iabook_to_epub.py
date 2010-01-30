@@ -24,9 +24,14 @@ import iarchive
 
 from debug import debug, debugging, assert_d
 
+
+max_width = 600
+max_height = 780
+
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
+
     scandata_ns = iabook.get_scandata_ns()
     bookData = iabook.get_bookdata()
     
@@ -40,7 +45,11 @@ def process_book(iabook, ebook):
     contents = iabook.get_toc()
     metadata = iabook.get_metadata()
     title = common.get_metadata_tag_data(metadata, 'title')
+    if title is None:
+        title = 'none'
     author = common.get_metadata_tag_data(metadata, 'creator')
+    if author is None:
+        author = 'none'
 
     i = 0
     cover_number = 0
@@ -178,9 +187,12 @@ def process_book(iabook, ebook):
                                      int(page.get('height')))
                         page_width, page_height = orig_page_size
                         
-                        req_width = int(600 * (region_width / float(page_width)))
-                        req_height = int(800 * (region_height / float(page_height)))
-                        image = iabook.get_page_image(i, (req_width, req_height),
+                        req_width = int(max_width *
+                                        (region_width / float(page_width)))
+                        req_height = int(max_height *
+                                         (region_height / float(page_height)))
+                        image = iabook.get_page_image(i,
+                                                      (req_width, req_height),
                                                       orig_page_size,
                                                       kdu_reduce=2,
                                                       region=region)
@@ -188,7 +200,7 @@ def process_book(iabook, ebook):
                         pic_href = 'images/' + pic_id + '.jpg'
                         picture_number += 1
                         ebook.add_content(pic_id, pic_href,
-                                          'image/jpeg', image)
+                                          'image/jpeg', image, deflate=False)
                         el = E.p({ 'class':'illus' },
                                  E.img(src=pic_href,
                                        alt=pic_id))
@@ -260,14 +272,14 @@ def process_book(iabook, ebook):
 
 def make_html_page_image(i, iabook, ebook, cover=False):
     ebook.flush_els()
-    image = iabook.get_page_image(i, (600, 800))
+    image = iabook.get_page_image(i, (max_width, max_height))
     leaf_id = 'leaf' + str(i).zfill(4)
     if not cover:
         leaf_image_id = 'leaf-image' + str(i).zfill(4)
     else:
         leaf_image_id = 'cover-image'
     ebook.add_content(leaf_image_id, 'images/' + leaf_image_id + '.jpg',
-                      'image/jpeg', image)
+                      'image/jpeg', image, deflate=False)
     img_tag = E.img({ 'src':'images/' + leaf_image_id + '.jpg',
                       'alt':'leaf ' + str(i) })
     tree = make_html('leaf ' + str(i).zfill(4), [ img_tag ])
