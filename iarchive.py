@@ -31,6 +31,17 @@ class Book(object):
             self.images_type = 'jp2.zip'
         elif os.path.exists(os.path.join(book_path, self.doc + '_tif.zip')):
             self.images_type = 'tif.zip'
+        elif os.path.exists(os.path.join(book_path, self.doc + '_jp2.tar')):
+            self.images_type = 'jp2.tar'
+
+# maybe images.type as (container_format, image_format)
+# tested this -- ('a', 'b') == ('a', 'b')
+# example id:  fifteenthcensus00reel2149
+
+# jp2 x tif x jpeg
+# tar zip single-file (cat)
+# mang suggests: separate handling of pkg format x image format
+        
 #         else:
 #             raise Exception('Can\'t find book images')
         
@@ -195,6 +206,12 @@ class Book(object):
             image_path = (self.doc + '_tif/' + self.doc + '_'
                           + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
+        elif self.images_type == 'jp2.tar':
+            # 7z e archive.tar dir/filename.jp2 <---- fast!
+            raise 'NYI'
+
+
+            
         else:
             return None
         try:
