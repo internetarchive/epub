@@ -74,8 +74,11 @@ def main(argv):
                       help='Generate output characters for OCRed '
                       'text in input files')
     parser.add_option('--outdir',
-                      default='viz',
-                      help='Output directory.  Default is \'%default\'')
+                      help='Output directory.  Default is source_type + \'_viz\'')
+    parser.add_option('--source',
+                      choices=['abbyy', 'pdftoxml', 'djvu'],
+                      default='abbyy',
+                      help='Which source to use for OCR data/coordinates.')
     parser.add_option('--show-opts',
                       action='store_true',
                       # help=optparse.SUPPRESS_HELP
@@ -86,6 +89,13 @@ def main(argv):
         parser.error('--reduce must be between 0 and 4')
     if opts.scale == 0:
         opts.scale = 2 ** opts.reduce
+
+    if opts.source == 'djvu':
+        parser.error('--source=djvu not supported at the moment')
+
+    if opts.outdir is None:
+        opts.outdir = opts.source + '_viz'
+
     if opts.show_opts:
         print 'Options: ' + str(opts)
         print 'Args: ' + str(args)
@@ -110,8 +120,41 @@ from color import color as c
 def visualize(iabook):
 #    scandata = objectify.parse(iabook.get_scandata_path()).getroot()
     scandata = iabook.get_scandata()
-    context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
+    if opts.source == 'abbyy':
+        context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
+    elif opts.source == 'pdfxml':
+        context = etree.iterparse(iabook.get_pdfxml_xml(), tag='PAGE')
+    elif opts.source == 'djvu':
+        context = etree.iterparse(iabook.get_djvu_xml(), tag='OBJECT')
     info = scan_pages(context, scandata, iabook)
+
+
+def has_coord(el):
+    if opts.source == 'abbyy':
+        return (el.get('t') is not None)
+    elif opts.source == 'pdfxml':
+        return (el.get('y') is not None)
+    elif opts.source == 'djvu':
+        raise 'djvuness not yet implemented here'
+
+
+def get_coord(el, ltrb):
+    def iget(ltrb):
+        return int(math.floor(float(el.get(ltrb))))
+    if opts.source == 'pdfxml':
+        if ltrb == 't':
+            return iget('y')
+        elif ltrb == 'l':
+            return iget('x')
+        elif ltrb == 'r':
+            return iget('x') + iget('width')
+        elif ltrb == 'b':
+            return iget('y') + iget('height')
+    elif opts.source == 'djvu':
+        raise 'djvuness not yet implemented here'
+    else: # abbyy
+        return el.get(ltrb)
+
 
 def draw_rect(draw, el, sty, use_coords=None):
     col = color.color[sty['col']]
