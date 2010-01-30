@@ -1,12 +1,23 @@
 font_dir = '/Users/mccabe/s/archive/epub/ttf/'
 font_mapping = { "Times New Roman" : "TimesRoman.ttf",
+                 "Georg" : "TimesRoman.ttf",
+                 "georg" : "TimesRoman.ttf",
                  "Arial" : "Helvetica.ttf",
+                 "Verda" : "Geneva.ttf",
+                 "verda" : "Geneva.ttf",
+                 "PalatinoLinotype" : "Helvetica.ttf",
+                 "palatinolinotype" : "Helvetica.ttf",
                  "Tahoma" : "Geneva.ttf",
                  "Courier" : "Courier.ttf",
                  "Courier New" : "Courier.ttf"
                  }
-italic_font_mapping = { "Times New Roman" : "TimesItalic.ttf",
+italic_font_mapping = {
+                 "Times New Roman" : "TimesItalic.ttf",
+                 "Georg" : "TimesItalic.ttf",
+                 "georg" : "TimesItalic.ttf",
                  "Arial" : "HelveticaOblique.ttf",
+                 "PalatinoLinotype" : "HelveticaOblique.ttf",
+                 "palatinolinotype" : "HelveticaOblique.ttf",
                  "Tahoma" : "GenevaItalic.ttf",
                  "Courier" : "CourierOblique.ttf",
                  "Courier New" : "CourierOblique.ttf"
@@ -23,10 +34,16 @@ def get_font(name, dpi, size, italic=False):
         fonts[name] = {}
     family = fonts[name];
     if not size in family:
-        if italic:
-            mapped = italic_font_mapping[name]
-        else:
-            mapped = font_mapping[name]
+        try:
+            if italic:
+                mapped = italic_font_mapping[name]
+            else:
+                mapped = font_mapping[name]
+        except KeyError:
+            if italic:
+                mapped = "HelveticaOblique.ttf"
+            else:
+                mapped = "Helvetica.ttf"
         font = ImageFont.truetype(font_dir + mapped, size)
         family[size] = font
     font = family[size]
