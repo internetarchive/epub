@@ -17,10 +17,16 @@ general:
 - handle books with disjoint/repeating page number ranges, 
   e.g. libraries of the future, missing page 1 in romance.
 
+example of legit discontinuous numbering:
+http://www.archive.org/stream/snowimagechildis00hawtiala#page/n17/mode/2up
+
 - move all abbyy parsing into iabook; make json interface to same. (see booki)
 - make condense, visualize be output opts
 - infer [front, main] page types - maybe synthesize more types for repeated pages
 - handle catstorieshelen - seems to be compounded of multiple books
+
+- Handle .tar image stacks
+
 
 epub:
 - Better chapter structure
