@@ -148,6 +148,43 @@ def analyze(aby_file, iabook):
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
+    i = 0
+
+    pages = []
+    for event, page in context:
+        page_struct = {}
+        page_struct['number'] = i
+        page_struct['picture'] = []
+        page_struct['texts'] = []
+        for block in page:
+            if block.get('blockType') == 'Picture':
+                page_struct['picture'].append(((int(block.get('l')),
+                                   int(block.get('t'))),
+                                  (int(block.get('r')),
+                                   int(block.get('b')))))
+            if block.get('blockType') == 'Text':
+                bstr = etree.tostring(block,
+                                      method='text',
+                                      encoding=unicode)
+                
+                page_struct['texts'].append(bstr)
+
+        pages.append(page_struct)
+
+        page.clear()
+        i += 1
+
+    print pages
+    return 'hi'
+
+
+
+
+
+def analyze_pages(aby_file, iabook):
+    context = etree.iterparse(aby_file,
+                              tag=aby_ns+'page',
+                              resolve_entities=False)
 
     page_offsets = {}
     i = 0
