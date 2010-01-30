@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# ツ
 
 import sys
 import getopt
@@ -27,10 +28,11 @@ from debug import debug, debugging, assert_d
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
-    aby_file = iabook.get_abbyy()
 
     scandata_ns = iabook.get_scandata_ns()
     bookData = iabook.get_bookdata()
+
+    aby_file = iabook.get_abbyy()
 
     # some books no scanlog
 #     scanLog = scandata.find(scandata_ns + 'scanLog')
@@ -40,7 +42,11 @@ def process_book(iabook, ebook):
     contents = iabook.get_toc()
     metadata = iabook.get_metadata()
     title = common.get_metadata_tag_data(metadata, 'title')
+    if title is None:
+        title = 'none'
     author = common.get_metadata_tag_data(metadata, 'creator')
+    if author is None:
+        author = 'none'
 
     ebook.push_tag('frontmatter')
     ebook.add_tag('doctitle', title)
