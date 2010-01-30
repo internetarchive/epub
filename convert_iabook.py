@@ -29,7 +29,7 @@ def main(argv):
                                    'dho:',
                                    ['debug', 'help', 'outfile=',
                                     'document=',
-                                    'daisy', 'epub', 'test', 'report'])
+                                    'daisy', 'epub', 'test', 'report', 'hocr'])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -39,6 +39,7 @@ def main(argv):
     make_daisy = False
     make_test = False
     make_report = False
+    make_hocr = False
     doc = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -57,6 +58,9 @@ def main(argv):
             found_output_opt = True
         elif opt in ('--report'):
             make_report = True
+            found_output_opt = True
+        elif opt in ('--hocr'):
+            make_hocr = True
             found_output_opt = True
         elif opt in ('-o', '--outfile'):
             out_name = arg
@@ -105,6 +109,8 @@ def main(argv):
             out_name = out_root + '.test'
         elif make_report:
             out_name = out_root + '.report'
+        elif make_hocr:
+            out_name = out_root + '.html'
         else:
             out_name = out_root + '.epub'
 
@@ -119,6 +125,8 @@ def main(argv):
     elif make_report:
         print iabook.report()
         sys.exit(0)
+    elif make_hocr:
+        iabook_to_hocr.process_book(iabook)
     else:
         ebook = epub.Book(out_name, metadata)
         iabook_to_epub.process_book(iabook, ebook)
@@ -143,3 +151,6 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+
+
+# freezing sensa-tions, "indigestive-style
