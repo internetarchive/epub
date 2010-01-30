@@ -25,7 +25,11 @@ class Book(object):
 
         self.book_id = common.get_metadata_tag_data(metadata, 'identifier')
         self.title = common.get_metadata_tag_data(metadata, 'title')
+        if self.title is None:
+            self.title = 'none'
         self.author = common.get_metadata_tag_data(metadata, 'creator')
+        if self.author is None:
+            self.author = 'none'
 
         tree_str = make_container_info(content_dir)
         self.add('META-INF/container.xml', tree_str)
@@ -64,7 +68,8 @@ class Book(object):
         part_str = 'part' + str(self.part_number).zfill(4)
         part_str_href = part_str + '.html'
         self.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                         common.tree_to_str(self.current_part, xml_declaration=False))
+                         common.tree_to_str(self.current_part,
+                                            xml_declaration=False))
         self.add_spine_item({ 'idref':part_str })
         if self.part_number == 0:
             self.add_guide_item({ 'href':part_str_href,
@@ -116,14 +121,14 @@ class Book(object):
         return etree.ElementTree(html), html.xpath('/html/body/div')[0]
 
 
-    def add_content(self, id, href, media_type, content_str):
+    def add_content(self, id, href, media_type, content_str, deflate=True):
         # info is e.g. { 'id':'title',
         #                'href':'title.html',
         #                'media-type':'application/xhtml+xml' },
         etree.SubElement(self.opf_manifest_el,
                          'item',
                          { 'id':id, 'href':href, 'media-type':media_type })
-        self.add(self.content_dir + href, content_str)
+        self.add(self.content_dir + href, content_str, deflate)
 
 
     def add_spine_item(self, info):
