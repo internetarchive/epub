@@ -52,10 +52,8 @@ class Book(object):
         self.max_page_number = 0
 
         # style sheet, etc.
-        for content in ['daisy.css',
-                        'daisyTransform.xsl', # remove for no warnings
-                        'dtbook-2005-3.dtd',
-                        'html.css', # remove for no warnings
+        for content in ['daisy.css', 'daisyTransform.xsl',
+                        'dtbook-2005-3.dtd', 'html.css',
                         'resource.res']:
             content_src = os.path.join(sys.path[0], 'daisy_files', content)
             content_str = open(content_src, 'r').read()
@@ -78,8 +76,16 @@ class Book(object):
               'href':self.smil_file,
               'media-type':'application/smil'
               },
+            { 'id':'daisyTransform',
+              'href':'daisyTransform.xsl',
+              'media-type':'text/xsl'
+              },
             { 'id':'daisyCss',
               'href':'daisy.css',
+              'media-type':'text/css'
+              },
+            { 'id':'htmlCss',
+              'href':'html.css',
               'media-type':'text/css'
               },
             { 'id':'resource',
@@ -87,18 +93,6 @@ class Book(object):
               'media-type':'application/x-dtbresource+xml'
               },
             ]
-        if True:
-            # these cause validation to fail
-            self.manifest_items.append(
-                { 'id':'daisyTransform',
-                  'href':'daisyTransform.xsl',
-                  'media-type':'text/xsl'
-                  })
-            self.manifest_items.append(
-                { 'id':'htmlCss',
-                  'href':'html.css',
-                  'media-type':'text/css'
-                  })
 
 
     def push_tag(self, tag, text='', attrs={}):
@@ -142,8 +136,7 @@ class Book(object):
         level = str(len(self.navpoint_stack))
         level_id_str = self.push_tag(ltag + level)
         htag_id_str, htag_dtb_el = self.add_tag(htag + level, text,
-                                                smil_attrs={'customTest':
-                                                            'headerCustomTest'})
+                                                smil_attrs={'customTest':'headerCustomTest'})
         current_navpoint_el = self.navpoint_stack[-1]
         navpoint_el = etree.SubElement(current_navpoint_el, 'navPoint',
                                        { 'id':level_id_str,
@@ -291,11 +284,9 @@ def make_dtbook(book_id, title):
     pi = etree.ProcessingInstruction('xml-stylesheet',
         'type="text/css" href="daisy.css" media="screen"')
     root_el.addprevious(pi)
-    # below causes validation fail
-    if True:
-        pi = etree.ProcessingInstruction('xml-stylesheet',
-            'type="text/xsl" href="daisyTransform.xsl" media="screen"')
-        root_el.addprevious(pi)
+    pi = etree.ProcessingInstruction('xml-stylesheet',
+        'type="text/xsl" href="daisyTransform.xsl" media="screen"')
+    root_el.addprevious(pi)
     
     head_el = etree.SubElement(root_el, 'head')
     etree.SubElement(head_el, 'meta',
