@@ -68,8 +68,7 @@ class Book(object):
         part_str = 'part' + str(self.part_number).zfill(4)
         part_str_href = part_str + '.html'
         self.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                         common.tree_to_str(self.current_part,
-                                            xml_declaration=False))
+                         common.tree_to_str(self.current_part, xml_declaration=False))
         self.add_spine_item({ 'idref':part_str })
         if self.part_number == 0:
             self.add_guide_item({ 'href':part_str_href,
