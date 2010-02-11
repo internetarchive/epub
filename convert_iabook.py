@@ -126,6 +126,7 @@ def main(argv):
         print iabook.report()
         sys.exit(0)
     elif make_hocr:
+        raise 'NYI'
         iabook_to_hocr.process_book(iabook)
     else:
         ebook = epub.Book(out_name, metadata)
