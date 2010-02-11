@@ -10,7 +10,6 @@ import daisy
 import iabook_to_daisy
 import iabook_to_epub
 import iarchive
-import common
 
 from debug import debug, debugging, assert_d
 
@@ -30,7 +29,7 @@ def main(argv):
                                    'dho:',
                                    ['debug', 'help', 'outfile=',
                                     'document=',
-                                    'daisy', 'epub'])
+                                    'daisy', 'epub', 'test', 'report', 'hocr'])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -38,6 +37,9 @@ def main(argv):
     found_output_opt = False
     make_epub = False
     make_daisy = False
+    make_test = False
+    make_report = False
+    make_hocr = False
     doc = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -51,6 +53,15 @@ def main(argv):
         elif opt in ('--epub'):
             make_epub = True
             found_output_opt = True
+        elif opt in ('--test'):
+            make_test = True
+            found_output_opt = True
+        elif opt in ('--report'):
+            make_report = True
+            found_output_opt = True
+        elif opt in ('--hocr'):
+            make_hocr = True
+            found_output_opt = True
         elif opt in ('-o', '--outfile'):
             out_name = arg
         elif opt in ('--document'):
@@ -58,7 +69,7 @@ def main(argv):
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
-        book_id = common.get_book_id()
+        book_id = iarchive.infer_book_id()
         if book_id is None:
             print 'No args given and no book found in current directory'
             usage()
@@ -94,6 +105,12 @@ def main(argv):
             out_root = book_id
         if make_daisy:
             out_name = out_root + '_daisy.zip'
+        elif make_test:
+            out_name = out_root + '.test'
+        elif make_report:
+            out_name = out_root + '.report'
+        elif make_hocr:
+            out_name = out_root + '.html'
         else:
             out_name = out_root + '.epub'
 
@@ -102,6 +119,15 @@ def main(argv):
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)
         iabook_to_daisy.process_book(iabook, ebook)
+    elif make_test:
+        print iabook.analyze()
+        sys.exit(0)
+    elif make_report:
+        print iabook.report()
+        sys.exit(0)
+    elif make_hocr:
+        raise 'NYI'
+        iabook_to_hocr.process_book(iabook)
     else:
         ebook = epub.Book(out_name, metadata)
         iabook_to_epub.process_book(iabook, ebook)
@@ -110,11 +136,22 @@ def main(argv):
 
     if debug_output:
         if make_daisy:
-            pass
+            output = os.popen('rm -rf daisy_debug')
+            output.read()
+            output = os.popen('unzip -d daisy_debug ' + out_name)
+            output.read()
+            zedval = os.path.join(sys.path[0], 'Zedval/ZedVal.jar')
+            opf_file = os.path.join('daisy_debug',
+                                    iabook.get_book_id() + '_daisy.opf')
+            output = os.popen('java -Xms128m -Xmx256m -jar '
+                              + zedval + ' ' + opf_file)
         else:
             epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
             output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
-            print output.read()
+        print output.read()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+
+
+# freezing sensa-tions, "indigestive-style

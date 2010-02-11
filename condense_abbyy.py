@@ -8,7 +8,7 @@ import gzip
 
 from lxml import etree
 
-import common
+import iarchive
 
 # showchars=False
 showchars=True
@@ -22,7 +22,7 @@ def main(argv):
 #         usage()
 #         sys.exit(-1)
 
-    id = common.get_book_id()
+    id = iarchive.infer_book_id()
     aby_file = gzip.open(id + '_abbyy.gz', 'rb')
     scandata = id + '.xml'
 
@@ -133,7 +133,7 @@ class FilterTarget:
 
 to_keep = {
     ns+'document':(['indent'], [ 'pagesCount', 'xmlns' ]),
-    ns+'page':(['indent'], [ 'width', 'leaf' ]),
+    ns+'page':(['indent'], [ 'width', 'height', 'resolution', 'originalCoords', 'leaf' ]),
     ns+'block':(['indent'], [ 'blockType', 'l', 'r', 't', 'b' ]),
     ns+'region':(['indent'], [ ]),
     ns+'rect':([ 'indent' ], [ ]),

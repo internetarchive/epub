@@ -31,6 +31,17 @@ class Book(object):
             self.images_type = 'jp2.zip'
         elif os.path.exists(os.path.join(book_path, self.doc + '_tif.zip')):
             self.images_type = 'tif.zip'
+        elif os.path.exists(os.path.join(book_path, self.doc + '_jp2.tar')):
+            self.images_type = 'jp2.tar'
+
+# maybe images.type as (container_format, image_format)
+# tested this -- ('a', 'b') == ('a', 'b')
+# example id:  fifteenthcensus00reel2149
+
+# jp2 x tif x jpeg
+# tar zip single-file (cat)
+# mang suggests: separate handling of pkg format x image format
+        
 #         else:
 #             raise Exception('Can\'t find book images')
         
@@ -43,6 +54,19 @@ class Book(object):
 
     def get_doc(self):
         return self.doc
+
+    def analyze(self):
+        import abbyy
+        return abbyy.analyze(self.get_abbyy(), self)
+
+    def report(self):
+        bookdata = self.get_bookdata()
+        result = ''
+        for name in 'leafCount', 'dpi':
+            result += (name + ': '
+                       + str(bookdata.find(self.get_scandata_ns() + name))
+                       + '\n')
+        return result
 
     def get_scandata_path(self):
         paths = [
@@ -80,6 +104,8 @@ class Book(object):
 
     def get_page_scandata(self, i):
         self.get_scandata()
+        if i >= len(self.scandata_pages):
+            return None
         return self.scandata_pages[int(i)]
 #     scandata_pages = scandata.xpath('/book/pageData/page')
 #     if scandata_pages is None or len(scandata_pages) == 0:
@@ -90,6 +116,22 @@ class Book(object):
             return self.leaves[leaf]
         else:
             return None
+
+    def get_bookdata(self):
+        scandata = self.get_scandata()
+        bookdata = scandata.find(self.get_scandata_ns() + 'bookData')
+        if bookdata is None:
+            raise 'why here?'
+            bookdata = scandata.bookData
+        return bookdata
+
+    def get_scandata_ns(self):
+        scandata = self.get_scandata()
+        bookData = scandata.find('bookData')
+        if bookData is None:
+            return '{http://archive.org/scribe/xml}'
+        else:
+            return ''
 
     def get_leafno_for_page(self, i):
         return int(self.get_page_scandata(i).get('leafNum'))
@@ -131,12 +173,26 @@ class Book(object):
             return open(abbyy_xml, 'r')
         raise 'No abbyy file found'
 
-    # get python string with image data - from .jp2 image in zip
+    def get_djvu_xml(self):
+        djvu_xml = os.path.join(self.book_path, self.doc + '_djvu.xml')
+        if os.path.exists(djvu_xml):
+            return open(djvu_xml, 'r')
+        raise 'No djvu.xml file found'
+
+
+    def get_pdfxml_xml(self):
+        pdfxml_xml = os.path.join(self.book_path, self.doc + '_pdfxml.xml')
+        if os.path.exists(pdfxml_xml):
+            return open(pdfxml_xml, 'r')
+        raise 'No pdfxml.xml file found'
+
+    # get python string with image data - from .jp2 image or tif in zip
     # finds appropriate leaf number for supplied page index
-    def get_page_image(self, i, width=700, height=900,
-                       quality=90,
-                       region='{0.0,0.0},{1.0,1.0}',
-                       out_img_type='jpg'):
+    def get_page_image(self, i, requested_size, orig_page_size=None,
+                       quality=60,
+                       region=None, # ((l,t)(r,b))
+                       out_img_type='jpg',
+                       kdu_reduce=2):
         leafno = self.get_leafno_for_page(i)
         if self.images_type == 'jp2.zip':
             zipf = os.path.join(self.book_path,
@@ -150,6 +206,12 @@ class Book(object):
             image_path = (self.doc + '_tif/' + self.doc + '_'
                           + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
+        elif self.images_type == 'jp2.tar':
+            # 7z e archive.tar dir/filename.jp2 <---- fast!
+            raise 'NYI'
+
+
+            
         else:
             return None
         try:
@@ -159,23 +221,40 @@ class Book(object):
         except KeyError:
             return None
         return image_from_zip(zipf, image_path,
-                              width, height, quality, region,
-                              in_img_type, out_img_type)
+                              requested_size, orig_page_size,
+                              quality, region,
+                              in_img_type, out_img_type,
+                              kdu_reduce)
+
+
+def get_kdu_region_string(img_size, region):
+    if region is not None and img_size is None:
+        raise 'need orig image size to support region request'
+    if region is None or img_size is None:
+        return '{0.0,0.0},{1.0,1.0}'
+    w, h = img_size
+    w = float(w)
+    h = float(h)
+    (l, t), (r, b) = region
+    result = ('{' + str(t/h) + ',' + str(l/w) + '},' +
+              '{' + str((b-t)/h) + ',' + str((r-l)/w) + '}')
+    return result
 
 if not os.path.exists('/tmp/stdout.ppm'):
     os.symlink('/dev/stdout', '/tmp/stdout.ppm')
 if not os.path.exists('/tmp/stdout.bmp'):
     os.symlink('/dev/stdout', '/tmp/stdout.bmp')
- 
+
 # get python string with image data - from .jp2 image in zip
 def image_from_zip(zipf, image_path,
-                   width, height, quality, region,
-                   in_img_type, out_img_type):
+                   requested_size, orig_page_size,
+                   quality, region,
+                   in_img_type, out_img_type,
+                   kdu_reduce):
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
-    if region != '{0.0,0.0},{1.0,1.0}':
-        raise Exception('Um, only whole image grabbage supported 4 now')
 
+    width, height = requested_size
     scale = ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
 #     scale = ' | pamscale -quiet -xyfit ' + str(width) + ' ' + str(height)
     if out_img_type == 'jpg':
@@ -185,26 +264,32 @@ def image_from_zip(zipf, image_path,
     else:
         raise Exception('unrecognized out img type')
     if in_img_type == 'jp2':
+        kdu_region = get_kdu_region_string(orig_page_size, region)
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
-                        + ' | kdu_expand -region "' + region + '"'
-                        +   ' -reduce 2 '
+                        + ' | kdu_expand -region "' + kdu_region + '"'
+                        +   ' -reduce ' + str(kdu_reduce)
                         +   ' -no_seek -i /dev/stdin -o /tmp/stdout.bmp'
                         + ' | bmptopnm -quiet '
-                        + ' | pnmscale -quiet '
-                        +   ' -xysize ' + str(width) + ' ' + str(height)
                         + scale
                         + cvt_to_out)
     elif in_img_type == 'tif':
+        crop = ''
+        if region is not None:
+            (l, t), (r, b) = region
+            l = str(l); t = str(t); r = str(r); b = str(b)
+            crop = (' | pamcut -left=' + l + ' -top=' + t
+                    + ' -right=' + r + ' -bottom=' + b)
+        
         import tempfile
         t_handle, t_path = tempfile.mkstemp()
-#         t_handle.close()
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                         + ' > ' + t_path)
         output.read()
         output = os.popen('tifftopnm -quiet ' + t_path
-#                         + ' | pamcut <blah> '
+                        + crop
                         + scale
                         + cvt_to_out)
+        
     else:
         raise Exception('unrecognized in img type')
     return output.read()
@@ -220,6 +305,21 @@ def iso_639_23_to_iso_639_1(marc_code):
             return mapping[marc_code]
     return marc_code
         
+def infer_book_id():
+    files=os.listdir(".")
+    #ignore files starting with '.' using list comprehension
+    files=[filename for filename in files if filename[0] != '.']
+    for fname in files:
+        if re.match('.*_abbyy.gz$', fname):
+            return re.sub('_abbyy.gz$', '', fname)
+        if re.match('.*_abbyy.zip$', fname):
+            return re.sub('_abbyy.zip$', '', fname)
+        if re.match('.*_abbyy.xml$', fname):
+            return re.sub('_abbyy.xml$', '', fname)
+    raise "couldn't get book id"
+    return None
+
+
 if __name__ == '__main__':
     sys.stderr.write('I\'m a module.  Don\'t run me directly!')
     sys.exit(-1)

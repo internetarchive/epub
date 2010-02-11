@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import getopt
 import re
 import os
 
@@ -15,22 +14,99 @@ from lxml import objectify
 import iarchive
 import common
 
-outdir='viz'
-
-kdu_reduce = 0
-scale = 2 ** kdu_reduce
-s = scale
-
 from debug import debug, debugging, assert_d
 
-def usage():
-    print 'usage: visualize_abbyy.py'
+opts = None
+
+
+def legend():
+    print 'legend: (for abbyy format)'
+    print '    ta - align'
+    print '    li - leftIndent'
+    print '    ri - rightIndent'
+    print '    si - startIndent'
+    print '    ls - lineSpacing'
+    print
+    print 'Colors:'
+    for sty_name in styles:
+        print '    ' + styles[sty_name]['col'] + '  -  ' + sty_name
 
 def main(argv):
-    if not os.path.isdir('./' + outdir+ '/'):
-        os.mkdir('./' + outdir + '/')
+    import optparse
+    parser = optparse.OptionParser()
+    parser = optparse.OptionParser(usage='usage: %prog [options]',
+                                   version='%prog 0.1',
+                                   description='A visualizer for '
+                                   'coordinate-annotated OCR data.')
+    def legend_callback(option, opt_str, value, parser):
+        legend()
+        sys.exit(0)
+    parser.add_option('--legend', '-l',
+                     action='callback',
+                     callback=legend_callback,
+                     help='Display legend information - for generated images')
+    parser.add_option('--reduce',
+                      action='store',
+                      type='int',
+                      metavar='n',
+                      default=2,
+                      help='For jp2 input images, reduce jp2 resolution '
+                      'by 2 ^ n when reading '
+                      'original image, for speed.  This also reduces the '
+                      'output scale by 2 ^ n, unless otherwise specified '
+                      'with --scale.')
+    parser.add_option('--scale',
+                      action='store',
+                      type='int',
+                      default=0,
+                      help='Scale result images down from original scan '
+                      'resolution.')
+    parser.add_option('--last',
+                      action='store',
+                      type='int',
+                      metavar='page',
+                      default=0,
+                      help='Stop generating output pages '
+                      'after the specified page')
+    parser.add_option('--text',
+                      action='store_true',
+                      default=False,
+                      help='Generate output characters for OCRed '
+                      'text in input files')
+    parser.add_option('--outdir',
+                      help='Output directory.  Default is source_type + \'_viz\'')
+    parser.add_option('--source',
+                      choices=['abbyy', 'pdftoxml', 'djvu'],
+                      default='abbyy',
+                      help='Which source to use for OCR data/coordinates.')
+    parser.add_option('--show-opts',
+                      action='store_true',
+                      # help=optparse.SUPPRESS_HELP
+                      help='Display parsed options/defaults and exit')
+    global opts
+    opts, args = parser.parse_args(argv)
+    if opts.reduce < 0 or opts.reduce > 4:
+        parser.error('--reduce must be between 0 and 4')
+    if opts.scale == 0:
+        opts.scale = 2 ** opts.reduce
 
-    id = common.get_book_id()
+    if opts.source == 'djvu':
+        parser.error('--source=djvu not supported at the moment')
+
+    if opts.outdir is None:
+        opts.outdir = opts.source + '_viz'
+
+    if opts.show_opts:
+        print 'Options: ' + str(opts)
+        print 'Args: ' + str(args)
+        sys.exit(0)
+
+    parser.destroy()
+    
+    if not os.path.isdir('./' + opts.outdir + '/'):
+        os.mkdir('./' + opts.outdir + '/')
+
+    id = iarchive.infer_book_id()
     iabook = iarchive.Book(id, '', '.')
     visualize(iabook)
 
@@ -44,14 +120,48 @@ from color import color as c
 def visualize(iabook):
 #    scandata = objectify.parse(iabook.get_scandata_path()).getroot()
     scandata = iabook.get_scandata()
-    context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
+    if opts.source == 'abbyy':
+        context = etree.iterparse(iabook.get_abbyy(), tag=abbyyns+'page')
+    elif opts.source == 'pdfxml':
+        context = etree.iterparse(iabook.get_pdfxml_xml(), tag='PAGE')
+    elif opts.source == 'djvu':
+        context = etree.iterparse(iabook.get_djvu_xml(), tag='OBJECT')
     info = scan_pages(context, scandata, iabook)
 
+
+def has_coord(el):
+    if opts.source == 'abbyy':
+        return (el.get('t') is not None)
+    elif opts.source == 'pdfxml':
+        return (el.get('y') is not None)
+    elif opts.source == 'djvu':
+        raise 'djvuness not yet implemented here'
+
+
+def get_coord(el, ltrb):
+    def iget(ltrb):
+        return int(math.floor(float(el.get(ltrb))))
+    if opts.source == 'pdfxml':
+        if ltrb == 't':
+            return iget('y')
+        elif ltrb == 'l':
+            return iget('x')
+        elif ltrb == 'r':
+            return iget('x') + iget('width')
+        elif ltrb == 'b':
+            return iget('y') + iget('height')
+    elif opts.source == 'djvu':
+        raise 'djvuness not yet implemented here'
+    else: # abbyy
+        return el.get(ltrb)
+
+
 def draw_rect(draw, el, sty, use_coords=None):
+    col = color.color[sty['col']]
     if sty['width'] == 0:
         return
     
-    lt, rb = use_coords if use_coords is not None else tag_coords(el, s)
+    lt, rb = use_coords if use_coords is not None else tag_coords(el, opts.scale)
 
     x1, y1 = lt
     x2, y2 = rb
@@ -78,7 +188,7 @@ def draw_rect(draw, el, sty, use_coords=None):
 #     x2 += sty['offset']
 #     y2 += sty['offset']
     draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)],
-              width=sty['width'], fill=sty['col'])
+              width=sty['width'], fill=col)
     
 def tag_coords(tag, s):
     t = int(tag.get('t'))/s
@@ -103,12 +213,12 @@ def enclosing_tag(tag):
     return tag_with_coords
 
 styles = {
-    'block_text' : { 'col':color.yellow, 'width':1, 'offset':0, 'margin':10 },
-    'block_picture' : { 'col':color.red, 'width':1, 'offset':7, 'margin':10 },
-    'block_table' : { 'col':color.purple, 'width':1, 'offset':7, 'margin':10 },
-    'rect' : { 'col':color.orange, 'width':0, 'offset':-4, 'margin':10 },
-    'par' : { 'col':color.green, 'width':2, 'offset':0, 'margin':10 },
-    'line' : { 'col':color.blue, 'width':1, 'offset':0, 'margin':10 },
+    'block_text' : { 'col':'yellow', 'width':1, 'offset':0, 'margin':10 },
+    'block_picture' : { 'col':'red', 'width':1, 'offset':7, 'margin':10 },
+    'block_table' : { 'col':'purple', 'width':1, 'offset':7, 'margin':10 },
+    'rect' : { 'col':'orange', 'width':0, 'offset':-4, 'margin':10 },
+    'par' : { 'col':'green', 'width':2, 'offset':0, 'margin':10 },
+    'line' : { 'col':'blue', 'width':1, 'offset':0, 'margin':10 },
     }
 
 def nons(tag):
@@ -126,9 +236,9 @@ def assert_tag(el, expected):
 
 def box_from_par(par):
     if len(par) > 0:
-        (o_l, o_t), (o_r, o_b) = tag_coords(par[0], s)
+        (o_l, o_t), (o_r, o_b) = tag_coords(par[0], opts.scale)
         for line in par:
-            (l, t), (r, b) = tag_coords(line, s)
+            (l, t), (r, b) = tag_coords(line, opts.scale)
             o_l = l if (l - o_l < 0) else o_l
             o_t = t if (t - o_t < 0) else o_t
             o_r = r if (o_r - r < 0) else o_r
@@ -144,6 +254,7 @@ import font
 def scan_pages(context, scandata, iabook):
     book_id = iabook.get_book_id()
     scandata_pages = scandata.pageData.page
+    scandata_ns = iabook.get_scandata_ns()
     try:
         # dpi isn't always there
         dpi = int(scandata.bookData.dpi.text)
@@ -155,20 +266,18 @@ def scan_pages(context, scandata, iabook):
     for event, page in context:
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
-        width = orig_width / s
-        height = orig_height / s
+        orig_size = (orig_width, orig_height)
+        requested_size = (orig_width / opts.scale, orig_height / opts.scale)
         
-        image = Image.new('RGB', (width, height))
-
+        image = Image.new('RGB', requested_size)
+        image_str = iabook.get_page_image(i, requested_size,
+                                          out_img_type='ppm',
+                                          kdu_reduce=opts.reduce)
         page_image = None
-
-        image_str = iabook.get_page_image(i, width, height, out_img_type='ppm')
         if image_str is not None:
             page_image = Image.open(StringIO.StringIO(image_str))
-            (nw, nh) = page_image.size
-            if nw != width or nh != height:
-                page_image = page_image.resize((width, height))
-#        image.paste(page_image, None)
+            if requested_size != page_image.size:
+                page_image = page_image.resize(requested_size)
             try:
                 image = Image.blend(image, page_image, .2)
             except ValueError:
@@ -179,8 +288,8 @@ def scan_pages(context, scandata, iabook):
         draw = ImageDraw.Draw(image)
         for block in page:
             if block.get('blockType') == 'Picture' and page_image is not None:
-                cropped = page_image.crop(four_coords(block, scale))
-                image.paste(cropped, four_coords(block, scale))
+                cropped = page_image.crop(four_coords(block, opts.scale))
+                image.paste(cropped, four_coords(block, opts.scale))
                 
         for block in page:
             if block.get('blockType') == 'Text':
@@ -212,11 +321,11 @@ def scan_pages(context, scandata, iabook):
                                         font_size = fmt.get('fs')
                                         font_size = int(re.sub('\.', '', font_size))
                                         font_ital = (fmt.get('italic') == 'true')
-                                        f = font.get_font(font_name, dpi / scale, font_size, font_ital)
+                                        f = font.get_font(font_name, dpi / opts.scale, font_size, font_ital)
                                         for cp in fmt:
                                             assert_d(cp.tag == abyns+'charParams')
-                                            draw.text((int(cp.get('l'))/s,
-                                                       int(cp.get('b'))/s),
+                                            draw.text((int(cp.get('l')) / opts.scale,
+                                                       int(cp.get('b')) / opts.scale),
                                                       cp.text.encode('utf-8'),
                                                       font=f,
                                                       fill=color.yellow)
@@ -237,7 +346,7 @@ def scan_pages(context, scandata, iabook):
                                 if att_txt is not None:
                                     t += nick + ':' + att_txt + ' '
                             if len(t) > 0:
-                                f = font.get_font("Courier", dpi / scale, 12)
+                                f = font.get_font("Courier", dpi / opts.scale, 12)
                                 draw.text(tl, t, font=f, fill=color.green)
                         for line in par:
                             render(draw, line, 'line');
@@ -247,14 +356,15 @@ def scan_pages(context, scandata, iabook):
                                 font_size = fmt.get('fs')
                                 font_size = int(re.sub('\.', '', font_size))
                                 font_ital = (fmt.get('italic') == 'true')
-                                f = font.get_font(font_name, dpi / scale, font_size, font_ital)
+                                f = font.get_font(font_name, dpi / opts.scale, font_size, font_ital)
                                 for cp in fmt:
                                     assert_d(cp.tag == abyns+'charParams')
-#                                     draw.text((int(cp.get('l'))/s,
-#                                                int(cp.get('b'))/s),
-#                                               cp.text.encode('utf-8'),
-#                                               font=f,
-#                                               fill=color.yellow)
+                                    if opts.text:
+                                        draw.text((int(cp.get('l')) / opts.scale,
+                                                   int(cp.get('b')) / opts.scale),
+                                                  cp.text.encode('utf-8'),
+                                                  font=f,
+                                                  fill=color.yellow)
                 elif (el.tag == abyns+'row'):
                     pass
                 else:
@@ -267,18 +377,32 @@ def scan_pages(context, scandata, iabook):
         page_scandata = iabook.get_page_scandata(i)
         if page_scandata is not None:
             t = page_scandata.pageType.text
-            f = font.get_font("Courier", dpi / scale, 48)
+
+#             pageno_string = page_scandata.pageNumber.text
+            pageno = page_scandata.find(scandata_ns + 'pageNumber')
+            if pageno:
+                pageno_string = pageno.text    
+                t += ' ' + pageno_string
+
+            handside = page_scandata.find(scandata_ns + 'handSide')
+            if handside:
+                t += ' ' + handside.text
+
+            f = font.get_font("Courier", dpi / opts.scale, 12)
             page_w, page_h = image.size
-            draw.text((.1 * dpi,
-                       .1 * dpi),
+            draw.text((.02 * dpi,
+                       .02 * dpi),
                       t.encode('utf-8'),
                       font=f,
                       fill=color.green)
 
-        image.save(outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
+        image.save(opts.outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
         print 'page index: ' + str(i)
         page.clear()
         i += 1
+        if opts.last > 0:
+            if i > opts.last:
+                sys.exit(0)
     return None
 
 def include_page(page):

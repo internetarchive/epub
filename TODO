@@ -1,27 +1,65 @@
 Mini to do:
 
-Get it working on the web
-Get daisy download happy
+
+
+finish checking in bits
+
+add bits from tweewee
+
+check stuff
+
+push to archive
+
+check with www-mccabe
+
+push?
+
+clear thru this file.
+
+Bug for: bad images on stanza
+
+
+Art of Caricaturing - needs cover?
+
+- check on get rid of
+try:
+    from lxml import etree
+except ImportError:
+    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
+    from lxml import etree
+from lxml import objectify
 
 
 To do:
+general:
+- handle books with disjoint/repeating page number ranges, 
+  e.g. libraries of the future, missing page 1 in romance.
+
+example of legit discontinuous numbering:
+http://www.archive.org/stream/snowimagechildis00hawtiala#page/n17/mode/2up
+
+- move all abbyy parsing into iabook; make json interface to same. (see booki)
+- make condense, visualize be output opts
+- infer [front, main] page types - maybe synthesize more types for repeated pages
+- handle catstorieshelen - seems to be compounded of multiple books
+
+- Handle .tar image stacks
+
+
 epub:
-- images (cf. best practices?)
-- switch to incremental content generation
-- make sure temp files get deleted!
 - Better chapter structure
+- link to streaming / details page / etc.
+- 'width', 'height' tags for images.  (pamfile + tee? temp files?)
+
 
 daisy:
 - extract proper metadata (or pass it elseways)
 - Copyright, legalese - add!
-- missing 1rst chapter headers
 
 
 Maybe someday:
-
 - Small-caps font emulation
 - Auto portrait/landscape scaling/rotation of images
-- fix 'sample title' in process_abbyy
 - Add code to iarchive.py to make sense of page numbers, e.g. unnumbered start pages, pages that start at '2', etc.  Romance is an initial example.  Also pageNumBox
 
 - make sure required epub, daisy metadata is actually present
@@ -32,24 +70,18 @@ Skip line if too many chars are suspicious?
 
 
 
-rename things.
-
-convert_iabook
-
 --daisy (opts - mogrify)
 --epub (default) (opts -> -d)
 --condense
 --visualize
 
 
-http://ia301518.us.archive.org/2/items/whowillfeedthemi00amararch/
 
 do we have a test/real eventual "/nls" (only) book/item now/yet?  i could dark the non-xml files (item mgr) and i could setup some sudoer rules for mike's script to be able to "sudo up" from "www-data" to root to access the files.  (or we could delay that for later?)
 [10/13/09 5:21:04 PM] Tracey Jaquith: mike -- for books like that, a few simple lines in the script like this should get you close to the privs thing:
 [10/13/09 5:21:10 PM] Tracey Jaquith: require_once '/petabox/setup.inc';
 [10/13/09 5:21:17 PM] Tracey Jaquith: Auth::must_be_logged_in();
 [10/13/09 5:21:28 PM] Tracey Jaquith: if (Auth::hasPriv("/nls"))  ...
-
 
 
 
@@ -60,18 +92,3 @@ will be the user id (email address)
 
 Auth::status() returns the current user's priv list (as an array), in a form suitable for being passed to the Auth::hasPriv() function tracey mentioned earlier. (you provide it no args; it looks up the current user via $_COOKIE['logged-in-user'])
 [10/13/09 8:40:33 PM] Hank Bromley: you can see how all this is defined, if you're interested, in petabox/www/common/Auth.inc
-
-
-
-
-
-
-[10/13/09 8:27:45 PM] Hank Bromley: which would you like for that third param name?
-[10/13/09 8:29:21 PM] Mike McCabe: (identifier, dir, doc?)
-[10/13/09 8:30:28 PM] Hank Bromley: sounds good. where "doc" may, on occasion, start with subdir(s).
-[10/13/09 8:31:05 PM] Mike McCabe: been considering also tool mods to support password-wrapping daisy.zip files for protected books
-
-
-
-doing: making epubs work again!
-

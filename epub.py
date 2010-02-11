@@ -5,6 +5,7 @@ import sys
 
 from lxml import etree
 from lxml import objectify
+from lxml.builder import E
 
 import common
 import zipfile
@@ -13,7 +14,7 @@ import os
 import sys
 from StringIO import StringIO
 
-from debug import debug, debugging
+from debug import debug, debugging, assert_d
 
 class Book(object):
     def __init__(self, out_name, metadata, content_dir='OEBPS/'):
@@ -24,7 +25,11 @@ class Book(object):
 
         self.book_id = common.get_metadata_tag_data(metadata, 'identifier')
         self.title = common.get_metadata_tag_data(metadata, 'title')
+        if self.title is None:
+            self.title = 'none'
         self.author = common.get_metadata_tag_data(metadata, 'creator')
+        if self.author is None:
+            self.author = 'none'
 
         tree_str = make_container_info(content_dir)
         self.add('META-INF/container.xml', tree_str)
@@ -33,16 +38,22 @@ class Book(object):
          self.opf_spine_el, self.opf_guide_el) = make_opf(metadata)
         
         (self.ncx, self.ncx_head_el,
-         self.ncx_navmap_el, self.ncx_pagelist_el) = make_ncx(self.book_id,
-                                                              self.title,
-                                                              self.author)
+         self.ncx_navmap_el) = make_ncx(self.book_id,
+                                        self.title,
+                                        self.author)
+        self.ncx_pagelist_el = None
 
-        self.tag_stack = []
         self.navpoint_stack = [self.ncx_navmap_el]
         self.id_index = 1
         self.nav_number = 1
         self.depth = 0
         self.current_depth = 0
+
+        self.el_stack = []
+        self.el_len_total = 0
+        self.max_el_len_total = 150000
+        self.part_number = 0
+        self.current_part = None
 
         # Add static extra files - style sheet, etc.
         for id, href, media_type in [('css', 'stylesheet.css', 'text/css')]:
@@ -51,14 +62,73 @@ class Book(object):
             self.add_content(id, href, media_type, content_str)
 
 
-    def add_content(self, id, href, media_type, content_str):
+    def flush_els(self):
+        if self.current_part is None:
+            return
+        part_str = 'part' + str(self.part_number).zfill(4)
+        part_str_href = part_str + '.html'
+        self.add_content(part_str, part_str_href, 'application/xhtml+xml',
+                         common.tree_to_str(self.current_part,
+                                            xml_declaration=False))
+        self.add_spine_item({ 'idref':part_str })
+        if self.part_number == 0:
+            self.add_guide_item({ 'href':part_str_href,
+                                   'type':'text',
+                                   'title':'Book' })
+        self.part_number += 1
+        self.el_stack = [] # xxx ? require popped?
+        self.el_len_total = 0
+        self.current_part = None
+
+
+    def add_el(self, el, el_len=100):
+        if self.el_len_total > self.max_el_len_total:
+            self.flush_els()
+        if len(self.el_stack) == 0:
+            assert_d(self.current_part == None)
+            self.current_part, body_el = self.make_xhtml()
+            self.el_stack.append(body_el)
+        self.el_stack[-1].append(el)
+        self.el_len_total += el_len
+        return 'part' + str(self.part_number).zfill(4) + '.html'
+
+
+    def push_el(self, el, el_len):
+        result = self.add_el(el)
+        self.el_stack.append(el)
+        return result
+    
+
+    def pop_el(self):
+        self.el_stack.pop()
+
+    def make_xhtml(self):
+        html = E.html(
+            E.head(
+                E.title('part' + str(self.part_number).zfill(4)),
+                E.meta(name='generator', content='abbyy to epub tool, v0.2'),
+                E.link(rel='stylesheet',
+                       href='stylesheet.css',
+                       type='text/css'),
+                E.meta({'http-equiv':'Content-Type',
+                        'content':'application/xhtml+xml; charset=utf-8'})
+                ),
+            E.body(
+                E.div({ 'class':'body' })
+            ),
+            xmlns='http://www.w3.org/1999/xhtml'
+            )
+        return etree.ElementTree(html), html.xpath('/html/body/div')[0]
+
+
+    def add_content(self, id, href, media_type, content_str, deflate=True):
         # info is e.g. { 'id':'title',
         #                'href':'title.html',
         #                'media-type':'application/xhtml+xml' },
         etree.SubElement(self.opf_manifest_el,
                          'item',
                          { 'id':id, 'href':href, 'media-type':media_type })
-        self.add(self.content_dir + href, content_str)
+        self.add(self.content_dir + href, content_str, deflate)
 
 
     def add_spine_item(self, info):
@@ -104,6 +174,10 @@ class Book(object):
     def add_pagetarget(self, name, value, page_href, type='normal'):
         pagetarget_id = 'pagetarget' + str(self.id_index).zfill(6)
         self.id_index += 1
+        
+        if self.ncx_pagelist_el is None:
+            self.ncx_pagelist_el = make_pagelist_el(self.ncx)
+        
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
                                          { 'id':pagetarget_id,
@@ -211,12 +285,16 @@ def make_ncx(book_id, title, author):
     navinfo_el = etree.SubElement(navmap_el, 'navInfo')
     etree.SubElement(navinfo_el, 'text').text = 'Book navigation'
 
+    # defer pagelist_el, as some books lack pages
+
+    return tree, head_el, navmap_el
+
+def make_pagelist_el(ncx):
+    root_el = ncx.getroot()
     pagelist_el = etree.SubElement(root_el, 'pageList')
     navlabel_el = etree.SubElement(pagelist_el, 'navLabel')
     etree.SubElement(navlabel_el, 'text').text = 'Pages'
-
-    return tree, head_el, navmap_el, pagelist_el
-
+    return pagelist_el
 
 if __name__ == '__main__':
     sys.stderr.write('I\'m a module.  Don\'t run me directly!')

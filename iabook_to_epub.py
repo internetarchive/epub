@@ -24,75 +24,79 @@ import iarchive
 
 from debug import debug, debugging, assert_d
 
+
+max_width = 600
+max_height = 780
+
 def process_book(iabook, ebook):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
+
+    scandata_ns = iabook.get_scandata_ns()
+    bookData = iabook.get_bookdata()
+    
     aby_file = iabook.get_abbyy()
 
-    bookData = scandata.find('bookData')
-    # XXX should fix below and similar by ensuring that scandata
-    #   is always the same fmt...
-    # scandata.zip/scandata.xml parses different?
-    if bookData is None:
-        bookData = scandata.bookData
-
     # some books no scanlog
-#     scanLog = scandata.find('scanLog')
+#     scanLog = scandata.find(scandata_ns + 'scanLog')
 #     if scanLog is None:
 #         scanLog = scandata.scanLog
 
     contents = iabook.get_toc()
     metadata = iabook.get_metadata()
     title = common.get_metadata_tag_data(metadata, 'title')
+    if title is None:
+        title = 'none'
     author = common.get_metadata_tag_data(metadata, 'creator')
+    if author is None:
+        author = 'none'
 
-    paragraphs = []
     i = 0
-    part_number = 0
     cover_number = 0
     toc_item_number = 0
+    picture_number = 0
     pushed_chapters = False
+    made_contents_navpoint = False
+    made_pages = False
     context = etree.iterparse(aby_file,
                               tag=aby_ns+'page',
                               resolve_entities=False)
     found_title = False
     for page_scandata in iabook.get_scandata_pages(): #confirm title exists
-        t = page_scandata.pageType.text
-        if t == 'Title' or t == 'Title Page':
+        t = page_scandata.pageType.text.lower()
+        if t == 'title' or t == 'title page':
             found_title = True
             break
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
         page_scandata = iabook.get_page_scandata(i)
-
-        pageno = page_scandata.find('pageNumber')
+        pageno = None
+        if page_scandata is not None:
+            pageno = page_scandata.find(scandata_ns + 'pageNumber')
         if pageno:
-            part_str = 'part' + str(part_number).zfill(4)
-            id = 'page-' + str(pageno)
-            page_mark_href = part_str + '.html#' + id
-            pdiv = E.div({ 'class':'newpage', 'id':'page-' + str(pageno) })
-            paragraphs.append(pdiv)
-            ebook.add_pagetarget(str(pageno), pageno, page_mark_href)
-
             if contents is not None and str(pageno) in contents:
+                ebook.flush_els()
                 if not pushed_chapters:
-                    chap_mark_href = part_str + '.html#chapters'
                     cdiv = E.div({ 'class':'newnav', 'id':'chapters' })
-                    paragraphs.append(cdiv)
-                    ebook.push_navpoint('Chapters', chap_mark_href)
+                    href = ebook.add_el(cdiv) + '#' + 'chapters'
+                    ebook.push_navpoint('Chapters', href)
                     pushed_chapters = True
                 id = 'toc-' + str(toc_item_number)
                 toc_item_number += 1
-                toc_mark_href = part_str + '.html#' + id
                 cdiv = E.div({ 'class':'newnav', 'id':id })
-                paragraphs.append(cdiv)
-                ebook.add_navpoint(contents[str(pageno)], toc_mark_href)
+                href = ebook.add_el(cdiv) + '#' + id
+                ebook.add_navpoint(contents[str(pageno)], href)
+
+            id = 'page-' + str(pageno)
+            pdiv = E.div({ 'class':'newpage', 'id':id })
+            href = ebook.add_el(pdiv) + '#' + id
+            ebook.add_pagetarget(str(pageno), pageno, href)
 
         def include_page(page_scandata):
             if page_scandata is None:
                 return False
-            add = page_scandata.find('addToAccessFormats')
+            add = page_scandata.find(scandata_ns + 'addToAccessFormats')
             if add is None:
                 add = page_scandata.addToAccessFormats
             if add is not None and add.text == 'true':
@@ -112,9 +116,14 @@ def process_book(iabook, ebook):
             else:
                 cover_title = 'Back Cover' ## xxx detect back page?
                 front_cover = False
+                ebook.flush_els()
+                if pushed_chapters:
+                    ebook.pop_navpoint()
+                    pushed_chapters = False
             
             (id, filename) = make_html_page_image(i, iabook, ebook,
                                                   cover=front_cover)
+
             ebook.add_navpoint(cover_title, filename)
             if cover_number == 0:
                 ebook.add_guide_item({ 'href':filename,
@@ -146,69 +155,79 @@ def process_book(iabook, ebook):
                                    'title':'Title Page' })
         elif page_type == 'contents':
             (id, filename) = make_html_page_image(i, iabook, ebook)
-            ebook.add_navpoint('Table of Contents', filename)
+            if not made_contents_navpoint:
+                ebook.add_navpoint('Table of Contents', filename)
+                made_contents_navpoint = True
             ebook.add_guide_item({ 'href':filename,
                                    'type':'toc',
                                    'title':'Title Page' })
+
         elif page_type == 'normal':
             if before_title_page:
-                # XXX consider skipping if blank + no words?
-                # make page image
-                (id, filename) = make_html_page_image(i, iabook, ebook)
+                page_text = etree.tostring(page,
+                                           method='text',
+                                           encoding=unicode)
+                # Skip if not much text
+                if len(page_text) >= 10:
+                    (id, filename) = make_html_page_image(i, iabook, ebook)
             else:
                 first_par = True
+                saw_pageno_header_footer = False
+                
                 for block in page:
-                    if block.get('blockType') == 'Text':
-                        pass
-                    else:
-                        pass
+                    if block.get('blockType') == 'Picture':
+                        region = ((int(block.get('l')),
+                                   int(block.get('t'))),
+                                  (int(block.get('r')),
+                                   int(block.get('b'))))
+                        (l, t), (r, b) = region
+                        region_width = r - l
+                        region_height = b - t
+                        orig_page_size = (int(page.get('width')),
+                                     int(page.get('height')))
+                        page_width, page_height = orig_page_size
+                        
+                        req_width = int(max_width *
+                                        (region_width / float(page_width)))
+                        req_height = int(max_height *
+                                         (region_height / float(page_height)))
+                        image = iabook.get_page_image(i,
+                                                      (req_width, req_height),
+                                                      orig_page_size,
+                                                      kdu_reduce=2,
+                                                      region=region)
+                        pic_id = 'picture' + str(picture_number)
+                        pic_href = 'images/' + pic_id + '.jpg'
+                        picture_number += 1
+                        ebook.add_content(pic_id, pic_href,
+                                          'image/jpeg', image, deflate=False)
+                        el = E.p({ 'class':'illus' },
+                                 E.img(src=pic_href,
+                                       alt=pic_id))
+                        ebook.add_el(el)
+                        continue
                     for el in block:
                         if el.tag == aby_ns+'region':
                             for rect in el:
                                 pass
                         elif el.tag == aby_ns+'text':
                             for par in el:
-                                def par_is_header(par):
-                                    # if:
-                                    #   it's the first on the page
-                                    #   there's only one line
-                                    #   on that line, there's a formatting tag, s.t.
-                                    #   - it has < 6 charParam kids
-                                    #   - each is wordNumeric
-                                    # then:
-                                    #   Skip it!
-                                    if len(par) != 1:
-                                        return False
-                                    line = par[0]
-                                    for fmt in line:
-                                        if len(fmt) > 6:
-                                            continue
-                                        saw_non_num = False
-                                        for cp in fmt:
-                                            if cp.get('wordNumeric') != 'true':
-                                                saw_non_num = True
-                                                break
-                                        if not saw_non_num:
-                                            return True
-                                        hdr_text = etree.tostring(fmt,
-                                                              method='text',
-                                                              encoding=unicode)
-                                        rnums = ['i', 'ii', 'iii', 'iv',
-                                                 'v', 'vi', 'vii', 'viii',
-                                                 'ix', 'x', 'xi', 'xii',
-                                                 'xiii', 'xiv', 'xv', 'xvi',
-                                                 'xvii', 'xviii', 'xix', 'xx',
-                                                 'xxi', 'xxii', 'xxiii', 'xxiv',
-                                                 'xxv', 'xxvi', 'xxvii',
-                                                 'xxviii', 'xxix', 'xxx',
-                                                 ]
-                                        if hdr_text.lower() in rnums:
-                                            return True
-                                    return False
-                                if first_par and par_is_header(par):
+                                # skip if its the first line and it could be a header
+                                if first_par and common.par_is_pageno_header_footer(par):
+                                    saw_pageno_header_footer = True
                                     first_par = False
                                     continue
                                 first_par = False
+
+                                # skip if it's the last par and it could be a header
+                                if (not saw_pageno_header_footer
+                                    and block == page[-1]
+                                    and el == block[-1]
+                                    and par == el[-1]
+                                    and common.par_is_pageno_header_footer(par)):
+                                    saw_pageno_header_footer = True
+                                    continue
+                                        
                                 lines = []
                                 prev_line = ''
                                 for line in par:
@@ -228,7 +247,14 @@ def process_book(iabook, ebook):
                                                 lines.append(' ')
                                             prev_line = fmt_text
                                 lines.append(prev_line)
-                                paragraphs.append(E.p(''.join(lines)))
+
+                                if not made_pages:
+                                    made_pages = True
+                                    if not contents:
+                                        href = ebook.add_el(E.div({ 'class':'pages', 'id':'pages' }))
+                                        ebook.add_navpoint('Pages', href)
+                                to_add = ''.join(lines)
+                                ebook.add_el(E.p(to_add), len(to_add))
                         elif (el.tag == aby_ns+'row'):
                             pass
                         else:
@@ -238,68 +264,29 @@ def process_book(iabook, ebook):
         page.clear()
         i += 1
 
-        if len(paragraphs) > 100:
-            # make a chunk!
-            part_str = 'part' + str(part_number).zfill(4)
-            part_str_href = part_str + '.html'
-            tree = make_html('sample title', paragraphs)
-            ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                              common.tree_to_str(tree, xml_declaration=False))
-            ebook.add_spine_item({ 'idref':part_str })
-            if part_number == 0:
-                ebook.add_guide_item({ 'href':part_str_href,
-                                       'type':'text',
-                                       'title':'Book' })
-                if not pushed_chapters:
-                    ebook.add_navpoint('Pages', part_str_href)
-            part_number += 1
-            paragraphs = []
-    # make chunk from last paragraphs
-    if len(paragraphs) > 0:
-        part_str = 'part' + str(part_number).zfill(4)
-        part_str_href = part_str + '.html'
-        tree = make_html('Book part ' + str(part_number), paragraphs)
-        ebook.add_content(part_str, part_str_href, 'application/xhtml+xml',
-                          common.tree_to_str(tree, xml_declaration=False))
-        ebook.add_spine_item({ 'idref':part_str })
-        if part_number == 0:
-            ebook.add_guide_item({ 'href':part_str_href,
-                                   'type':'text',
-                                   'title':'Book' })
-            if not pushed_chapters:
-                ebook.add_navpoint('Pages', part_str_href)
-
+    ebook.flush_els()
     if pushed_chapters:
         ebook.pop_navpoint()
 
 
 
 def make_html_page_image(i, iabook, ebook, cover=False):
-    image = iabook.get_page_image(i, width=600, height=800, quality=90)
+    ebook.flush_els()
+    image = iabook.get_page_image(i, (max_width, max_height))
     leaf_id = 'leaf' + str(i).zfill(4)
     if not cover:
         leaf_image_id = 'leaf-image' + str(i).zfill(4)
     else:
         leaf_image_id = 'cover-image'
     ebook.add_content(leaf_image_id, 'images/' + leaf_image_id + '.jpg',
-                      'image/jpeg', image)
+                      'image/jpeg', image, deflate=False)
     img_tag = E.img({ 'src':'images/' + leaf_image_id + '.jpg',
                       'alt':'leaf ' + str(i) })
     tree = make_html('leaf ' + str(i).zfill(4), [ img_tag ])
     ebook.add_content(leaf_id, leaf_id + '.html', 'application/xhtml+xml',
                       common.tree_to_str(tree, xml_declaration=False))
     ebook.add_spine_item({ 'idref':leaf_id, 'linear':'no' })
-
     return leaf_id, leaf_id + '.html'
-
-
-def make_page_image(i, iabook, ebook):
-    image = iabook.get_image(i, width=600, height=800, quality=90)
-    leaf_image_id = 'leaf-image' + str(i).zfill(4)
-    ebook.add_content(leaf_image_id, 'images/' + leaf_image_id + '.jpg',
-                      'image/jpeg', image);
-    ebook.add_spine_item({ 'idref':leaf_image_id, 'linear':'no' })
-    return leaf_image_id, 'images/' + leaf_image_id + '.jpg'
 
 
 def make_html(title, body_elems):
@@ -310,9 +297,6 @@ def make_html(title, body_elems):
             E.link(rel='stylesheet',
                    href='stylesheet.css',
                    type='text/css'),
-#             E.link(rel='stylesheet',
-#                    href='page-template.xpgt',
-#                    type='application/vnd.adobe-page-template+xml'),
             E.meta({'http-equiv':'Content-Type',
                 'content':'application/xhtml+xml; charset=utf-8'})
         ),
