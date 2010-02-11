@@ -1,4 +1,4 @@
-font_dir = '/Users/mccabe/s/archive/epub/ttf/'
+font_dir = '/home/mike/s/archive/epub/ttf/'
 font_mapping = { "Times New Roman" : "TimesRoman.ttf",
                  "Arial" : "Helvetica.ttf",
                  "Tahoma" : "Geneva.ttf",
