@@ -49,7 +49,7 @@ class FilterTarget:
             self.text += ('title="bbox 0 0 %s %s; image %s">' %
                           (r(attrib['width']),
                            r(attrib['height']),
-                           'images/' + str(self.leafno) + '.png'))
+                           'images/image' + str(self.leafno).zfill(2) + '.jpg'))
             self.pr(self.text)
             self.text = ''
             # <div class="ocr_page" title="bbox 0 0 896 1450; image 002b.png">
