@@ -136,7 +136,7 @@ to_keep = {
     ns+'page':(['indent'], [ 'width', 'height', 'resolution', 'originalCoords', 'leaf' ]),
     ns+'block':(['indent'], [ 'blockType', 'l', 'r', 't', 'b' ]),
     ns+'region':(['indent'], [ ]),
-    ns+'rect':([ 'indent' ], [ ]),
+    ns+'rect':([ 'indent' ], [ 'l', 'r', 't', 'b' ]),
     ns+'text':(['indent'], [ 'backgroundColor', 'inverted']),
     ns+'line':(['indent'], [ 'baseline', 'spacing', 'l', 'r', 't', 'b' ]),
     ns+'par':(['indent'], [ 'startIndent', 'leftIndent', 'rightIndent', 'lineSpacing', 'align']),
