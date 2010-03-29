@@ -14,7 +14,21 @@ from debug import debug, debugging, assert_d
 ns='{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 
 def main(argv):
-    aby_file = gzip.open(argv[0], 'rb')
+    import optparse
+    parser = optparse.OptionParser(usage='usage: %prog [options] '
+                                   'inputfile_abbyy.gz',
+                                   description='Get image coordinate data '
+                                   'from abbyy.')
+    parser.add_option('--format',
+                      choices=['json', 'xml'],
+                      default='json',
+                      help='Output format.')
+    opts, args = parser.parse_args(argv)
+
+    if len(args) != 1:
+        parser.error('Please specify exactly one abbyy.gz file as input.')
+
+    aby_file = gzip.open(args[0], 'rb')
     find_images(aby_file)
 
 def p(s, out):
