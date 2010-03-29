@@ -64,10 +64,23 @@ def main(argv):
     parser.add_option('--last',
                       action='store',
                       type='int',
-                      metavar='page',
+                      metavar='leaf',
                       default=0,
-                      help='Stop generating output pages '
-                      'after the specified page')
+                      help='Stop generating output leaves '
+                      'after the specified leaf')
+    parser.add_option('--first',
+                      action='store',
+                      type='int',
+                      metavar='leaf',
+                      default=0,
+                      help='Don\'t generate output leaves until the '
+                      'specified leaf')
+    parser.add_option('--leaf',
+                      action='store',
+                      type='int',
+                      metavar='leaf',
+                      default=0,
+                      help='Only generate output for the specified leaf')
     parser.add_option('--text',
                       action='store_true',
                       default=False,
@@ -89,6 +102,11 @@ def main(argv):
         parser.error('--reduce must be between 0 and 4')
     if opts.scale == 0:
         opts.scale = 2 ** opts.reduce
+
+    if opts.leaf != 0:
+        if opts.first > 0 or opts.last > 0:
+            parser.error('can\'t specify --last or --first with --leaf')
+        opts.last = opts.first = opts.leaf
 
     if opts.source == 'djvu':
         parser.error('--source=djvu not supported at the moment')
@@ -216,7 +234,7 @@ styles = {
     'block_text' : { 'col':'yellow', 'width':1, 'offset':0, 'margin':10 },
     'block_picture' : { 'col':'red', 'width':1, 'offset':7, 'margin':10 },
     'block_table' : { 'col':'purple', 'width':1, 'offset':7, 'margin':10 },
-    'rect' : { 'col':'orange', 'width':0, 'offset':-4, 'margin':10 },
+    'rect' : { 'col':'orange', 'width':1, 'offset':-4, 'margin':10 },
     'par' : { 'col':'green', 'width':2, 'offset':0, 'margin':10 },
     'line' : { 'col':'blue', 'width':1, 'offset':0, 'margin':10 },
     }
@@ -264,6 +282,10 @@ def scan_pages(context, scandata, iabook):
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
     for event, page in context:
+        if opts.first > 0:
+            if i < opts.first:
+                i += 1
+                continue
         orig_width = int(page.get('width'))
         orig_height = int(page.get('height'))
         orig_size = (orig_width, orig_height)
@@ -292,11 +314,15 @@ def scan_pages(context, scandata, iabook):
                 image.paste(cropped, four_coords(block, opts.scale))
                 
         for block in page:
+            blocktype = ''
             if block.get('blockType') == 'Text':
+                blocktype = 'Text'
                 render(draw, block, 'block_text')    
             if block.get('blockType') == 'Picture':
+                blocktype = 'Picture'
                 render(draw, block, 'block_picture')
             if block.get('blockType') == 'Table':
+                blocktype = 'Table'
                 render(draw, block, 'block_table')
 #             else:
 #                 render(draw, block, 'block_picture')
@@ -305,7 +331,10 @@ def scan_pages(context, scandata, iabook):
 #                     image.paste(cropped, four_coords(block))
             for el in block:
                 if el.tag == abyns+'region':
-                    pass
+                    for rect in el:
+                        if rect.tag != abyns+'rect':
+                            raise 'found non-rect in region: ' + rect.tag
+                        render(draw, rect, 'rect')
                 elif el.tag == abyns+'row':
                     for cell in el:
                         for text in cell:
@@ -397,7 +426,7 @@ def scan_pages(context, scandata, iabook):
                       fill=color.green)
 
         image.save(opts.outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
-        print 'page index: ' + str(i)
+        print 'leaf index: ' + str(i)
         page.clear()
         i += 1
         if opts.last > 0:
