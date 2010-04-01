@@ -103,7 +103,7 @@ def write_json(keys, pages, callback):
         if not first:
             sys.stdout.write(', ')
         first = False
-        sys.stdout.write('"' + key + '" : ')
+        sys.stdout.write('"' + key + '":')
         sys.stdout.write(str(pages[key]))
     sys.stdout.write('}')
     if callback is not None:
