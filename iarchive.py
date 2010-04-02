@@ -194,16 +194,17 @@ class Book(object):
                        out_img_type='jpg',
                        kdu_reduce=2):
         leafno = self.get_leafno_for_page(i)
+        doc_basename = os.path.basename(self.doc)
         if self.images_type == 'jp2.zip':
             zipf = os.path.join(self.book_path,
                                 self.doc + '_jp2.zip')
-            image_path = (self.doc + '_jp2/' + self.doc + '_'
+            image_path = (doc_basename + '_jp2/' + doc_basename + '_'
                           + str(leafno).zfill(4) + '.jp2')
             in_img_type = 'jp2'
         elif self.images_type == 'tif.zip':
             zipf  = os.path.join(self.book_path,
                                  self.doc + '_tif.zip')
-            image_path = (self.doc + '_tif/' + self.doc + '_'
+            image_path = (doc_basename + '_tif/' + doc_basename + '_'
                           + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
         elif self.images_type == 'jp2.tar':

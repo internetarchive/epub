@@ -100,7 +100,7 @@ def main(argv):
 
     if out_name is None:
         if len(doc) > 0:
-            out_root = doc
+            out_root = os.path.basename(doc)
         else:
             out_root = book_id
         if make_daisy:
