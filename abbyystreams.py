@@ -28,10 +28,8 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                 assert block.tag == block_tag
                 if block.attrib['blockType'] == 'Picture':
                     if (picture):
-                        result=picture(block)
-                        if not result: continue
-                        elif ((typeof(result)==str) and
-                              (result[0]!='\n')):
+                        result,inline=picture(block)
+                        if inline:
                             passage=addtext(passage,result,True)
                         else:
                             if passage != '': yield passage
@@ -40,10 +38,8 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                     continue
                 if block.attrib['blockType'] == 'Table':
                     if (table):
-                        result=table(block)
-                        if not result: continue
-                        elif ((typeof(result)==str) and
-                              (result[0]!='\n')):
+                        result,inline=table(block)
+                        if inline:
                             passage=addtext(passage,result,True)
                         else:
                             if passage != '': yield passage
@@ -68,10 +64,7 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                     lastr=False
                     for line in par:
                         assert line.tag == line_tag
-                        if ((line==par[0]) and (par==e_text[0]) and (block==element[0]) and
-                            (atpagetop(block,element,debug)) and
-                            (len(par) == 1) and
-                            (checkoddlyspaced(line,0,debug))):
+                        if (likelyheader(line,par,e_text,block,element,debug)):
                             if (header):
                                 result=header(linecontent(line),line)
                                 if not result: continue
@@ -82,10 +75,7 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                                     passage=''
                                     yield result
                             continue
-                        if ((line==par[-1]) and (par==e_text[-1]) and (block==element[-1]) and
-                            (atpagebottom(block,element,debug)) and
-                            len(par) == 1 and
-                            (checkoddlyspaced(line,0,debug))):
+                        if (likelyfooter(line,par,e_text,block,element,debug)):
                             if (footer):
                                 result=footer(linecontent(line),line)
                                 if not result: continue
@@ -140,7 +130,27 @@ def addtext(passage,text,extra=False):
     else: return passage+' '+text
         
 
-def checkoddlyspaced(line,pos=0,debug=False):
+def likelyheader(line,para,text,block,page,debug):
+    if ((line==para[0]) and (para==text[0]) and
+        (block==page[0]) and (len(para) == 1)):
+        if (atpagetop(block,page,debug)):
+            return (checkoddlyspaced(line,debug))
+        elif (atpagetop(block,page,debug,2)):
+            return (checkoddlyspaced(line,debug,2))
+        else: return False
+    else: return False
+
+def likelyfooter(line,para,text,block,page,debug):
+    if ((line==para[-1]) and (para==text[-1]) and
+        (block==page[-1]) and (len(para) == 1)):
+        if (atpagebottom(block,page,debug)):
+            return (checkoddlyspaced(line,debug))
+        elif (atpagebottom(block,page,debug,2)):
+            return (checkoddlyspaced(line,debug,2))
+        else: return False
+    else: return False
+
+def checkoddlyspaced(line,debug=False,pos=0,thresh=5):
     charwidth=0
     charspace=0
     nchars=0
@@ -175,19 +185,20 @@ def checkoddlyspaced(line,pos=0,debug=False):
         print "headfoot tspace=%d twidth=%d mspace=%d mwidth=%d norm=%d n=%d/%s"%\
               (charspace,charwidth,maxspace,maxwidth,normalchars,nchars,text)
     if (normalchars>0):
-        return ((maxspace)>((charwidth/normalchars)*5))
+        return ((maxspace)>((charwidth/normalchars)*thresh))
     else:
-        return ((maxspace)>((maxwidth)*5))
+        return ((maxspace)>((maxwidth)*thresh))
 
 
-def atpagetop(block,page,debug):
+def atpagetop(block,page,debug,thresh=1):
     if debug:
-        print "t=%d,h=%d,h/10=%d"%(int(block.attrib["t"]),int(page.attrib["height"]),int(page.attrib["height"])/10)
-    return (int(block.attrib["t"])<(int(page.attrib["height"])/10))
-def atpagebottom(block,page,debug):
+        print "t=%d,h=%d,h/10=%d,th=%d"%(int(block.attrib["t"]),int(page.attrib["height"]),int(page.attrib["height"])/10,thresh)
+    return (int(block.attrib["t"])<(thresh*(int(page.attrib["height"])/10)))
+def atpagebottom(block,page,debug,thresh=1):
     if debug:
-        print "b=%d,h=%d,h/10=%d"%(int(block.attrib["b"]),int(page.attrib["height"]),int(page.attrib["height"])/10)
-    return (int(block.attrib["b"])>((9*int(page.attrib["height"]))/10))
+        print "b=%d,h=%d,h/10=%d,th=%d"%(int(block.attrib["b"]),int(page.attrib["height"]),int(page.attrib["height"])/10,thresh)
+    return (int(block.attrib["b"])>(((10-thresh)*int(page.attrib["height"]))/10))
+
 def linecontent(line):
     text=''
     for fmt in line:
