@@ -48,8 +48,49 @@ def process_book(iabook, ebook, alt_contents=None):
 
     ebook.push_tag('frontmatter')
     ebook.add_tag('doctitle', title)
-    ebook.add_tag('covertitle', title)
+    # ebook.add_tag('covertitle', title)
     ebook.add_tag('docauthor', author)
+
+    ebook.push_navpoint('level', 'h', 'Producer\'s Note')
+    ebook.push_navpoint('level', 'h', 'About Internet Archive Daisy Books')
+    ebook.add_tag('p', """This book was produced in DAISY format by the
+    Internet Archive.  After we scanned the book pages, it was
+    converted to DAISY format automatically.  This relies on optical
+    character recognition during the scanning process, and is somewhat
+    susceptible to errors.  Thse errors may include weird characters,
+    non-words, and guesses at structure where we can't find any.  Page
+    numbers and headers or footers may remain from the scanned page.
+    We're working on ways to improve our scanning process and the
+    resulting books, but in the meantime, we hope that this book will
+    be useful to you.
+    """)
+    ebook.pop_navpoint()
+    ebook.push_navpoint('level', 'h', 'About this DAISY book')
+    has_nav = False
+    if iabook.has_pagenos():
+        has_nav = True
+        ebook.add_tag('p', "This book has page navigation.")
+    if contents is not None:
+        has_nav = True
+        ebook.add_tag('p', "This book has chapter navigation.")
+    if not has_nav:
+        ebook.add_tag('p', "This book as paragraph navigation, "
+                      "but is otherwise unstructured.")
+    ebook.pop_navpoint()
+    ebook.push_navpoint('level', 'h', 'About the Internet Archive')
+    ebook.add_tag('p', """The Internet Archive was founded in 1996
+    to build an Internet library
+and to promote universal access to all knowledge.  Its purposes
+include offering permanent access for researchers, historians,
+scholars, people with disabilities, and the general public to
+historical collections that exist in digital format.  Internet Archive
+includes texts, audio, moving images, and software as well as archived
+web pages, and provides specialized services for information access
+for the blind and other persons with disabilities.
+    """)
+    ebook.pop_navpoint()
+    ebook.pop_navpoint()
+    
     ebook.pop_tag()
     ebook.push_tag('bodymatter')
 

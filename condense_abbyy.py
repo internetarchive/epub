@@ -8,8 +8,6 @@ import gzip
 
 from lxml import etree
 
-import iarchive
-
 # showchars=False
 showchars=True
 
@@ -18,23 +16,21 @@ from debug import debug, debugging, assert_d
 ns='{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 
 def main(argv):
-#     if len(argv) != 2:
-#         usage()
-#         sys.exit(-1)
+    if len(argv) != 2:
+        usage()
+        sys.exit(-1)
 
-    id = iarchive.infer_book_id()
-    aby_file = gzip.open(id + '_abbyy.gz', 'rb')
-    scandata = id + '.xml'
+    aby_file = gzip.open(sys.argv[1])
 
     if not showchars:
         del to_keep[ns+'charParams']
         (fmt_hints, fmt_attrs) = to_keep[ns+'formatting']
         fmt_hints.append('nonl')
 
-    condense_abbyy(aby_file, scandata)
+    condense_abbyy(aby_file)
 
 def usage():
-    print "Usage:"
+    print "Usage: python condense_abbyy.py file_abbyy.gz > output.txt"
 
 def p(s, out):
     try:
@@ -163,7 +159,7 @@ synonyms = {
     'false':'F',
 }
 
-def condense_abbyy(xml, outfile='outfile.txt'): 
+def condense_abbyy(xml):
     try:
         out = sys.stdout
         parser = etree.XMLParser(resolve_entities=False, target=FilterTarget(to_keep, synonyms, out))
