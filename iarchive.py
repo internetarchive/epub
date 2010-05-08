@@ -111,6 +111,20 @@ class Book(object):
 #     if scandata_pages is None or len(scandata_pages) == 0:
 #         scandata_pages = scandata.pageData.page
 
+    def has_pagenos(self):
+        self.get_scandata()
+        max_page = len(self.scandata_pages)
+        i = 0
+        result = False
+        while i < max_page:
+            page_scandata = self.get_page_scandata(i)
+            pageno = page_scandata.find(self.get_scandata_ns() + 'pageNumber');
+            if pageno:
+                result = True
+                break
+            i += 1
+        return result
+
     def get_page_data_from_leafno(self, leaf):
         if leaf in self.leaves:
             return self.leaves[leaf]
