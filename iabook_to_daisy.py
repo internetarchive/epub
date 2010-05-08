@@ -24,7 +24,7 @@ import iarchive
 
 from debug import debug, debugging, assert_d
 
-def process_book(iabook, ebook):
+def process_book(iabook, ebook, alt_contents=None):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
     aby_file = iabook.get_abbyy()
@@ -72,6 +72,10 @@ def process_book(iabook, ebook):
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
+        if alt_contents is not None:
+            ebook.add_tag('p', alt_contents)
+            break
+            
         page_scandata = iabook.get_page_scandata(i)
         pageno = None
         if page_scandata is not None:
