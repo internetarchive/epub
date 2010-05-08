@@ -210,9 +210,6 @@ class Book(object):
         elif self.images_type == 'jp2.tar':
             # 7z e archive.tar dir/filename.jp2 <---- fast!
             raise 'NYI'
-
-
-            
         else:
             return None
         try:
