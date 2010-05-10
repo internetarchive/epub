@@ -24,7 +24,7 @@ import iarchive
 
 from debug import debug, debugging, assert_d
 
-def process_book(iabook, ebook, alt_contents=None):
+def process_book(iabook, ebook, alt_booktext=None):
     aby_ns="{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}"
     scandata = iabook.get_scandata()
     aby_file = iabook.get_abbyy()
@@ -53,16 +53,15 @@ def process_book(iabook, ebook, alt_contents=None):
 
     ebook.push_navpoint('level', 'h', 'Producer\'s Note')
     ebook.push_navpoint('level', 'h', 'About Internet Archive Daisy Books')
-    ebook.add_tag('p', """This book was produced in DAISY format by the
-    Internet Archive.  After we scanned the book pages, it was
-    converted to DAISY format automatically.  This relies on optical
-    character recognition during the scanning process, and is somewhat
-    susceptible to errors.  Thse errors may include weird characters,
-    non-words, and guesses at structure where we can't find any.  Page
-    numbers and headers or footers may remain from the scanned page.
-    We're working on ways to improve our scanning process and the
-    resulting books, but in the meantime, we hope that this book will
-    be useful to you.
+    ebook.add_tag('p', """This book was produced in DAISY format by the Internet Archive.  The
+    book pages were scanned and converted to DAISY format
+    automatically.  This process relies on optical character
+    recognition, and is somewhat susceptible to errors.  These errors
+    may include weird characters, non-words, and incorrect guesses at
+    structure.  Page numbers and headers or footers may remain from
+    the scanned page.  The Internet Archive is working to improve the
+    scanning process and resulting books, but in the meantime, we hope
+    that this book will be useful to you.
     """)
     ebook.pop_navpoint()
     ebook.push_navpoint('level', 'h', 'About this DAISY book')
@@ -80,10 +79,10 @@ def process_book(iabook, ebook, alt_contents=None):
     ebook.push_navpoint('level', 'h', 'About the Internet Archive')
     ebook.add_tag('p', """The Internet Archive was founded in 1996
     to build an Internet library
-and to promote universal access to all knowledge.  Its purposes
+and to promote universal access to all knowledge.  The Archive's purposes
 include offering permanent access for researchers, historians,
 scholars, people with disabilities, and the general public to
-historical collections that exist in digital format.  Internet Archive
+historical collections that exist in digital format.  The Internet Archive
 includes texts, audio, moving images, and software as well as archived
 web pages, and provides specialized services for information access
 for the blind and other persons with disabilities.
@@ -93,6 +92,9 @@ for the blind and other persons with disabilities.
     
     ebook.pop_tag()
     ebook.push_tag('bodymatter')
+
+#     ebook.push_navpoint('level', 'h', 'Start of book')
+#     pushed_navpoint = True
 
     if contents is None:
         ebook.push_navpoint('level', 'h', 'Book')
@@ -113,8 +115,8 @@ for the blind and other persons with disabilities.
     # True if no title found, else False now, True later.
     before_title_page = found_title
     for event, page in context:
-        if alt_contents is not None:
-            ebook.add_tag('p', alt_contents)
+        if alt_booktext is not None:
+            ebook.add_tag('p', alt_booktext)
             break
             
         page_scandata = iabook.get_page_scandata(i)
