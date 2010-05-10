@@ -166,8 +166,8 @@ class Book(object):
 
     def add_pagetarget(self, name, value, type='normal'):
         self.total_page_count += 1
-        if value > self.max_page_number:
-            self.max_page_number += 1
+        if str(value).isdigit() and value > self.max_page_number:
+            self.max_page_number = value
         pagenum_id, pagenum_el = self.add_tag('pagenum', name,
                               attrs={ 'page':type },
                               smil_attrs={'customTest':'pagenumCustomTest' })
