@@ -233,7 +233,7 @@ def enclosing_tag(tag):
 styles = {
     'block_text' : { 'col':'yellow', 'width':1, 'offset':0, 'margin':10 },
     'block_picture' : { 'col':'red', 'width':1, 'offset':7, 'margin':10 },
-    'block_table' : { 'col':'purple', 'width':1, 'offset':7, 'margin':10 },
+    'block_table' : { 'col':'purple', 'width':10, 'offset':7, 'margin':10 },
     'rect' : { 'col':'orange', 'width':1, 'offset':-4, 'margin':10 },
     'par' : { 'col':'green', 'width':2, 'offset':0, 'margin':10 },
     'line' : { 'col':'blue', 'width':1, 'offset':0, 'margin':10 },
@@ -338,64 +338,11 @@ def scan_pages(context, scandata, iabook):
                 elif el.tag == abyns+'row':
                     for cell in el:
                         for text in cell:
-                            for par in text:
-                                par_coords = box_from_par(par)
-                                if par_coords is not None:
-                                    render(draw, par, 'par', par_coords)
-                                for line in par:
-                                    render(draw, line, 'line');
-                                    for fmt in line:
-                                        assert_d(fmt.tag == abyns+'formatting')
-                                        font_name = fmt.get('ff')
-                                        font_size = fmt.get('fs')
-                                        font_size = int(re.sub('\.', '', font_size))
-                                        font_ital = (fmt.get('italic') == 'true')
-                                        f = font.get_font(font_name, dpi / opts.scale, font_size, font_ital)
-                                        for cp in fmt:
-                                            assert_d(cp.tag == abyns+'charParams')
-                                            draw.text((int(cp.get('l')) / opts.scale,
-                                                       int(cp.get('b')) / opts.scale),
-                                                      cp.text.encode('utf-8'),
-                                                      font=f,
-                                                      fill=color.yellow)
+                            draw_text_el(draw, dpi, text)
                 elif el.tag == abyns+'text':
-                    for par in el:
-                        par_coords = box_from_par(par)
-                        if par_coords is not None:
-                            render(draw, par, 'par', par_coords)
-                            tl, rb = par_coords
-
-                            t = ''
-                            for att, nick in [ ('align', 'ta'),
-                                               ('leftIndent', 'li'),
-                                               ('rightIndent', 'ri'),
-                                               ('startIndent', 'si'),
-                                               ('lineSpacing', 'ls') ]:
-                                att_txt = par.get(att)
-                                if att_txt is not None:
-                                    t += nick + ':' + att_txt + ' '
-                            if len(t) > 0:
-                                f = font.get_font("Courier", dpi / opts.scale, 12)
-                                draw.text(tl, t, font=f, fill=color.green)
-                        for line in par:
-                            render(draw, line, 'line');
-                            for fmt in line:
-                                assert_d(fmt.tag == abyns+'formatting')
-                                font_name = fmt.get('ff')
-                                font_size = fmt.get('fs')
-                                font_size = int(re.sub('\.', '', font_size))
-                                font_ital = (fmt.get('italic') == 'true')
-                                f = font.get_font(font_name, dpi / opts.scale, font_size, font_ital)
-                                for cp in fmt:
-                                    assert_d(cp.tag == abyns+'charParams')
-                                    if opts.text:
-                                        draw.text((int(cp.get('l')) / opts.scale,
-                                                   int(cp.get('b')) / opts.scale),
-                                                  cp.text.encode('utf-8'),
-                                                  font=f,
-                                                  fill=color.yellow)
+                    draw_text_el(draw, dpi, el)
                 elif (el.tag == abyns+'row'):
-                    pass
+                    raise 'unexpected row el'
                 else:
                     print('unexpected tag type' + el.tag)
                     sys.exit(-1)
@@ -434,6 +381,44 @@ def scan_pages(context, scandata, iabook):
                 sys.exit(0)
     return None
 
+def draw_text_el(draw, dpi, el):
+    for par in el:
+        par_coords = box_from_par(par)
+        if par_coords is not None:
+            render(draw, par, 'par', par_coords)
+            tl, rb = par_coords
+
+            t = ''
+            for att, nick in [ ('align', 'ta'),
+                               ('leftIndent', 'li'),
+                               ('rightIndent', 'ri'),
+                               ('startIndent', 'si'),
+                               ('lineSpacing', 'ls') ]:
+                att_txt = par.get(att)
+                if att_txt is not None:
+                    t += nick + ':' + att_txt + ' '
+            if len(t) > 0:
+                f = font.get_font("Courier", dpi / opts.scale, 12)
+                draw.text(tl, t, font=f, fill=color.green)
+        for line in par:
+            render(draw, line, 'line');
+            for fmt in line:
+                assert_d(fmt.tag == abyns+'formatting')
+                font_name = fmt.get('ff')
+                font_size = fmt.get('fs')
+                font_size = int(re.sub('\.', '', font_size))
+                font_ital = (fmt.get('italic') == 'true')
+                f = font.get_font(font_name, dpi / opts.scale,
+                                  font_size, font_ital)
+                for cp in fmt:
+                    assert_d(cp.tag == abyns+'charParams')
+                    if opts.text:
+                        draw.text((int(cp.get('l')) / opts.scale,
+                                   int(cp.get('b')) / opts.scale),
+                                  cp.text.encode('utf-8'),
+                                  font=f,
+                                  fill=color.yellow)
+
 def include_page(page):
     if page is None:
         return False
@@ -444,7 +429,6 @@ def include_page(page):
         return True
     else:
         return False
-
 
 
 if __name__ == '__main__':
