@@ -13,6 +13,7 @@ from datetime import datetime
 import os
 import sys
 from StringIO import StringIO
+import base64
 
 from debug import debug, debugging, assert_d
 
@@ -237,6 +238,17 @@ def make_opf(metadata):
     etree.SubElement(metadata_el, 'meta',
                      { 'name':'cover', 'content':'cover-image' })
     etree.SubElement(metadata_el, dcb+'type').text = 'Text'
+
+    # Fill in missing required metadata fields with made-up entries
+    md_tags = [ datum['tag'] for datum in metadata ]
+    replacements = { 'title': 'Unknown Title',
+                     'language': 'eng',
+                     'identifier': 'no_identifier' +
+                     base64.b64encode(os.urandom(10))[:10] }
+    for k, v in replacements.iteritems():
+        if not k in md_tags:
+            metadata.append({ 'tag': k, 'text': v })
+    
     for md in metadata:
         tagname = md['tag']
         if not tagname in [ 'title', 'creator', 'subject', 'description',
@@ -244,7 +256,6 @@ def make_opf(metadata):
                            'format', 'identifier', 'source', 'language',
                            'relation','coverage', 'rights' ]:
             continue
-        # XXX should make sure req'd is present somehow
         if tagname == 'identifier':
             el = etree.SubElement(metadata_el, dcb + tagname,
                                   { 'id':'bookid' })

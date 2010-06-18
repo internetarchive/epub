@@ -236,6 +236,15 @@ unique-identifier="bookid"/>
             'oebpackage':'http://openebook.org/namespaces/oeb-package/1.0/' })
     el = etree.SubElement(dc_metadata_el, dcb + 'Format')
     el.text = 'ANSI/NISO Z39.86-2005'
+
+    # TODO: ensure required elements: (copy code from epub.py)
+    # title
+    # publisher
+    # date
+    # format (must be 'ANSI/NISO Z39.86-2005')
+    # language
+    # identifier
+    
     for md in metadata:
         tagname = md['tag']
         if not tagname in [ 'title', 'creator', 'subject', 'description',
