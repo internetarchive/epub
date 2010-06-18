@@ -241,20 +241,20 @@ def make_opf(metadata):
 
     # Fill in missing required metadata fields with made-up entries
     md_tags = [ datum['tag'] for datum in metadata ]
-    replacements = { 'title': 'Unknown Title',
-                     'language': 'eng',
-                     'identifier': 'no_identifier' +
-                     base64.b64encode(os.urandom(10))[:10] }
-    for k, v in replacements.iteritems():
+    replacements = ( ('title', 'Unknown Title'),
+                     ('language', 'eng'),
+                     ('identifier', 'no_identifier'
+                      + base64.b64encode(os.urandom(10))[:10]) )
+    for k, v in replacements:
         if not k in md_tags:
             metadata.append({ 'tag': k, 'text': v })
     
     for md in metadata:
         tagname = md['tag']
-        if not tagname in [ 'title', 'creator', 'subject', 'description',
+        if not tagname in ( 'title', 'creator', 'subject', 'description',
                            'publisher', 'contributor', 'date', 'type',
                            'format', 'identifier', 'source', 'language',
-                           'relation','coverage', 'rights' ]:
+                           'relation','coverage', 'rights' ):
             continue
         if tagname == 'identifier':
             el = etree.SubElement(metadata_el, dcb + tagname,
@@ -278,12 +278,12 @@ def make_ncx(book_id, title, author):
     tree = etree.parse(StringIO(xml))
     root_el = tree.getroot()
     head_el = etree.SubElement(root_el, 'head')
-    metas = [
+    metas = (
         { 'name' : 'dtb:uid', 'content' : 'test id' },
         { 'name' : 'dtb:totalPageCount', 'content' : '0' },
         { 'name' : 'dtb:maxPageNumber', 'content' : '0' },
 #         { 'name' : 'dtb:depth', 'content' : '1' },
-        ]
+        )
     for item in metas:
         etree.SubElement(head_el, 'meta', item)
     doctitle = etree.SubElement(root_el, 'docTitle')
