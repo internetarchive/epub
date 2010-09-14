@@ -57,7 +57,8 @@ def par_is_pageno_header_footer(par):
 
     print line_text
 
-    mo = re.match('(preface)* *([xiv]*) *(preface)*',
+    # roman numeral?
+    mo = re.match('(preface)* *([ivxl]*) *(preface)*',
                 line_text)
     if mo and mo.group(2):
 #         debug()
@@ -75,7 +76,6 @@ def par_is_pageno_header_footer(par):
         debug()
         return common.rnum_to_int(mo.group(1))
 
-
     for fmt in line:
         if len(fmt) > 6:
             continue
@@ -90,28 +90,16 @@ def par_is_pageno_header_footer(par):
         if not saw_non_num:
             return fmt_text
         fmt_text = fmt_text.lower()
-        rnums = ['i', 'ii', 'iii', 'iv',
-                 'v', 'vi', 'vii', 'viii',
-                 'ix', 'x', 'xi', 'xii',
-                 'xiii', 'xiv', 'xv', 'xvi',
-                 'xvii', 'xviii', 'xix', 'xx',
-                 'xxi', 'xxii', 'xxiii', 'xxiv',
-                 'xxv', 'xxvi', 'xxvii',
-                 'xxviii', 'xxix', 'xxx',
-                 ]
         r = common.rnum_to_int(fmt_text)
         if r:
             return fmt_text
         fmt_text = fmt_text.replace('i', '1').replace('o', '0')
         if re.match('[0-9]+', fmt_text):
             return int(fmt_text)
+        # common OCR errors
         if re.match('[0-9afhiklmnouvx^]*[0-9][0-9afhiklmnouvx^]*',
                     fmt_text):
             return fmt_text
-        # common OCR errors
-#         if re.match('[0-9afhiklmnouvx^]+',
-#                     fmt_text):
-#             return fmt_text
     return ''
 
 def get_hf_pagenos(page):
