@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# XXX add arrow to indicate block order??
+
 import sys
 import re
 import os
