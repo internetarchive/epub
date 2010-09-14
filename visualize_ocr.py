@@ -222,6 +222,10 @@ def four_coords(tag, s):
     b = int(tag.get('b'))/s
     return l, t, r, b
 
+def center(tag, s):
+    l, t, r, b = four_coords(tag, s)
+    return l + (r - l) / 2, t + (b - t) / 2
+
 def enclosing_tag(tag):
     tag_with_coords = tag
     while tag_with_coords is not None:
