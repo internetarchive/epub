@@ -425,7 +425,7 @@ def scan_pages(context, scandata, iabook):
                       font=f,
                       fill=color.green)
 
-        image.save(opts.outdir + '/img' + scandata_pages[i].get('leafNum') + '.png')
+        image.save(opts.outdir + '/img' + scandata_pages[i].get('leafNum').zfill(3) + '.png')
         print 'leaf index: ' + str(i)
         page.clear()
         i += 1
