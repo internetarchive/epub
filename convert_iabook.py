@@ -118,6 +118,9 @@ def main(argv):
     metadata = iabook.get_metadata()
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)
+
+        alt_booktext = "This is a protected daisy format book.  If you are hearing this message, then your device is missing the appropriate key to read this book.  For more information, see the archive.org daisy faq."
+#         iabook_to_daisy.process_book(iabook, ebook, alt_booktext)
         iabook_to_daisy.process_book(iabook, ebook)
     elif make_test:
         print iabook.analyze()

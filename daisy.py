@@ -166,8 +166,8 @@ class Book(object):
 
     def add_pagetarget(self, name, value, type='normal'):
         self.total_page_count += 1
-        if value > self.max_page_number:
-            self.max_page_number += 1
+        if str(value).isdigit() and value > self.max_page_number:
+            self.max_page_number = value
         pagenum_id, pagenum_el = self.add_tag('pagenum', name,
                               attrs={ 'page':type },
                               smil_attrs={'customTest':'pagenumCustomTest' })
@@ -236,6 +236,15 @@ unique-identifier="bookid"/>
             'oebpackage':'http://openebook.org/namespaces/oeb-package/1.0/' })
     el = etree.SubElement(dc_metadata_el, dcb + 'Format')
     el.text = 'ANSI/NISO Z39.86-2005'
+
+    # TODO: ensure required elements: (copy code from epub.py)
+    # title
+    # publisher
+    # date
+    # format (must be 'ANSI/NISO Z39.86-2005')
+    # language
+    # identifier
+    
     for md in metadata:
         tagname = md['tag']
         if not tagname in [ 'title', 'creator', 'subject', 'description',

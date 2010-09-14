@@ -196,15 +196,16 @@ def process_book(iabook, ebook):
                                                       orig_page_size,
                                                       kdu_reduce=2,
                                                       region=region)
-                        pic_id = 'picture' + str(picture_number)
-                        pic_href = 'images/' + pic_id + '.jpg'
-                        picture_number += 1
-                        ebook.add_content(pic_id, pic_href,
-                                          'image/jpeg', image, deflate=False)
-                        el = E.p({ 'class':'illus' },
-                                 E.img(src=pic_href,
-                                       alt=pic_id))
-                        ebook.add_el(el)
+                        if image is not None:
+                            pic_id = 'picture' + str(picture_number)
+                            pic_href = 'images/' + pic_id + '.jpg'
+                            picture_number += 1
+                            ebook.add_content(pic_id, pic_href,
+                                              'image/jpeg', image, deflate=False)
+                            el = E.p({ 'class':'illus' },
+                                     E.img(src=pic_href,
+                                           alt=pic_id))
+                            ebook.add_el(el)
                         continue
                     for el in block:
                         if el.tag == aby_ns+'region':
