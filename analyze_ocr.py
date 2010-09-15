@@ -5,6 +5,7 @@ from lxml.etree import iterparse
 
 from windowed_iterator import windowed_iterator
 import find_pagenos
+import find_header_footer
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 
@@ -15,7 +16,9 @@ from tuples import *
 def build_pageinfo(pages):
     for leafno, page in enumerate(pages):
         pageno_candidates = [c for c in find_pagenos.pageno_candidates(page, leafno)]
-        yield PageInfo(page, leafno, {'pageno_candidates':pageno_candidates})
+        hf_candidates = find_header_footer.hf_candidates(page)
+        yield PageInfo(page, leafno, {'pageno_candidates':pageno_candidates,
+                                      'hf_candidates':hf_candidates})
 
 def drop_event(iter):
     for event, page in iter:
@@ -32,7 +35,7 @@ def get_annotated_pages(context):
     pages = windowed_iterator(pages, windowsize, clear_pageinfo)
     for pageinfo in pages:
         guess = find_pagenos.guess_best_pageno(pageinfo, pages)
-        # hf = guess_hf(pageinfo, pages)
+        guess2 = find_header_footer.guess_hf(pageinfo, pages)
         yield pageinfo, pages, guess
 
 def main(args):
