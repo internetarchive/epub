@@ -18,21 +18,23 @@ def guess_best_pageno(pageinfo, pages):
     """ Select the best candidate pagenumber for the given page,
     with reference to neighboring pages.
     """
-    print 'pageinfo.leafno: %s' % pageinfo.leafno
-    def tally(pageinfo, sofar, weight, oc):
+    #    print 'pageinfo.leafno: %s' % pageinfo.leafno
+    def tally(pageinfo, current_leafno, sofar, weight, oc):
         for c in pageinfo.info['pageno_candidates']:
             # for pagecoord in c.coords:
             #     oc.cluster(numpy.array(pagecoord.findcenter()))
+            if c.offset >= current_leafno:
+                continue
             if c.offset not in sofar[c.type]:
                 sofar[c.type][c.offset] = weight
             else:
                 sofar[c.type][c.offset] += weight
     sofar = {'roman':{},'arabic':{}}
     oc = OnlineCluster.OnlineCluster(6)
-    tally(pageinfo, sofar, 2, oc)
-    print pageinfo
+    tally(pageinfo, pageinfo.leafno, sofar, 2, oc)
+    #    print pageinfo
     for neighbor_info in pages.neighbors():
-        tally(neighbor_info, sofar, 1, oc)
+        tally(neighbor_info, pageinfo.leafno, sofar, 1, oc)
     # clusters=oc.trimclusters()
     # for c in clusters:
     #     print c
