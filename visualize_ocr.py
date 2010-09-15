@@ -2,6 +2,10 @@
 
 # XXX add arrow to indicate block order??
 
+# change this to apply scale as part of draw step!
+
+# make main an optional thing - that's what calls single draw-page...
+
 import sys
 import re
 import os
@@ -15,11 +19,11 @@ from lxml import objectify
 
 import iarchive
 import common
+import analyze_ocr
 
 from debug import debug, debugging, assert_d
 
 opts = None
-
 
 def legend():
     print 'legend: (for abbyy format)'
@@ -243,6 +247,7 @@ styles = {
     'rect' : { 'col':'orange', 'width':1, 'offset':-4, 'margin':10 },
     'par' : { 'col':'green', 'width':2, 'offset':0, 'margin':10 },
     'line' : { 'col':'blue', 'width':1, 'offset':0, 'margin':10 },
+    'pageno' : { 'col':'white', 'width':3, 'offset':-1, 'margin':10 },
     }
 
 def nons(tag):
@@ -287,7 +292,10 @@ def scan_pages(context, scandata, iabook):
     i = 0
     f = ImageFont.load_default()
 #    f = ImageFont.load('/Users/mccabe/s/archive/epub/Times-18.bdf')
-    for event, page in context:
+
+    for pageinfo, pages, guess in analyze_ocr.get_annotated_pages(context):
+        page = pageinfo.page
+        print guess
         if opts.first > 0:
             if i < opts.first:
                 i += 1
@@ -352,6 +360,12 @@ def scan_pages(context, scandata, iabook):
                 else:
                     print('unexpected tag type' + el.tag)
                     sys.exit(-1)
+
+        candidates = pageinfo.info['pageno_candidates']
+        for p in candidates:
+            for c in p.coords:
+                l, t, r, b = c
+            draw_rect(draw, None, styles['pageno'], ((float(l)/opts.scale, float(t)/opts.scale), (float(r)/opts.scale, float(b)/opts.scale)))
 
         if not include_page(scandata_pages[i]):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
