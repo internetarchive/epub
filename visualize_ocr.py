@@ -363,9 +363,12 @@ def scan_pages(context, scandata, iabook):
 
         candidates = pageinfo.info['pageno_candidates']
         for p in candidates:
-            for c in p.coords:
+            for fmt, c in p.coords:
                 l, t, r, b = c
             draw_rect(draw, None, styles['pageno'], ((float(l)/opts.scale, float(t)/opts.scale), (float(r)/opts.scale, float(b)/opts.scale)))
+
+        for hfline, hftext in pageinfo.info['hf_guesses']:
+            render(draw, hfline, 'pageno')
 
         if not include_page(scandata_pages[i]):
             draw.line([(0, 0), image.size], width=50, fill=color.red)
@@ -426,7 +429,7 @@ def draw_text_el(draw, dpi, el):
                 assert_d(fmt.tag == abyns+'formatting')
                 font_name = fmt.get('ff')
                 font_size = fmt.get('fs')
-                font_size = int(re.sub('\.', '', font_size))
+                font_size = int(re.sub('\.\d*', '', font_size))
                 font_ital = (fmt.get('italic') == 'true')
                 f = font.get_font(font_name, dpi / opts.scale,
                                   font_size, font_ital)
