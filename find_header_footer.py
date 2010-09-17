@@ -1,5 +1,6 @@
 import re
 from lxml import etree
+from levenshtein import levenshtein
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 
@@ -22,11 +23,50 @@ def simplify_line_text(line):
     # similar from page to page
     return re.sub(r'[ivx\d]', r'@', text)
 
+weights = (1.0, .75, .5, .5, .5,
+           .5, .5, .5, .75, 1.0)
 def guess_hf(pageinfo, pages):
+    result = []
+    pageinfo.info['hf_guesses'] = result
     hf_candidates = pageinfo.info['hf_candidates']
-    pass
+    if 'pageno_fmt' in pageinfo.info:
+        pageno_fmt = pageinfo.info['pageno_fmt']
+        pageno_line = pageno_fmt.getparent()
+    else:
+        pageno_fmt = None
+        pageno_line = None
+        
+    for i in range(len(weights)):
+        if hf_candidates[i] is None:
+            continue
+        score = 0
+        if hf_candidates[i][0] == pageno_line:
+            score = 2
+        if levenshtein(hf_candidates[i][1], 'chapter @') < 5:
+            score = 2
+        for neighbor_info in pages.neighbors():
+            score += (weights[i]
+                      * text_similarity(pageinfo, neighbor_info, i)
+                      * geometry_similarity(pageinfo, neighbor_info, i))
+        if score > .5:
+            result.append(hf_candidates[i])
+    return result
 
+def text_similarity(pageinfo, neighbor_info, line_index):
+    neighbor_candidate = neighbor_info.info['hf_candidates'][line_index]
+    if neighbor_candidate is None:
+        return 0
+    neighbor_line, neighbor_text = neighbor_candidate
+    line, text = pageinfo.info['hf_candidates'][line_index]
+    maxlen = max(len(neighbor_text), len(text))
+    distance = levenshtein(neighbor_text, text)
+    if distance > maxlen:
+        return 0
+    return (maxlen - distance) / maxlen
 
+def geometry_similarity(pageinfo, neighbor_info, line_index):
+    return 1
+    
 
 # def rearrange_lines(page):
 #     lb = line_builder()
