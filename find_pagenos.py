@@ -50,21 +50,32 @@ def guess_best_pageno(pageinfo, pages):
 
     mostsofar = None
     votes = 0
-    for k in sofar['roman']:
-        if sofar['roman'][k] > votes:
-            votes = sofar['roman'][k]
-            mostsofarmsg = 'roman:  %s' % k
-            mostsofar = k
+    likelytype = None
     for k in sofar['arabic']:
         if sofar['arabic'][k] > votes:
             votes = sofar['arabic'][k]
-            mostsofarmsg = 'arabic:  %s' % k
+            likelytype = 'arabic'
+            mostsofar = k
+    for k in sofar['roman']:
+        if sofar['roman'][k] > votes:
+            votes = sofar['roman'][k]
+            likelytype = 'roman'
             mostsofar = k
 
     pageno_guess = None
     if mostsofar:
-        print 'leafno %s: page guess %s' % (pageinfo.leafno, pageinfo.leafno - int(mostsofar))
         pageno_guess = pageinfo.leafno - int(mostsofar)
+        print 'leafno %s: page guess %s %s' % (pageinfo.leafno, pageno_guess, likelytype)
+        pageinfo.info['pageno_guess'] = pageno_guess
+
+        # if a page coord candidate on *this* page matches, capture it
+        for c in pageinfo.info['pageno_candidates']:
+            if c.type == likelytype and c.offset == mostsofar:
+                # just take first potential coordinate for now
+                pageinfo.info['pageno_fmt'] = c.coords[0][0]
+                pageinfo.info['pageno_coord'] = c.coords[0][1]
+                break
+        
     return pageno_guess
 
 #     print 'roman:  %s' % json.dumps(sofar['roman'])
@@ -122,9 +133,9 @@ def pageno_candidates(page, leafno):
                 if i > leafno and i != 0:
                     continue
                 seen[num_str] = Pageno('roman', num_str, i, leafno - i,
-                                       [find_coords(m)])
+                                       [(fmt, find_coords(m))])
             else:
-                seen[num_str].coords.append(find_coords(m))
+                seen[num_str].coords.append((fmt, find_coords(m)))
             yield seen[num_str]
 
         # look for arabic numerals
@@ -139,9 +150,9 @@ def pageno_candidates(page, leafno):
                 if i > leafno and i != 0:
                     continue
                 seen[num_str] = Pageno('arabic', num_str, i, leafno - i,
-                                       [find_coords(m)])
+                                       [(fmt, find_coords(m))])
             else:
-                seen[num_str].coords.append(find_coords(m))
+                seen[num_str].coords.append((fmt, find_coords(m)))
             yield seen[num_str]
 
 
