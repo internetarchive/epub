@@ -75,6 +75,19 @@ def main(argv):
             doc = arg
         elif opt in ('--toc'):
             toc = json.loads(arg)
+            if len(toc) > 0:
+                # accept openlibrary toc format (array of tocitems)
+                # or original bespoke format: hash of pagenum -> title
+                try:
+                    item0 = toc[0]
+                    oldtoc = toc
+                    toc = {}
+                    for tocitem in oldtoc:
+                        toc[tocitem['pagenum']] = '%s - %s' % (tocitem['label'],
+                                                               tocitem['title'])
+                except KeyError:
+                    # there must be a better way to detect an array...
+                    pass
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
