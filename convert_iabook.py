@@ -5,6 +5,11 @@ import sys
 import getopt
 import os
 
+try:
+    import json
+except:
+    import simplejson as json
+
 import epub
 import daisy
 import iabook_to_daisy
@@ -29,7 +34,8 @@ def main(argv):
                                    'dho:',
                                    ['debug', 'help', 'outfile=',
                                     'document=',
-                                    'daisy', 'epub', 'test', 'report', 'hocr'])
+                                    'daisy', 'epub', 'test', 'report', 'hocr',
+                                    'toc='])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -40,6 +46,7 @@ def main(argv):
     make_test = False
     make_report = False
     make_hocr = False
+    toc = None
     doc = ''
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -66,6 +73,8 @@ def main(argv):
             out_name = arg
         elif opt in ('--document'):
             doc = arg
+        elif opt in ('--toc'):
+            toc = json.loads(arg)
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
@@ -114,7 +123,7 @@ def main(argv):
         else:
             out_name = out_root + '.epub'
 
-    iabook = iarchive.Book(book_id, doc, book_path)
+    iabook = iarchive.Book(book_id, doc, book_path, toc=toc)
     metadata = iabook.get_metadata()
     if make_daisy:
         ebook = daisy.Book(out_name, metadata)

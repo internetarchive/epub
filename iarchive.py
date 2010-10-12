@@ -10,19 +10,20 @@ import zipfile
 try:
     from lxml import etree
 except ImportError:
-    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages') 
+    sys.path.append('/petabox/sw/lib/lxml/lib/python2.5/site-packages')
     from lxml import etree
 from lxml import objectify
 
 from debug import debug, debugging, assert_d
 
 class Book(object):
-    def __init__(self, book_id, doc, book_path):
+    def __init__(self, book_id, doc, book_path, toc=None):
         self.book_id = book_id
         self.doc = doc
         if len(self.doc) == 0:
             self.doc = self.book_id
         self.book_path = book_path
+        self.toc = toc
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
@@ -41,10 +42,10 @@ class Book(object):
 # jp2 x tif x jpeg
 # tar zip single-file (cat)
 # mang suggests: separate handling of pkg format x image format
-        
+
 #         else:
 #             raise Exception('Can\'t find book images')
-        
+
 
     def get_book_id(self):
         return self.book_id
@@ -164,6 +165,8 @@ class Book(object):
         return result
 
     def get_toc(self):
+        if self.toc is not None:
+            return self.toc
         toc_path = os.path.join(self.book_path, self.doc + '_toc.xml')
         if not os.path.exists(toc_path):
             return None
@@ -291,7 +294,7 @@ def image_from_zip(zipf, image_path,
             l = str(l); t = str(t); r = str(r); b = str(b)
             crop = (' | pamcut -left=' + l + ' -top=' + t
                     + ' -right=' + r + ' -bottom=' + b)
-        
+
         import tempfile
         t_handle, t_path = tempfile.mkstemp()
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
@@ -301,7 +304,7 @@ def image_from_zip(zipf, image_path,
                         + crop
                         + scale
                         + cvt_to_out)
-        
+
     else:
         raise Exception('unrecognized in img type')
     return output.read()
@@ -316,7 +319,7 @@ def iso_639_23_to_iso_639_1(marc_code):
         if marc_code in mapping:
             return mapping[marc_code]
     return marc_code
-        
+
 def infer_book_id():
     files=os.listdir(".")
     #ignore files starting with '.' using list comprehension
