@@ -14,37 +14,58 @@ charParams_tag = ns + 'charParams'
 
 re_page_num = re.compile(r'^\[?\d+\]?$')
 
-def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False):
+def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,blockfn=False):
     passage = ''
     curformat=False
+    layoutinfo = False
     page_count = 0
     for event, element in iterparse(f):
         if element.tag == page_tag:
             page_count+= 1
+	    if pagefn:
+	      if layoutinfo:
+	      	 layoutinfo=layoutinfo+pagefn(page_count,element)
+	      else: layoutinfo=pagefn(page_count,element)
             if debug:
                 print 'page', page_count
             page_break = True
             for block in element:
                 assert block.tag == block_tag
+		if blockfn:
+		   if layoutinfo:
+		      layoutinfo=layoutinfo+blockfn(block)
+		   else: layoutinfo=blockfn(block)
                 if block.attrib['blockType'] == 'Picture':
                     if (picture):
                         result,inline=picture(block)
                         if inline:
-                            passage=addtext(passage,result,True)
+			   if layoutinfo:
+			      layoutinfo=layoutinfo+result
+			   else: layoutinfo=result
                         else:
-                            if passage != '': yield passage
+                            if passage != '':
+			       if format and curformat:
+			       	  formatted=format(passage,False,curformat)
+			       	  yield formatted
+			       else: yield passage
                             passage=''
                             yield result
                     continue
                 if block.attrib['blockType'] == 'Table':
                     if (table):
-                        result,inline=table(block)
-                        if inline:
-                            passage=addtext(passage,result,True)
-                        else:
-                            if passage != '': yield passage
-                            passage=''
-                            yield result
+                       result,inline=table(block)
+                       if inline:
+		       	  if layoutinfo:
+			     layoutinfo=layoutinfo+result
+			  else: layoutinfo=result
+                       else:
+			if passage != '':
+			   if format and curformat:
+			      formatted=format(passage,False,curformat)
+			      yield formatted
+			   else: yield passage
+                           passage=''
+                           yield result
                     continue
                 assert block.attrib['blockType'] == 'Text'
                 assert len(block) in (1, 2)
@@ -68,10 +89,16 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                             if (header):
                                 result=header(linecontent(line),line)
                                 if not result: continue
-                                elif ((typeof(result)==str) and (result[0]!='\n')):
-                                    passage=addtext(passage,result,True)
+                                elif ((type(result)==str) and (result[0]!='\n')):
+				    if layoutinfo:
+				       layoutinfo=layoutinfo+result
+				    else: layoutinfo=result
                                 else:
-                                    if passage != '': yield passage
+                                    if passage != '':
+			       	       if format and curformat:
+			       	       	  formatted=format(passage,False,curformat)
+			       	  	  yield formatted
+			       	       else: yield passage
                                     passage=''
                                     yield result
                             continue
@@ -79,10 +106,17 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                             if (footer):
                                 result=footer(linecontent(line),line)
                                 if not result: continue
-                                elif ((typeof(result)==str) and (result[0]!='\n')):
-                                    passage=addtext(passage,result,True)
+                                elif ((type(result)==str) and (result[0]!='\n')):
+				     if layoutinfo:
+				     	layoutinfo=layoutinfo+result
+				     else:
+					layoutinfo=result
                                 else:
-                                    if passage != '': yield passage
+                                    if passage != '':
+			       	       if format and curformat:
+			       	       	  formatted=format(passage,False,curformat)
+			       	  	  yield formatted
+			       	       else: yield passage
                                     passage=''
                                     yield result
                             continue
@@ -98,35 +132,41 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                                 if formatted:
                                     curformat=formatting.attrib
                                     cur=formatted
-                            text=addtext(text,cur)
+                            text=addtext(text,cur,layoutinfo)
+			    layoutinfo=False
                             for charParams in formatting:
                                 assert charParams.tag == charParams_tag
                     if text == '':
                         continue
                     if page_break:
                         if (passage and first_lower):
-                            passage = addtext(passage,text)
+                            passage = addtext(passage,text,layoutinfo)
+			    layoutinfo=False
                             page_break = False
                             continue
                         page_break = False
                     if passage:
-                        yield passage
+		       if format and curformat:
+		       	  formatted=format(passage,False,curformat)
+			  yield formatted
+		       else: yield passage
                     passage = text
-
             element.clear()
     if passage:
-        yield passage
+       if format and curformat:
+       	  formatted=format(passage,False,curformat)
+	  yield formatted
+       else: yield passage
 
-def addtext(passage,text,extra=False):
-    if passage=='': return text
+
+def addtext(passage,text,layout=False):
+    if passage=='':
+       if layout: return layout+text
+       else: return text;
     elif passage[-1]=='-':
-        if extra:
-            point=passage.rfind(' ')
-            if point:
-                return passage[:point]+' '+text+' '+passage[point:-1]
-            else: return passage[:-1]
-        else:
-            return passage[:-1]+text
+        if layout:
+	   return passage[:-1]+layout+text
+        else: return passage[:-1]+text
     else: return passage+' '+text
         
 
