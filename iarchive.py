@@ -266,6 +266,7 @@ def image_from_zip(zipf, image_path,
                    quality, region,
                    in_img_type, out_img_type,
                    kdu_reduce):
+    clean_me_up = None
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
 
@@ -296,7 +297,8 @@ def image_from_zip(zipf, image_path,
                     + ' -right=' + r + ' -bottom=' + b)
 
         import tempfile
-        t_handle, t_path = tempfile.mkstemp()
+        _, t_path = tempfile.mkstemp(prefix='tiff_for_epub_')
+        clean_me_up = t_path
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                         + ' > ' + t_path)
         output.read()
@@ -304,10 +306,13 @@ def image_from_zip(zipf, image_path,
                         + crop
                         + scale
                         + cvt_to_out)
-
     else:
         raise Exception('unrecognized in img type')
-    return output.read()
+    try:
+        return output.read()
+    finally:
+        if clean_me_up is not None:
+            os.unlink(clean_me_up)
 
 # ' | pnmscale -quiet -xysize ' + str(width) + ' ' + str(height)
 
