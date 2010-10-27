@@ -341,5 +341,5 @@ def infer_book_id():
 
 
 if __name__ == '__main__':
-    sys.stderr.write('I\'m a module.  Don\'t run me directly!')
+    sys.stderr.write('I\'m a module.  Don\'t run me directly!\n')
     sys.exit(-1)
