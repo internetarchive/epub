@@ -9,6 +9,7 @@ import os
 import gzip
 import string
 import StringIO
+import json
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
@@ -76,6 +77,9 @@ if "debug" in sys.argv:
     debug_arg=True
 else: debug_arg=False
 
+title=False
+creator=False
+
 if (os.path.exists(sys.argv[1])):
     if sys.argv[1].endswith('.gz'):
         f=gzip.open(sys.argv[1])
@@ -89,6 +93,13 @@ else:
                       (sys.argv[1],sys.argv[1]))
     zipdata=urlstream.read()
     f=GzipFile(fileobj=StringIO.StringIO(zipdata))
+    detailstream=urlopen("http://www.archive.org/details/%s?output=json"%sys.argv[1])
+    details=json.load(detailstream)
+    if "metadata" in details:
+       metadata=details["metadata"]
+       if "title" in metadata: title=metadata["title"][0]
+       if "creator" in metadata: creator=metadata["creator"][0]
+    
     
 # f = GzipFile(fileobj=urlopen(sys.argv[1]))
 # f = open(sys.argv[1])
@@ -111,6 +122,16 @@ paracount=1
 
 print "<html>"
 print "<head>"
+if title and creator:
+   print "<title>%s by %s</title>"%(title,creator)
+elif title:
+   print "<title>%s</title>"%title
+elif creator:
+   print "<title>by %s</title>"%creator
+if title:
+   print "<meta name='DC.TITLE' content='%s'/>"%title
+if creator:
+   print "<meta name='DC.CREATOR' content='%s'/>"%creator
 print "<style>"
 print "span.abbyyheader { display: none;}"
 print "span.abbyyfooter { display: none;}"
