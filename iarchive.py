@@ -297,7 +297,7 @@ def image_from_zip(zipf, image_path,
                     + ' -right=' + r + ' -bottom=' + b)
 
         import tempfile
-        _, t_path = tempfile.mkstemp(prefix='tiff_for_epub_')
+        _, t_path = tempfile.mkstemp(prefix='tiff_for_epub_', suffix='.tif')
         clean_me_up = t_path
         output = os.popen('unzip -p ' + zipf + ' ' + image_path
                         + ' > ' + t_path)
