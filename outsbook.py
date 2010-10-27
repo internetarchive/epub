@@ -132,7 +132,7 @@ if title:
    print "<meta name='DC.TITLE' content='%s'/>"%title
 if creator:
    print "<meta name='DC.CREATOR' content='%s'/>"%creator
-print "<link rel='sbook.refuri' href='http://www.archive.org/%s/sbook.html'/>"%sys.argv[1]
+print "<link rel='sbook.refuri' href='http://www.archive.org/sbooks/%s/index.html'/>"%sys.argv[1]
 print "<style>"
 print "span.abbyyheader { display: none;}"
 print "span.abbyyfooter { display: none;}"
