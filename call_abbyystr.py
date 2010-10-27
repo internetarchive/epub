@@ -19,7 +19,7 @@ fontmap={}
 def getfontname(s):
     if (s in fontmap):
        return fontmap[s]
-    else: return string.replace(s," ","")
+    else: return "\"%s\""%s
 
 def xmlhead(x,elt):
     return "<header>"+x+"</header>"

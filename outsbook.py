@@ -19,7 +19,7 @@ fontmap={}
 def getfontname(s):
     if (s in fontmap):
        return fontmap[s]
-    else: return string.replace(s," ","")
+    else: return "\"%s\""%s
 
 classcount=1
 classmap={}
@@ -97,8 +97,8 @@ else:
     details=json.load(detailstream)
     if "metadata" in details:
        metadata=details["metadata"]
-       if "title" in metadata: title=metadata["title"][0]
-       if "creator" in metadata: creator=metadata["creator"][0]
+       if "title" in metadata: title=string.replace(metadata["title"][0],"'","&apos;")
+       if "creator" in metadata: creator=string.replace(metadata["creator"][0],"'","&apos;")
     
     
 # f = GzipFile(fileobj=urlopen(sys.argv[1]))
@@ -132,6 +132,7 @@ if title:
    print "<meta name='DC.TITLE' content='%s'/>"%title
 if creator:
    print "<meta name='DC.CREATOR' content='%s'/>"%creator
+print "<link rel='sbook.refuri' href='http://www.archive.org/%s/sbook.html'/>"%sys.argv[1]
 print "<style>"
 print "span.abbyyheader { display: none;}"
 print "span.abbyyfooter { display: none;}"
