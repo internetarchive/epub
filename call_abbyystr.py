@@ -42,10 +42,10 @@ def xmlpage(num,element):
     attribs=element.attrib
     return ("<page num=\"%d\" width=\"%s\" height=\"%s\"/>"%
     	    	      (num,attribs["width"],attribs["height"]));
-def xmlblock(element):
+def xmlblock(element,leafno):
     attribs=element.attrib
-    return ("<block left=\"%s\" top=\"%s\" right=\"%s\" bottom=\"%s\"/>"%
-    	    	       (attribs["l"],attribs["t"],attribs["r"],attribs["b"]));
+    return ("<block leaf=\"%d\" left=\"%s\" top=\"%s\" right=\"%s\" bottom=\"%s\"/>"%
+    	    	       (leafno,attribs["l"],attribs["t"],attribs["r"],attribs["b"]));
 
 def htmlhead(x,elt):
     return "<span class='header'>"+x+"</span>"
@@ -53,15 +53,15 @@ def htmlfoot(x,elt):
     return "<span class='footer'>"+x+"</span>"
 def htmlpage(num,element):
       attribs=element.attrib
-      return ("<a name=\"page%d\" class=\"page\" data-pageno=\"%d\" data-size=\"%sx%s\"/>"%
+      return ("<a name=\"leaf%d\" class=\"leaf\" data-leafno=\"%d\" data-leafdim=\"%sx%s\"/>"%
               (num,num,attribs["width"],attribs["height"]));
-def htmlblock(element):
+def htmlblock(element,leafno):
       attribs=element.attrib
       l=int(attribs["l"])
       r=int(attribs["r"])
       b=int(attribs["b"])
       t=int(attribs["t"])
-      return ("<a class=\"block\" title=\"%dx%d+%d+%d\"/>"%(r-l,b-t,l,t));
+      return ("<a class=\"block\" title=\"L%dB%dx%d+@%d,%d\"/>"%(leafno,r-l,b-t,l,t));
 
 def printhead(x, y):
     print 'Header: ' + x.encode('utf-8')

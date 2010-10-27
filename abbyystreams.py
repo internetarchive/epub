@@ -18,26 +18,26 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
     passage = ''
     curformat=False
     layoutinfo = False
-    page_count = 0
+    leaf_count = 0
     for event, element in iterparse(f):
         if element.tag == page_tag:
-            page_count+= 1
+            leaf_count+= 1
 	    if pagefn:
 	      if layoutinfo:
-	      	 layoutinfo=layoutinfo+pagefn(page_count,element)
-	      else: layoutinfo=pagefn(page_count,element)
+	      	 layoutinfo=layoutinfo+pagefn(leaf_count,element)
+	      else: layoutinfo=pagefn(leaf_count,element)
             if debug:
-                print 'page', page_count
+                print 'page', leaf_count
             page_break = True
             for block in element:
                 assert block.tag == block_tag
 		if blockfn:
 		   if layoutinfo:
-		      layoutinfo=layoutinfo+blockfn(block)
-		   else: layoutinfo=blockfn(block)
+		      layoutinfo=layoutinfo+blockfn(block,leaf_count)
+		   else: layoutinfo=blockfn(block,leaf_count)
                 if block.attrib['blockType'] == 'Picture':
                     if (picture):
-                        result,inline=picture(block)
+                        result,inline=picture(block,leaf_count)
                         if inline:
 			   if layoutinfo:
 			      layoutinfo=layoutinfo+result
@@ -53,7 +53,7 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                     continue
                 if block.attrib['blockType'] == 'Table':
                     if (table):
-                       result,inline=table(block)
+                       result,inline=table(block,leaf_count)
                        if inline:
 		       	  if layoutinfo:
 			     layoutinfo=layoutinfo+result

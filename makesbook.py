@@ -19,7 +19,30 @@ fontmap={}
 def getfontname(s):
     if (s in fontmap):
        return fontmap[s]
-    else: return "\"%s\""%s
+    else: return "'%s'"%s
+
+if (os.path.exists(sys.argv[1])):
+    bookid='sbook'
+    if sys.argv[1].endswith('.gz'):
+        f=gzip.open(sys.argv[1])
+    else: f=open(sys.argv[1])
+elif (sys.argv[1].startswith('http')):
+    bookid='sbook'
+    if sys.argv[1].endswith('.gz'):
+        f=GzipFile(fileobj=urlopen(sys.argv[1]))
+    else: f=urlopen(sys.argv[1])
+else:
+    bookid=sys.argv[1]
+    urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%
+                      (sys.argv[1],sys.argv[1]))
+    zipdata=urlstream.read()
+    f=GzipFile(fileobj=StringIO.StringIO(zipdata))
+    detailstream=urlopen("http://www.archive.org/details/%s?output=json"%sys.argv[1])
+    details=json.load(detailstream)
+    if "metadata" in details:
+       metadata=details["metadata"]
+       if "title" in metadata: title=string.replace(metadata["title"][0],"'","&apos;")
+       if "creator" in metadata: creator=string.replace(metadata["creator"][0],"'","&apos;")
 
 classcount=1
 classmap={}
@@ -58,11 +81,34 @@ def htmlfoot(x,elt):
 
 def htmlpage(num,element):
       attribs=element.attrib
-      return ("<a name=\"page%d\" class=\"page\" data-pageno=\"%d\" data-size=\"%sx%s\"/>"%
+      return ("<a name='leaf%d' class='leaf' data-leafno='%d' data-leafdim='@%sx%s'/>"%
               (num,num,attribs["width"],attribs["height"]));
 
+img_count=1
+def htmlimg(elt,leafno):
+  global bookid
+  global img_count
+  attribs=elt.attrib
+  img_name="images/img%d.jpg"%img_count
+  img_count=img_count+1
+  return (("<img src='%s' data-dim='%s:%d@%s,%s,%s,%s'/>"%
+            (img_name,bookid,leafno,
+	     attribs["l"],attribs["t"],attribs["r"],attribs["b"])),
+	   False)
+
+table_count=1
+def htmltable(elt,leafno):
+  global bookid
+  global img_count
+  attribs=elt.attrib
+  img_name="images/tbl%d.jpg"%img_count
+  table_count=table_count+1
+  return ("<img src='%s' class='table' data-dim='%s:%d@%s,%s,%s,%s'/>"%
+          	(img_name,bookid,leafno,
+		 attribs["l"],attribs["t"],attribs["r"],attribs["b"]))
+
 blockcount=1
-def htmlblock(element):
+def htmlblock(element,leafno):
       global blockcount
       attribs=element.attrib
       l=int(attribs["l"])
@@ -71,7 +117,8 @@ def htmlblock(element):
       t=int(attribs["t"])
       blockname="abbyyblock%d"%blockcount
       blockcount=blockcount+1
-      return ("<a name=\"%s\" class=\"block\" title=\"%dx%d+%d+%d\"/>"%(blockname,r-l,b-t,l,t));
+      return ("<a name='%s' class='block' title='l%db%dx%d@%d,%d'/>"%
+              (blockname,leafno,r-l,b-t,l,t));
 
 if "debug" in sys.argv:
     debug_arg=True
@@ -79,35 +126,16 @@ else: debug_arg=False
 
 title=False
 creator=False
+metadata={}
 
-if (os.path.exists(sys.argv[1])):
-    if sys.argv[1].endswith('.gz'):
-        f=gzip.open(sys.argv[1])
-    else: f=open(sys.argv[1])
-elif (sys.argv[1].startswith('http')):
-    if sys.argv[1].endswith('.gz'):
-        f=GzipFile(fileobj=urlopen(sys.argv[1]))
-    else: f=urlopen(sys.argv[1])
-else:
-    urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%
-                      (sys.argv[1],sys.argv[1]))
-    zipdata=urlstream.read()
-    f=GzipFile(fileobj=StringIO.StringIO(zipdata))
-    detailstream=urlopen("http://www.archive.org/details/%s?output=json"%sys.argv[1])
-    details=json.load(detailstream)
-    if "metadata" in details:
-       metadata=details["metadata"]
-       if "title" in metadata: title=string.replace(metadata["title"][0],"'","&apos;")
-       if "creator" in metadata: creator=string.replace(metadata["creator"][0],"'","&apos;")
-    
-    
 # f = GzipFile(fileobj=urlopen(sys.argv[1]))
 # f = open(sys.argv[1])
 
 pars=[]
 for par in abbyystreams.abbyytext(f, header=htmlhead, footer=htmlfoot,
     	   			     format=xmlformat,blockfn=htmlblock,
-				     pagefn=htmlpage,
+				     pagefn=htmlpage,picture=htmlimg,
+				     table=htmltable,
                                      debug=debug_arg):
     pars.append(par)
 
@@ -120,8 +148,12 @@ for x in classhist:
 paraprefix="<span class='%s'>"%topclass
 paracount=1
 
+print "<?xml encoding='utf-8' ?>"
+print "<!DOCTYPE html>"
 print "<html>"
 print "<head>"
+print ("<meta name='ia.item' content='%s'/>"%bookid)
+
 if title and creator:
    print "<title>%s by %s</title>"%(title,creator)
 elif title:
@@ -132,7 +164,13 @@ if title:
    print "<meta name='DC.TITLE' content='%s'/>"%title
 if creator:
    print "<meta name='DC.CREATOR' content='%s'/>"%creator
-print "<link rel='sbook.refuri' href='http://www.archive.org/sbooks/%s/index.html'/>"%sys.argv[1]
+if "publisher" in metadata:
+   print "<meta name='DC.PUBLISHER' content='%s'/>"%(metadata["publisher"][0])
+if "date" in metadata:
+   print "<meta name='DC.DATE' content='%s'/>"%(metadata["date"][0])
+if "description" in metadata:
+   print "<meta name='DC.DESCRIPTION' content='%s'/>"%(metadata["description"][0])
+print "<link rel='sbook.refuri' href='http://www.archive.org/sbooks/%s/index.html'/>"%bookid
 print "<style>"
 print "span.abbyyheader { display: none;}"
 print "span.abbyyfooter { display: none;}"
@@ -144,10 +182,10 @@ print "</head>"
 print "<body>"
 for par in pars:
     if par.startswith(paraprefix):
-       print ("<p id='SBOOK"+str(paracount)+"'"+par[5:-7]+"</p>").encode('utf-8')
+       print ("<p id='"+bookid+str(paracount)+"'"+par[5:-7]+"</p>").encode('utf-8')
        paracount=paracount+1
     elif par.startswith("<span "):
-       print ("<div id='SBOOK"+str(paracount)+"'"+par[5:-7]+"</div>").encode('utf-8')
+       print ("<div id='"+bookid+str(paracount)+"'"+par[5:-7]+"</div>").encode('utf-8')
        paracount=paracount+1
     else: print par.encode('utf-8') 
 print "</body>"
