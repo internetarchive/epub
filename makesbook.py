@@ -10,6 +10,7 @@ import gzip
 import string
 import StringIO
 import json
+import cgi
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
@@ -135,7 +136,7 @@ pars=[]
 for par in abbyystreams.abbyytext(f, header=htmlhead, footer=htmlfoot,
     	   			     format=xmlformat,blockfn=htmlblock,
 				     pagefn=htmlpage,picture=htmlimg,
-				     table=htmltable,
+				     table=htmltable,escapefn=cgi.escape,
                                      debug=debug_arg):
     pars.append(par)
 
@@ -148,7 +149,7 @@ for x in classhist:
 paraprefix="<span class='%s'>"%topclass
 paracount=1
 
-print "<?xml encoding='utf-8' ?>"
+print "<?xml version='1.0' encoding='utf-8' ?>"
 print "<!DOCTYPE html>"
 print "<html>"
 print "<head>"

@@ -14,7 +14,7 @@ charParams_tag = ns + 'charParams'
 
 re_page_num = re.compile(r'^\[?\d+\]?$')
 
-def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,blockfn=False):
+def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,blockfn=False,escapefn=False):
     passage = ''
     curformat=False
     layoutinfo = False
@@ -127,12 +127,13 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                             elif first_char:
                                 first_char=False
                                 if cur[0].islower(): first_lower=True
+		            if escapefn: cur=escapefn(cur)
                             if format:
                                 formatted=format(cur,formatting.attrib,curformat)
                                 if formatted:
                                     curformat=formatting.attrib
                                     cur=formatted
-                            text=addtext(text,cur,layoutinfo)
+			    text=addtext(text,cur,layoutinfo)
 			    layoutinfo=False
                             for charParams in formatting:
                                 assert charParams.tag == charParams_tag
