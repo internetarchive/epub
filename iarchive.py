@@ -226,15 +226,23 @@ class Book(object):
             in_img_type = 'tif'
         elif self.images_type == 'jp2.tar':
             # 7z e archive.tar dir/filename.jp2 <---- fast!
-            raise 'NYI'
+            ### emergency fix for jp2.tar books
+            zipf = os.path.join(self.book_path,
+                                self.doc + '_jp2.tar')
+            image_path = (doc_basename + '_jp2/' + doc_basename + '_'
+                          + str(leafno).zfill(4) + '.jp2')
+            in_img_type = 'jp2'
         else:
             return None
+
         try:
-            z = zipfile.ZipFile(zipf, 'r')
-            info = z.getinfo(image_path) # for to check it exists
-            z.close()
+            if self.images_type != 'jp2.tar': ### emergency fix for jp2.tar books
+                z = zipfile.ZipFile(zipf, 'r')
+                info = z.getinfo(image_path) # for to check it exists
+                z.close()
         except KeyError:
             return None
+
         return image_from_zip(zipf, image_path,
                               requested_size, orig_page_size,
                               quality, region,
@@ -281,7 +289,14 @@ def image_from_zip(zipf, image_path,
         raise Exception('unrecognized out img type')
     if in_img_type == 'jp2':
         kdu_region = get_kdu_region_string(orig_page_size, region)
-        output = os.popen('unzip -p ' + zipf + ' ' + image_path
+
+        ### emergency fix for jp2.tar books
+        if zipf.endswith('jp2.tar'):
+            unzip_cmd = '7z e -so ' + zipf + ' ' + image_path + ' 2>/dev/null'
+        else:
+            unzip_cmd = 'unzip -p ' + zipf + ' ' + image_path
+
+        output = os.popen(unzip_cmd
                         + ' | kdu_expand -region "' + kdu_region + '"'
                         +   ' -reduce ' + str(kdu_reduce)
                         +   ' -no_seek -i /dev/stdin -o /tmp/stdout.bmp'
