@@ -63,7 +63,11 @@ def process_book(iabook, ebook):
                               resolve_entities=False)
     found_title = False
     for page_scandata in iabook.get_scandata_pages(): #confirm title exists
-        t = page_scandata.pageType.text.lower()
+        try:
+            t = page_scandata.pageType.text.lower()
+        except AttributeError:
+            t = 'normal'
+
         if t == 'title' or t == 'title page':
             found_title = True
             break
@@ -108,7 +112,11 @@ def process_book(iabook, ebook):
             i += 1
             continue
 
-        page_type = page_scandata.pageType.text.lower()
+        try:
+            page_type = page_scandata.pageType.text.lower()
+        except AttributeError:
+            page_type = 'normal'
+
         if page_type == 'cover':
             if cover_number == 0:
                 cover_title = 'Front Cover'
