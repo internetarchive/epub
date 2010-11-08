@@ -225,8 +225,6 @@ class Book(object):
                           + str(leafno).zfill(4) + '.tif')
             in_img_type = 'tif'
         elif self.images_type == 'jp2.tar':
-            # 7z e archive.tar dir/filename.jp2 <---- fast!
-            ### emergency fix for jp2.tar books
             zipf = os.path.join(self.book_path,
                                 self.doc + '_jp2.tar')
             image_path = (doc_basename + '_jp2/' + doc_basename + '_'
@@ -236,10 +234,11 @@ class Book(object):
             return None
 
         try:
-            if self.images_type != 'jp2.tar': ### emergency fix for jp2.tar books
+            if self.images_type != 'jp2.tar':
                 z = zipfile.ZipFile(zipf, 'r')
                 info = z.getinfo(image_path) # for to check it exists
                 z.close()
+            # XXX extend above to work with jp2.tar?
         except KeyError:
             return None
 
@@ -290,7 +289,6 @@ def image_from_zip(zipf, image_path,
     if in_img_type == 'jp2':
         kdu_region = get_kdu_region_string(orig_page_size, region)
 
-        ### emergency fix for jp2.tar books
         if zipf.endswith('jp2.tar'):
             unzip_cmd = '7z e -so ' + zipf + ' ' + image_path + ' 2>/dev/null'
         else:
