@@ -33,7 +33,8 @@ class Book(object):
         imgstack_types = (('jp2', 'zip'),
                           ('tif', 'zip'),
                           ('jp2', 'tar'),
-                          ('jpg', 'zip'))
+                          ('jpg', 'zip'),
+                          ('jpg', 'tar'))
         for imgstack_t in imgstack_types:
             imgstack_path = os.path.join(book_path, '%s_%s.%s' %
                                          (self.doc,
