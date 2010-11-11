@@ -63,7 +63,11 @@ def process_book(iabook, ebook):
                               resolve_entities=False)
     found_title = False
     for page_scandata in iabook.get_scandata_pages(): #confirm title exists
-        t = page_scandata.pageType.text.lower()
+        try:
+            t = page_scandata.pageType.text.lower()
+        except AttributeError:
+            t = 'normal'
+
         if t == 'title' or t == 'title page':
             found_title = True
             break
@@ -108,7 +112,11 @@ def process_book(iabook, ebook):
             i += 1
             continue
 
-        page_type = page_scandata.pageType.text.lower()
+        try:
+            page_type = page_scandata.pageType.text.lower()
+        except AttributeError:
+            page_type = 'normal'
+
         if page_type == 'cover':
             if cover_number == 0:
                 cover_title = 'Front Cover'
@@ -123,44 +131,47 @@ def process_book(iabook, ebook):
             
             (id, filename) = make_html_page_image(i, iabook, ebook,
                                                   cover=front_cover)
+            if id is not None:
+                ebook.add_navpoint(cover_title, filename)
+                if cover_number == 0:
+                    ebook.add_guide_item({ 'href':filename,
+                                           'type':'cover',
+                                           'title':cover_title })
 
-            ebook.add_navpoint(cover_title, filename)
-            if cover_number == 0:
-                ebook.add_guide_item({ 'href':filename,
-                                       'type':'cover',
-                                       'title':cover_title })
-
-                # Add intro page after 1rst cover page
-                tree = make_html('Archive',
-                     [E.p('This book made available by the Internet Archive.')])
-                ebook.add_content('intro', 'intro.html',
-                                  'application/xhtml+xml',
-                                  common.tree_to_str(tree,
-                                                     xml_declaration=False))
-                ebook.add_spine_item({ 'idref':'intro', 'linear':'no' })
-            cover_number += 1
+                    # Add intro page after 1rst cover page
+                    tree = make_html('Archive',
+                         [E.p('This book made available by the Internet Archive.')])
+                    ebook.add_content('intro', 'intro.html',
+                                      'application/xhtml+xml',
+                                      common.tree_to_str(tree,
+                                                         xml_declaration=False))
+                    ebook.add_spine_item({ 'idref':'intro', 'linear':'no' })
+                cover_number += 1
 
         elif page_type == 'title' or page_type == 'title page':
             before_title_page = False
             (id, filename) = make_html_page_image(i, iabook, ebook)
-            ebook.add_navpoint('Title Page', filename)
-            ebook.add_guide_item({ 'href':filename,
-                                   'type':'title-page',
-                                   'title':'Title Page' })
+            if id is not None:
+                ebook.add_navpoint('Title Page', filename)
+                ebook.add_guide_item({ 'href':filename,
+                                       'type':'title-page',
+                                       'title':'Title Page' })
         elif page_type == 'copyright':
             (id, filename) = make_html_page_image(i, iabook, ebook)
-            ebook.add_navpoint('Copyright', filename)
-            ebook.add_guide_item({ 'href':filename,
-                                   'type':'copyright-page',
-                                   'title':'Title Page' })
+            if id is not None:
+                ebook.add_navpoint('Copyright', filename)
+                ebook.add_guide_item({ 'href':filename,
+                                       'type':'copyright-page',
+                                       'title':'Title Page' })
         elif page_type == 'contents':
             (id, filename) = make_html_page_image(i, iabook, ebook)
-            if not made_contents_navpoint:
-                ebook.add_navpoint('Table of Contents', filename)
-                made_contents_navpoint = True
-            ebook.add_guide_item({ 'href':filename,
-                                   'type':'toc',
-                                   'title':'Title Page' })
+            if id is not None:
+                if not made_contents_navpoint:
+                    ebook.add_navpoint('Table of Contents', filename)
+                    made_contents_navpoint = True
+                ebook.add_guide_item({ 'href':filename,
+                                       'type':'toc',
+                                       'title':'Title Page' })
 
         elif page_type == 'normal':
             if before_title_page:
@@ -170,6 +181,7 @@ def process_book(iabook, ebook):
                 # Skip if not much text
                 if len(page_text) >= 10:
                     (id, filename) = make_html_page_image(i, iabook, ebook)
+                # XXX note that above might return None, None and do nothing...
             else:
                 first_par = True
                 saw_pageno_header_footer = False
@@ -274,6 +286,8 @@ def process_book(iabook, ebook):
 def make_html_page_image(i, iabook, ebook, cover=False):
     ebook.flush_els()
     image = iabook.get_page_image(i, (max_width, max_height))
+    if image is None:
+        return None, None
     leaf_id = 'leaf' + str(i).zfill(4)
     if not cover:
         leaf_image_id = 'leaf-image' + str(i).zfill(4)
