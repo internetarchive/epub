@@ -29,6 +29,7 @@ class Book(object):
         self.scandata = None
         self.imgstack_archive_fmt = None
         self.imgstack_image_fmt = None
+        self.imgstack_name = None
         imgstack_types = (('jp2', 'zip'),
                           ('tif', 'zip'),
                           ('jp2', 'tar'),
