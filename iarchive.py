@@ -40,9 +40,10 @@ class Book(object):
             if os.path.exists(imgstack_path):
                 self.imgstack_image_fmt = imgstack_t[0]
                 self.imgstack_archive_fmt = imgstack_t[1]
+                self.imgstack_name = imgstack_path
                 break
 
-#         else:
+#         if self.imgstack_archive_fmt is None:
 #             raise Exception('Can\'t find book images')
 
 
@@ -212,10 +213,7 @@ class Book(object):
         leafno = self.get_leafno_for_page(i)
         doc_basename = os.path.basename(self.doc)
 
-        zipf = os.path.join(self.book_path,
-                            '%s_%s.%s' % (self.doc,
-                                          self.imgstack_image_fmt,
-                                          self.imgstack_archive_fmt))
+        zipf = self.imgstack_name
         image_path = '%s_%s/%s_%s.%s' % (doc_basename, self.imgstack_image_fmt,
                                          doc_basename, str(leafno).zfill(4),
                                          self.imgstack_image_fmt)
@@ -226,7 +224,7 @@ class Book(object):
                 z = zipfile.ZipFile(zipf, 'r')
                 info = z.getinfo(image_path) # for to check it exists
                 z.close()
-            # XXX extend above to work with tar?
+            # XXX extend above to work with tar?  or push into image_from_zip?
         except KeyError:
             return None
 
