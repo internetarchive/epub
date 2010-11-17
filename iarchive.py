@@ -294,9 +294,8 @@ def image_from_zip(zipf, image_path,
         crop = ''
         if region is not None:
             (l, t), (r, b) = region
-            l = str(l); t = str(t); r = str(r); b = str(b)
-            crop = (' | pamcut -left=' + l + ' -top=' + t
-                    + ' -right=' + r + ' -bottom=' + b)
+            crop = (' | pamcut -pad -left=%s -top=%s -right=%s -bottom=%s ' %
+                    (l, t, r, b))
 
         import tempfile
         tmp_suffix = '.%s' % in_img_type
