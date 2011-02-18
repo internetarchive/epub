@@ -274,13 +274,14 @@ def image_from_zip(zipf, image_path,
         cvt_to_out = ' | ppmtoppm -quiet'
     else:
         raise Exception('unrecognized out img type')
+
+    if zipf.endswith('.tar'):
+        unzip_cmd = '7z e -so ' + zipf + ' ' + image_path + ' 2>/dev/null'
+    else:
+        unzip_cmd = 'unzip -p ' + zipf + ' ' + image_path
+
     if in_img_type == 'jp2':
         kdu_region = get_kdu_region_string(orig_page_size, region)
-
-        if zipf.endswith('.tar'):
-            unzip_cmd = '7z e -so ' + zipf + ' ' + image_path + ' 2>/dev/null'
-        else:
-            unzip_cmd = 'unzip -p ' + zipf + ' ' + image_path
 
         output = os.popen(unzip_cmd
                         + ' | kdu_expand -region "' + kdu_region + '"'
@@ -293,15 +294,14 @@ def image_from_zip(zipf, image_path,
         crop = ''
         if region is not None:
             (l, t), (r, b) = region
-            l = str(l); t = str(t); r = str(r); b = str(b)
-            crop = (' | pamcut -left=' + l + ' -top=' + t
-                    + ' -right=' + r + ' -bottom=' + b)
+            crop = (' | pamcut -pad -left=%s -top=%s -right=%s -bottom=%s ' %
+                    (l, t, r, b))
 
         import tempfile
         tmp_suffix = '.%s' % in_img_type
         _, t_path = tempfile.mkstemp(prefix='img_for_epub_', suffix=tmp_suffix)
         clean_me_up = t_path
-        output = os.popen('unzip -p ' + zipf + ' ' + image_path
+        output = os.popen(unzip_cmd
                         + ' > ' + t_path)
         output.read()
         to_pnm = { 'tif': 'tifftopnm',

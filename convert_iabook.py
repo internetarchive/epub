@@ -86,9 +86,12 @@ def main(argv):
                         for tocitem in oldtoc:
                             toc[tocitem['pagenum']] = '%s - %s' % (tocitem['label'],
                                                                    tocitem['title'])
+                    except TypeError:
+                        toc = None
+
                     except KeyError:
                         # there must be a better way to detect an array...
-                        pass
+                        toc = None
         if not found_output_opt:
             make_epub = True
     if len(args) == 0:
