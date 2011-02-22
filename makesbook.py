@@ -15,6 +15,7 @@ import cgi
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
 block_tag = ns + 'block'
+olibid=False
 
 fontmap={}
 def getfontname(s):
@@ -33,12 +34,20 @@ elif (sys.argv[1].startswith('http')):
         f=GzipFile(fileobj=urlopen(sys.argv[1]))
     else: f=urlopen(sys.argv[1])
 else:
+    if (sys.argv[1].startswith('OL')):
+        olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%sys.argv[1])
+        olibinfo=json.load(olibstream)
+        olibid=sys.argv[1]
+        iaid=olibinfo["ocaid"]
+        if (not(iaid)):
+            error ("No archive reference for %s"%olibid)
+    else: iaid=sys.argv[1]
     bookid=sys.argv[1]
     urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%
-                      (sys.argv[1],sys.argv[1]))
+                      (iaid,iaid))
     zipdata=urlstream.read()
     f=GzipFile(fileobj=StringIO.StringIO(zipdata))
-    detailstream=urlopen("http://www.archive.org/details/%s?output=json"%sys.argv[1])
+    detailstream=urlopen("http://www.archive.org/details/%s?output=json"%iaid)
     details=json.load(detailstream)
     if "metadata" in details:
        metadata=details["metadata"]
@@ -121,6 +130,10 @@ def htmlblock(element,leafno):
       return ("<a name='%s' class='block' title='l%db%dx%d@%d,%d'/>"%
               (blockname,leafno,r-l,b-t,l,t));
 
+def linehandler(elt,lineno,leafno):
+  global bookid
+  return ("<a name='%s/N%d/L%d' class='line'/>"%(bookid,leafno,lineno));
+
 if "debug" in sys.argv:
     debug_arg=True
 else: debug_arg=False
@@ -137,6 +150,7 @@ for par in abbyystreams.abbyytext(f, header=htmlhead, footer=htmlfoot,
     	   			     format=xmlformat,blockfn=htmlblock,
 				     pagefn=htmlpage,picture=htmlimg,
 				     table=htmltable,escapefn=cgi.escape,
+                                  linefn=linehandler,
                                      debug=debug_arg):
     pars.append(par)
 
@@ -153,7 +167,9 @@ print "<?xml version='1.0' encoding='utf-8' ?>"
 print "<!DOCTYPE html>"
 print "<html>"
 print "<head>"
-print ("<meta name='ia.item' content='%s'/>"%bookid)
+print ("<meta name='ia.item' content='%s'/>"%iaid)
+if olibid:
+    print ("<meta name='olib.item' content='%s'/>"%olibid)
 
 if title and creator:
    print "<title>%s by %s</title>"%(title,creator)
