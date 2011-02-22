@@ -14,14 +14,16 @@ charParams_tag = ns + 'charParams'
 
 re_page_num = re.compile(r'^\[?\d+\]?$')
 
-def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,blockfn=False,escapefn=False):
+def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,linefn=False,blockfn=False,escapefn=False):
     passage = ''
     curformat=False
     layoutinfo = False
     leaf_count = 0
+    line_count = 0
     for event, element in iterparse(f):
         if element.tag == page_tag:
             leaf_count+= 1
+	    line_count=0
 	    if pagefn:
 	      if layoutinfo:
 	      	 layoutinfo=layoutinfo+pagefn(leaf_count,element)
@@ -85,6 +87,13 @@ def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=F
                     lastr=False
                     for line in par:
                         assert line.tag == line_tag
+			line_count+=1
+			if (linefn):
+			   result=linefn(line,line_count,leaf_count)
+			   if result:
+			      if layoutinfo:
+			      	 layoutinfo=layoutinfo+result
+			      else: layoutinfo=result
                         if (likelyheader(line,par,e_text,block,element,debug)):
                             if (header):
                                 result=header(linecontent(line),line)
