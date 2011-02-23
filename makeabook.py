@@ -1,5 +1,6 @@
 from gzip import GzipFile
-from urllib2 import urlopen
+from zipfile import ZipFile
+from urllib2 import urlopen, HTTPError
 
 import abbyystreams
 
@@ -12,10 +13,21 @@ import StringIO
 import json
 import cgi
 
+import iarchive
+
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
 block_tag = ns + 'block'
 olibid=False
+iabook=False
+iaid=False
+max_width = 600
+max_height = 780
+
+def tryenv(var,dflt):
+    if (os.environ.get(var)):
+        return os.environ.get(var)
+    else: return dflt
 
 fontmap={}
 def getfontname(s):
@@ -42,11 +54,18 @@ else:
         if (not(iaid)):
             error ("No archive reference for %s"%olibid)
     else: iaid=sys.argv[1]
+    print "iaid=%s"%iaid
     bookid=sys.argv[1]
-    urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%
-                      (iaid,iaid))
-    zipdata=urlstream.read()
-    f=GzipFile(fileobj=StringIO.StringIO(zipdata))
+    try:
+        urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid))
+        zipdata=urlstream.read()
+        f=GzipFile(fileobj=StringIO.StringIO(zipdata))
+    except HTTPError:
+        urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.zip"%(iaid,iaid))
+        zipdata=urlstream.read()
+        zipfile=ZipFile(StringIO.StringIO(zipdata))
+        names=zipfile.namelist()
+        f=zipfile.open(names[0])
     detailstream=urlopen("http://www.archive.org/details/%s?output=json"%iaid)
     details=json.load(detailstream)
     if "metadata" in details:
@@ -94,14 +113,45 @@ def htmlpage(num,element):
       return ("<a name='leaf%d' class='leaf' data-leafno='%d' data-leafdim='@%sx%s'/>"%
               (num,num,attribs["width"],attribs["height"]));
 
+resdir=tryenv("RESDIR",False)
 img_count=1
-def htmlimg(elt,leafno):
+def htmlimg(block,leafno,page=False):
   global bookid
   global img_count
-  attribs=elt.attrib
-  img_name="images/img%d.jpg"%img_count
+  global resdir
+  global max_width
+  global max_height
+  if resdir:
+      imgdir=resdir
+  else: imgdir="resources"
+  attribs=block.attrib
+  img_name="%s/img%d.jpg"%(imgdir,img_count)
   img_count=img_count+1
-  return (("<img src='%s' data-dim='%s:%d@%s,%s,%s,%s'/>"%
+  if ((imgdir) and (page) and (iabook)):
+      region = ((int(block.get('l')),
+                 int(block.get('t'))),
+                (int(block.get('r')),
+                 int(block.get('b'))))
+      (l, t), (r, b) = region
+      region_width = r - l
+      region_height = b - t
+      orig_page_size = (int(page.get('width')),
+                        int(page.get('height')))
+      page_width, page_height = orig_page_size
+      
+      req_width = int(max_width *
+                      (region_width / float(page_width)))
+      req_height = int(max_height *
+                       (region_height / float(page_height)))
+      image_stream=urlopen("http://archive.org/BookReader/BookReaderImages.php?zip=/")
+      image = iabook.get_page_image(i,
+                                    (req_width, req_height),
+                                    orig_page_size,
+                                    kdu_reduce=2,
+                                    region=region)
+      if image is not None:
+          open(img_name,"wb").write(image)
+  return (("<img src='%s' data-dim='%s:%d@%s,%s,%s,%s' class='illus'/>"%
             (img_name,bookid,leafno,
 	     attribs["l"],attribs["t"],attribs["r"],attribs["b"])),
 	   False)
@@ -150,7 +200,7 @@ for par in abbyystreams.abbyytext(f, header=htmlhead, footer=htmlfoot,
     	   			     format=xmlformat,blockfn=htmlblock,
 				     pagefn=htmlpage,picture=htmlimg,
 				     table=htmltable,escapefn=cgi.escape,
-                                  linefn=linehandler,
+                                     linefn=linehandler,
                                      debug=debug_arg):
     pars.append(par)
 
