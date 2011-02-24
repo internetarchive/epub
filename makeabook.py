@@ -54,7 +54,6 @@ else:
         if (not(iaid)):
             error ("No archive reference for %s"%olibid)
     else: iaid=sys.argv[1]
-    print "iaid=%s"%iaid
     bookid=sys.argv[1]
     try:
         urlstream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid))
@@ -154,18 +153,19 @@ def htmlimg(block,leafno,page=False):
   return (("<img src='%s' data-dim='%s:%d@%s,%s,%s,%s' class='illus'/>"%
             (img_name,bookid,leafno,
 	     attribs["l"],attribs["t"],attribs["r"],attribs["b"])),
-	   False)
+	   True)
 
 table_count=1
 def htmltable(elt,leafno):
   global bookid
-  global img_count
+  global table_count
   attribs=elt.attrib
-  img_name="images/tbl%d.jpg"%img_count
+  table_name="images/tbl%d.jpg"%table_count
   table_count=table_count+1
-  return ("<img src='%s' class='table' data-dim='%s:%d@%s,%s,%s,%s'/>"%
-          	(img_name,bookid,leafno,
-		 attribs["l"],attribs["t"],attribs["r"],attribs["b"]))
+  return (("<img src='%s' class='table' data-dim='%s:%d@%s,%s,%s,%s'/>"%
+           (table_name,bookid,leafno,
+            attribs["l"],attribs["t"],attribs["r"],attribs["b"])),
+          True)
 
 blockcount=1
 def htmlblock(element,leafno):
