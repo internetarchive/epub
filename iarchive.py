@@ -6,6 +6,7 @@ import re
 import gzip
 import os
 import zipfile
+from subprocess import Popen, PIPE
 
 try:
     from lxml import etree
@@ -261,7 +262,6 @@ def image_from_zip(zipf, image_path,
                    quality, region,
                    in_img_type, out_img_type,
                    kdu_reduce):
-    clean_me_up = None
     if not os.path.exists(zipf):
         raise Exception('Zipfile missing')
 
@@ -280,40 +280,53 @@ def image_from_zip(zipf, image_path,
     else:
         unzip_cmd = 'unzip -p ' + zipf + ' ' + image_path
 
-    if in_img_type == 'jp2':
-        kdu_region = get_kdu_region_string(orig_page_size, region)
-
-        output = os.popen(unzip_cmd
-                        + ' | kdu_expand -region "' + kdu_region + '"'
-                        +   ' -reduce ' + str(kdu_reduce)
-                        +   ' -no_seek -i /dev/stdin -o /tmp/stdout.bmp'
-                        + ' | bmptopnm -quiet '
-                        + scale
-                        + cvt_to_out)
-    elif in_img_type == 'tif' or in_img_type == 'jpg':
-        crop = ''
-        if region is not None:
-            (l, t), (r, b) = region
-            crop = (' | pamcut -pad -left=%s -top=%s -right=%s -bottom=%s ' %
-                    (l, t, r, b))
-
-        import tempfile
-        tmp_suffix = '.%s' % in_img_type
-        _, t_path = tempfile.mkstemp(prefix='img_for_epub_', suffix=tmp_suffix)
-        clean_me_up = t_path
-        output = os.popen(unzip_cmd
-                        + ' > ' + t_path)
-        output.read()
-        to_pnm = { 'tif': 'tifftopnm',
-                   'jpg': 'jpegtopnm' }
-        output = os.popen(to_pnm[in_img_type] + ' -quiet ' + t_path
-                        + crop
-                        + scale
-                        + cvt_to_out)
-    else:
-        raise Exception('unrecognized in img type')
+    clean_me_up = None
     try:
-        return output.read()
+        result = None
+        if in_img_type == 'jp2':
+            kdu_region = get_kdu_region_string(orig_page_size, region)
+            kdu_cmd_fmt = ('kdu_expand -region "' + kdu_region + '"'
+                        + ' -reduce %s'
+                        + ' -no_seek -i /dev/stdin -o /tmp/stdout.bmp')
+            # try with aggressive kdu_reduce; hide stderr
+            p = Popen(['-c',
+                       unzip_cmd + ' | ' + (kdu_cmd_fmt % kdu_reduce) +
+                       ' | bmptopnm -quiet ' + scale + cvt_to_out],
+                      stdout=PIPE, stderr=PIPE, shell=True)
+            result = p.stdout.read()
+            # retry if above failed, with no kdu_reduce, passing stderr.
+            if p.returncode != 0:
+                p = Popen(['-c',
+                           unzip_cmd + ' | ' + (kdu_cmd_fmt % 0) +
+                           ' | bmptopnm -quiet ' + scale + cvt_to_out],
+                          stdout=PIPE, shell=True)
+                result = p.stdout.read()
+        elif in_img_type == 'tif' or in_img_type == 'jpg':
+            crop = ''
+            if region is not None:
+                (l, t), (r, b) = region
+                crop = (' | pamcut -pad -left=%s -top=%s -right=%s -bottom=%s '
+                        % (l, t, r, b))
+
+            import tempfile
+            tmp_suffix = '.%s' % in_img_type
+            _, t_path = tempfile.mkstemp(prefix='img_for_epub_',
+                                         suffix=tmp_suffix)
+            clean_me_up = t_path
+            output = os.popen(unzip_cmd
+                            + ' > ' + t_path)
+            output.read()
+            to_pnm = { 'tif': 'tifftopnm',
+                       'jpg': 'jpegtopnm' }
+            output = os.popen(to_pnm[in_img_type] + ' -quiet ' + t_path
+                            + crop
+                            + scale
+                            + cvt_to_out)
+            result = output.read
+        else:
+            raise Exception('unrecognized input img type')
+
+        return result
     finally:
         if clean_me_up is not None:
             os.unlink(clean_me_up)
