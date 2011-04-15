@@ -29,12 +29,6 @@ def tryenv(var,dflt):
         return os.environ.get(var)
     else: return dflt
 
-fontmap={}
-def getfontname(s):
-    if (s in fontmap):
-       return fontmap[s]
-    else: return "'%s'"%s
-
 if (os.path.exists(sys.argv[1])):
     bookid='sbook'
     if sys.argv[1].endswith('.gz'):
@@ -176,13 +170,23 @@ def htmlblock(element,leafno):
       b=int(attribs["b"])
       t=int(attribs["t"])
       blockname="abbyyblock%d"%blockcount
+      blocknum=blockcount
       blockcount=blockcount+1
-      return ("<a name='%s' class='block' title='l%db%dx%d@%d,%d'/>"%
-              (blockname,leafno,r-l,b-t,l,t));
+      return ("<a name='%s' class='block' title='l%db%d/%dx%d+%d,%d'/>"%
+              (blockname,leafno,blocknum,r-l,b-t,l,t));
+
+def floatblock(passage):
+    return "<div class='abbyyfloat'>%s</div>"%passage
 
 def linehandler(elt,lineno,leafno):
   global bookid
-  return ("<a name='%s/N%d/L%d' class='line'/>"%(bookid,leafno,lineno));
+  attribs=elt.attrib
+  l=int(attribs["l"])
+  r=int(attribs["r"])
+  b=int(attribs["b"])
+  t=int(attribs["t"])
+  return ("<a name='%s/N%d/L%d' class='line' title='%dx%d+%d,%d'/>"%
+          (bookid,leafno,lineno,r-l,b-t,l,t));
 
 if "debug" in sys.argv:
     debug_arg=True
@@ -200,7 +204,7 @@ for par in abbyystreams.abbyytext(f, header=htmlhead, footer=htmlfoot,
     	   			     format=xmlformat,blockfn=htmlblock,
 				     pagefn=htmlpage,picture=htmlimg,
 				     table=htmltable,escapefn=cgi.escape,
-                                     linefn=linehandler,
+                                     linefn=linehandler,floatfn=floatblock,
                                      debug=debug_arg):
     pars.append(par)
 

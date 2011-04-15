@@ -14,162 +14,200 @@ charParams_tag = ns + 'charParams'
 
 re_page_num = re.compile(r'^\[?\d+\]?$')
 
-def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,linefn=False,blockfn=False,escapefn=False):
+def abbyytext(f, debug=False, header=False, footer=False, picture=False, table=False, format=False,layout=False,pagefn=False,linefn=False,blockfn=False,escapefn=False,floatfn=False):
     passage = ''
     curformat=False
     layoutinfo = False
     pageinfo = False
     leaf_count = 0
     line_count = 0
-    for event, element in iterparse(f):
-        if element.tag == page_tag:
-            leaf_count+= 1
-	    line_count=0
-            pageinfo=element.attrib
-	    if pagefn:
-	      if layoutinfo:
-	      	 layoutinfo=layoutinfo+pagefn(leaf_count,element)
-	      else: layoutinfo=pagefn(leaf_count,element)
+    thread_break=True
+    body_thread=False
+    page_width=0
+    bottom=0
+    for event, page in iterparse(f):
+        if page.tag != page_tag: continue
+        leaf_count+= 1
+        line_count=0
+        bottom=0
+        if (body_thread):
+            yield passage
+            passage=body_thread
+            body_thread=False
+        pageinfo=page.attrib
+        if pagefn:
+            if layoutinfo:
+                layoutinfo=layoutinfo+pagefn(leaf_count,page)
+            else: layoutinfo=pagefn(leaf_count,page)
+        if debug:
+            print 'page', leaf_count, pageinfo
+        flow_break = True
+        page_width = int(pageinfo["width"])
+        for block in page:
+            assert block.tag == block_tag
+            if blockfn:
+               if layoutinfo:
+                  layoutinfo=layoutinfo+blockfn(block,leaf_count)
+               else: layoutinfo=blockfn(block,leaf_count)
+            blockinfo=block.attrib
+            if blockinfo['blockType'] == 'Picture':
+                flow_break=True
+                if (debug):
+                    print "Picture" , block.attrib
+                if (picture):
+                    result,inline=picture(block,leaf_count,pageinfo)
+                    if inline:
+                       if layoutinfo:
+                          layoutinfo=layoutinfo+result
+                       else: layoutinfo=result
+                    else:
+                        if passage != '':
+                           if format and curformat:
+                              formatted=format(passage,False,curformat)
+                              yield formatted
+                           else: yield passage
+                        passage=''
+                        yield result
+                continue
+            if blockinfo['blockType'] == 'Table':
+                flow_break=True
+                if (debug):
+                    print "Table" , block.attrib
+                if (table):
+                   result,inline=table(block,leaf_count)
+                   if inline:
+                      if layoutinfo:
+                         layoutinfo=layoutinfo+result
+                      else: layoutinfo=result
+                   else:
+                    if passage != '':
+                       if format and curformat:
+                          formatted=format(passage,False,curformat)
+                          yield formatted
+                       else: yield passage
+                       passage=''
+                       yield result
+                continue
+            assert blockinfo['blockType'] == 'Text'
+            assert len(block) in (1, 2)
+            region = block[0]
+            assert region.tag == region_tag
+            # text = []
+            if len(block) == 2:
+                e_text = block[1]
+                assert e_text.tag == text_tag
+            block_width=int(blockinfo["r"])-int(blockinfo["l"])
+            if ((int(blockinfo["b"])<bottom) or
+                ((block_width<(3*(page_width/4))) and
+                 (int(blockinfo["l"])>page_width/10))):
+              if (not(body_thread)):
+                  body_thread=passage
+                  thread_break=flow_break
+                  flow_break=True
+                  passage=''
+            elif (body_thread):
+                if (floatfn):
+                    result=floatfn(passage)
+                else: result=passage
+                yield result
+                passage=body_thread
+                flow_break=thread_break
+                body_thread=False
+            else: bottom=int(blockinfo["b"])
             if debug:
-                print 'page', leaf_count
-            page_break = True
-            for block in element:
-                assert block.tag == block_tag
-		if blockfn:
-		   if layoutinfo:
-		      layoutinfo=layoutinfo+blockfn(block,leaf_count)
-		   else: layoutinfo=blockfn(block,leaf_count)
-                if block.attrib['blockType'] == 'Picture':
-                    if (picture):
-                        result,inline=picture(block,leaf_count,pageinfo)
-                        if inline:
-			   if layoutinfo:
-			      layoutinfo=layoutinfo+result
-			   else: layoutinfo=result
-                        else:
-                            if passage != '':
-			       if format and curformat:
-			       	  formatted=format(passage,False,curformat)
-			       	  yield formatted
-			       else: yield passage
-                            passage=''
-                            yield result
-                    continue
-                if block.attrib['blockType'] == 'Table':
-                    if (table):
-                       result,inline=table(block,leaf_count)
-                       if inline:
-		       	  if layoutinfo:
-			     layoutinfo=layoutinfo+result
-			  else: layoutinfo=result
-                       else:
-			if passage != '':
-			   if format and curformat:
-			      formatted=format(passage,False,curformat)
-			      yield formatted
-			   else: yield passage
-                           passage=''
-                           yield result
-                    continue
-                assert block.attrib['blockType'] == 'Text'
-                assert len(block) in (1, 2)
-                region = block[0]
-                assert region.tag == region_tag
-                # text = []
-                if len(block) == 2:
-                    e_text = block[1]
-                    assert e_text.tag == text_tag
-                if debug:
-                    print 'block', block.attrib
-                for par in e_text:
-                    assert par.tag == par_tag
-                    text = ''
-                    first_lower=False
-                    first_char=True
-                    lastr=False
-                    for line in par:
-                        assert line.tag == line_tag
-			line_count+=1
-			if (linefn):
-			   result=linefn(line,line_count,leaf_count)
-			   if result:
-			      if layoutinfo:
-			      	 layoutinfo=layoutinfo+result
-			      else: layoutinfo=result
-                        if (likelyheader(line,par,e_text,block,element,debug)):
-                            if (header):
-                                result=header(linecontent(line),line)
-                                if not result: continue
-                                elif ((type(result)==str) and (result[0]!='\n')):
-				    if layoutinfo:
-				       layoutinfo=layoutinfo+result
-				    else: layoutinfo=result
-                                else:
-                                    if passage != '':
-			       	       if format and curformat:
-			       	       	  formatted=format(passage,False,curformat)
-			       	  	  yield formatted
-			       	       else: yield passage
-                                    passage=''
-                                    yield result
-                            continue
-                        if (likelyfooter(line,par,e_text,block,element,debug)):
-                            if (footer):
-                                result=footer(linecontent(line),line)
-                                if not result: continue
-                                elif ((type(result)==str) and (result[0]!='\n')):
-				     if layoutinfo:
-				     	layoutinfo=layoutinfo+result
-				     else:
-					layoutinfo=result
-                                else:
-                                    if passage != '':
-			       	       if format and curformat:
-			       	       	  formatted=format(passage,False,curformat)
-			       	  	  yield formatted
-			       	       else: yield passage
-                                    passage=''
-                                    yield result
-                            continue
-                        for formatting in line:
-                            assert formatting.tag == formatting_tag
-                            cur = ''.join(e.text for e in formatting)
-                            if cur=='': continue
-                            elif first_char:
-                                first_char=False
-                                if cur[0].islower(): first_lower=True
-		            if escapefn: cur=escapefn(cur)
-                            if format:
-                                formatted=format(cur,formatting.attrib,curformat)
-                                if formatted:
-                                    curformat=formatting.attrib
-                                    cur=formatted
-			    text=addtext(text,cur,layoutinfo)
-			    layoutinfo=False
-                            for charParams in formatting:
-                                assert charParams.tag == charParams_tag
-                    if text == '':
+                if (body_thread):
+                    print 'float', block.attrib
+                else: print 'block', block.attrib
+            for par in e_text:
+                assert par.tag == par_tag
+                text = ''
+                first_lower=False
+                first_char=True
+                lastr=False
+                for line in par:
+                    assert line.tag == line_tag
+                    line_count+=1
+                    if (linefn):
+                       result=linefn(line,line_count,leaf_count)
+                       if result:
+                          if layoutinfo:
+                             layoutinfo=layoutinfo+result
+                          else: layoutinfo=result
+                    if (likelyheader(line,par,e_text,block,page,debug)):
+                        if (header):
+                            result=header(linecontent(line),line)
+                            if not result: continue
+                            elif ((type(result)==str) and (result[0]!='\n')):
+                                if layoutinfo:
+                                   layoutinfo=layoutinfo+result
+                                else: layoutinfo=result
+                            else:
+                                if passage != '':
+                                   if format and curformat:
+                                      formatted=format(passage,False,curformat)
+                                      yield formatted
+                                   else: yield passage
+                                passage=''
+                                yield result
                         continue
-                    if page_break:
-                        if (passage and first_lower):
-                            passage = addtext(passage,text,layoutinfo)
-			    layoutinfo=False
-                            page_break = False
-                            continue
-                        page_break = False
-                    if passage:
-		       if format and curformat:
-		       	  formatted=format(passage,False,curformat)
-			  yield formatted
-		       else: yield passage
-                    passage = text
-            element.clear()
+                    if (likelyfooter(line,par,e_text,block,page,debug)):
+                        if (footer):
+                            result=footer(linecontent(line),line)
+                            if not result: continue
+                            elif ((type(result)==str) and (result[0]!='\n')):
+                                 if layoutinfo:
+                                    layoutinfo=layoutinfo+result
+                                 else:
+                                    layoutinfo=result
+                            else:
+                                if passage != '':
+                                   if format and curformat:
+                                      formatted=format(passage,False,curformat)
+                                      yield formatted
+                                   else: yield passage
+                                passage=''
+                                yield result
+                        continue
+                    for formatting in line:
+                        assert formatting.tag == formatting_tag
+                        cur = ''.join(e.text for e in formatting)
+                        if cur=='': continue
+                        elif first_char:
+                            first_char=False
+                            if cur[0].islower(): first_lower=True
+                        if escapefn: cur=escapefn(cur)
+                        if format:
+                            formatted=format(cur,formatting.attrib,curformat)
+                            if formatted:
+                                curformat=formatting.attrib
+                                cur=formatted
+                        text=addtext(text,cur,layoutinfo)
+                        layoutinfo=False
+                        for charParams in formatting:
+                            assert charParams.tag == charParams_tag
+                if text == '':
+                    continue
+                if (passage and first_lower):
+                    passage = addtext(passage,text,layoutinfo)
+                    layoutinfo=False
+                    flow_break = False
+                    continue
+                if passage:
+                   if format and curformat:
+                      formatted=format(passage,False,curformat)
+                      yield formatted
+                   else: yield passage
+                passage = text
+        if (body_thread):
+            yield passage
+            passage=body_thread
+            body_thread=False
+    page.clear()
     if passage:
        if format and curformat:
        	  formatted=format(passage,False,curformat)
 	  yield formatted
        else: yield passage
-
 
 def addtext(passage,text,layout=False):
     if passage=='':
@@ -183,26 +221,32 @@ def addtext(passage,text,layout=False):
         
 
 def likelyheader(line,para,text,block,page,debug):
+    pagewidth=int(page.attrib["width"])
     if ((line==para[0]) and (para==text[0]) and
         (block==page[0]) and (len(para) == 1)):
         if (atpagetop(block,page,debug)):
-            return (checkoddlyspaced(line,debug))
+            return (checkoddlyspaced(line,debug,pagewidth))
         elif (atpagetop(block,page,debug,2)):
-            return (checkoddlyspaced(line,debug,2))
+            return (checkoddlyspaced(line,debug,pagewidth,2))
         else: return False
     else: return False
 
 def likelyfooter(line,para,text,block,page,debug):
+    pagewidth=int(page.attrib["width"])
     if ((line==para[-1]) and (para==text[-1]) and
         (block==page[-1]) and (len(para) == 1)):
         if (atpagebottom(block,page,debug)):
-            return (checkoddlyspaced(line,debug))
+            return (checkoddlyspaced(line,debug,pagewidth))
         elif (atpagebottom(block,page,debug,2)):
-            return (checkoddlyspaced(line,debug,2))
+            return (checkoddlyspaced(line,debug,pagewidth,2))
         else: return False
     else: return False
 
-def checkoddlyspaced(line,debug=False,pos=0,thresh=5):
+def checkoddlyspaced(line,debug=False,pagewidth=False,pos=0,thresh=5):
+    if (pagewidth):
+        la=line.attrib
+        linewidth=int(la["r"])-int(la["l"])
+        if (linewidth<pagewidth/2): return True
     charwidth=0
     charspace=0
     nchars=0
@@ -265,5 +309,4 @@ def closenough(lastr,lastbutr):
 
 def oob_trace(kind,string,data):
     print "%s:%s"%(kind,string)
-
 
