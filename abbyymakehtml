@@ -12,8 +12,8 @@ else:
    base=re.sub('\.html$', '', base)
    print base
    if "nowrap" in sys.argv:
-      args=["/git/epub/abbyy2html",base,"nowrap"]
+      args=["/src/epub/abbyy2html",base,"nowrap"]
    else:
-      args=["/git/epub/abbyy2html",base]
+      args=["/src/epub/abbyy2html",base]
    proc=subprocess.Popen(args,stdout=open(sys.argv[1],"w"))
    proc.wait()

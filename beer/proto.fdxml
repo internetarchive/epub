@@ -19,6 +19,7 @@
 	  padding-top: 10px;
 	  padding-bottom: 10px;
 	  }
+	 .bookMeta .button {float: right; border: transparent 3px;}
 	  .sideBySide {
 	  display: block;
 	  }
@@ -30,8 +31,23 @@
 	  background-color: white;
 	  padding: 20px;
 	  }
-	  .abbyypagehead { display: none;}
-	  .abbyypagefoot { display: none;}
+	  .abbyypagehead, .abbyypagefoot {
+         opacity: 0.5; background-color: silver;
+	 display: none;}
+	 .abbyyblock, .abbyyline {
+	   opacity: 0.7; color: blue;
+	 display: none;}
+
+	 body.showblocks .abbyyblock { display: inline;}
+	 body.showlines .abbyyline { display: inline;}
+	 body.showhidden span.abbyypagehead,
+	 body.showhidden span.abbyypagefoot
+	 {display: inline;}
+
+	 span.droppedhyphen {
+	 content: '-'; opacity: 0.5; background-color: pink;
+	 display: none;}
+	 body.showhidden span.droppedhyphen {  display: inline;
 	  td#PAGETEXT img { display: none;}
 	  td#PAGETEXT p { display: none;}
 	  td#PAGETEXT p.displayed { display: block;}
@@ -50,7 +66,23 @@
 	     value="$(CGIGET 'LEAF)" style="width: 15%" />
       <input type="submit" /> 
     </form> 
-    <div class="bookMeta"> <a href="$" target="_blank"><?= (olib/get olib 'title)?></a> by <a href="$AUTHOR" target="_blank"><?= (olib/get (olib/get olib 'authors) 'name)?></a>, page <span id="PAGEDISPLAY"><?= leaf?></span>&nbsp;&nbsp;&nbsp;<a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>&nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a> <?= olib ?></div> 
+    <div class="bookMeta">
+      <a href="$" target="_blank"><?= (olib/get olib 'title)?></a>
+      by <a href="$AUTHOR" target="_blank">
+	<?= (olib/get (olib/get olib 'authors) 'name)?></a>,
+      page <span id="PAGEDISPLAY"><?= leaf?></span>
+      &nbsp;&nbsp;&nbsp;
+      <a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>
+      &nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a>
+      <?= olib ?>
+      <span class="button" onclick="toggleClass(document.body,'elisions')">
+	elisions</span>
+      <span class="button" onclick="toggleClass(document.body,'lineinfo')">
+	line info</span>
+      <span class="button" onclick="toggleClass(document.body,'blocks')">
+	blocks</span>
+
+    </div> 
     <table class="sideByside"> 
       <tr> 
 	<!--

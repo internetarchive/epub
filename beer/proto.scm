@@ -1,8 +1,8 @@
 (use-module '{fdweb xhtml texttools})
 (use-module '{openlibrary})
 
-(define abbyymakehtml (get-component "abbyymakehtml"))
-(define tmpdir "/tmp/")
+(define abbyymakehtml (get-component "../abbyymakehtml"))
+(define tmpdir "/tmp/abbyy2html")
 
 (define (showtext olib)
   (let ((path (mkpath tmpdir (string-append olib ".html"))))
