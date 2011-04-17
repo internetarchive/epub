@@ -19,26 +19,28 @@ edgethresh=0.1
 
 global_classmap={}
 
-def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
-    leaf_count=1
+def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
+    leaf_count=-1
     block_count=0
     para_count=0
     line_count=0
     leaf_line_count=0
     page_height=-1
     page_width=-1
+    page_top=True
     for event,node in iterparse(f,events):
         if ((node.tag == page_tag) and (event=='end')):
             node.clear()
             continue
-        elif (node.tag == page_tag):
+        elif ((node.tag == page_tag) and (event=='start')):
             pageinfo=node.attrib
             page_height=int(pageinfo["height"])
             page_width=int(pageinfo["width"])
             leaf_count=leaf_count+1
             leaf_line_count=1
-            yield ("<a class='leafstart' name='abbyleaf%d' data-book='%dx%d'/>"%
-                   (leaf_count,page_width,page_height))
+            page_top=True
+            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-book='%dx%d'></a>"%
+                   (leaf_count,leaf_count,page_width,page_height))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib
@@ -48,13 +50,13 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
             b=int(blockinfo['b'])
             block_count=block_count+1
             if inline_blocks:
-                yield ("<a class='%s' name='abbyblock%d' data-book='p%d/%dx%d+%d,%d'/>"%
-                       ((getclassname("block",blockinfo,page_height)),block_count,
-                        leaf_count,r-l,b-t,l,t))
+                yield ("<a class='%s' name='abbyyblock%d' data-book='p%d/%dx%d+%d,%d'></a>"%
+                       ((getclassname("abbyyblock",blockinfo,page_height,page_top)),
+                        block_count,leaf_count,r-l,b-t,l,t))
             else:
-                yield ("<div class='%s' id='abbyblock%d' data-book='p%d/%dx%d+%d,%d'>"%
-                       ((getclassname("block",blockinfo,page_height)),block_count,
-                        leaf_count,r-l,b-t,l,t))
+                yield ("<div class='%s' id='abbyyblock%d' data-book='p%d/%dx%d+%d,%d'>"%
+                       ((getclassname("abbyyblock",blockinfo,page_height,page_top)),
+                        block_count,leaf_count,r-l,b-t,l,t))
             blocktype=blockinfo['blockType']
             if (blocktype=='Text'): continue
             elif (blocktype=='Picture'):
@@ -63,15 +65,9 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
                 continue
             else: continue
         elif ((node.tag == block_tag) and (event=='end')):
+            page_top=False
             if inline_blocks:
-                blockinfo=node.attrib
-                l=int(blockinfo['l'])
-                t=int(blockinfo['t'])
-                r=int(blockinfo['r'])
-                b=int(blockinfo['b'])
-                yield ("<a class='%s' name='abbyblock%d' data-book='p%d/%dx%d+%d,%d'/>"%
-                       ((getclassname("block",blockinfo,page_height)),block_count,
-                        leaf_count,r-l,b-t,l,t))
+                continue
             else:
                 yield "</div>"
             continue
@@ -83,6 +79,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
             para_b=page_height
             para_count=para_count+1
             curfmt=False
+            curclass=False
             line_no=0
             for line in node:
                 hyphenated=False
@@ -99,7 +96,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
                     first_char = line[0][0]
                     if (first_char.attrib.get('wordStart') == 'false' or
                         first_char.attrib.get('wordFromDictionary') == 'false'):
-                        text=text[:-1]+"<span class='droppedhyphen'></span>"
+                        text=text[:-1]+"<span class='abbyydroppedhyphen'></span>"
                         hyphenated=True
                 line_count=line_count+1
                 if (line_no>0) and (not hyphenated):
@@ -109,21 +106,38 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
                 else:
                     line_no=1
                 leaf_line_count=leaf_line_count+1
-                text=text+("<a class='%s' NAME='%sp%dn%d' data-book='p%d/%dx%d+%d,%d' data-baseline='%d'/>"%
-                           (getclassname("line",lineinfo,page_height),
-                            book_id,leaf_count,leaf_line_count,leaf_count,r-l,b-t,l,t,
-                            int(lineinfo['baseline'])))
+                lineclass=getclassname("abbyyline",lineinfo,page_height,page_top)
+                anchor=("<a class='%s' NAME='%sp%dn%d' data-book='p%d/%dx%d+%d,%d' data-baseline='%d'"%
+                        (lineclass,book_id,
+                         leaf_count,leaf_line_count,leaf_count,
+                         r-l,b-t,l,t,
+                         int(lineinfo['baseline'])))
+                closeanchor=""
+                if ((lineclass.find("abbyypagehead")>=0) or
+                    (lineclass.find("abbyypagefoot")>=0)):
+                    if curfmt:
+                        text=text+"</span>"+anchor+">"+"<span class='"+curclass+"'>"
+                        closeanchor="</span></a>"
+                    else:
+                        text=text+anchor+">"
+                        closeanchor="</a>"
                 for formatting in line:
                     fmt=formatting.attrib
                     classname=getcssname(fmt,curfmt,classmap)
                     if (classname):
+                        curfmt=fmt
+                        curclass=classname
+                    if (classname):
                         if (curfmt): text=text+"</span>"
                         text=text+("<span class='%s'>"%classname)
                     text=text+''.join(c.text for c in formatting)
+                text=text+closeanchor
             if (curfmt): text=text+"</span>"
             
-            classname=getclassname("para",{"l": l,"t": t,"r": r,"b": b},page_height)
-            if (classname.find("pagehead")>=0) or (classname.find("pagefoot")>=0):
+            classname=getclassname("abbyypara",{"l": l,"t": t,"r": r,"b": b},
+                                   page_height,page_top)
+            if ((classname.find("abbyypagehead")>=0) or
+                (classname.find("abbyypagefoot")>=0)):
                 tagname="span"
                 newline=""
             else:
@@ -134,6 +148,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=False):
                     book_id,para_count,
                     leaf_count,r-l,b-t,l,t,
                     text.strip(),tagname,newline))
+            curfmt=False
+            curclass=False
                     
 fontmap={}
 def getfontname(s):
@@ -173,14 +189,16 @@ def getcssname(format,curformat,classmap):
        return classname
     else: return False
 
-def getclassname(base,attrib,height):
+def getclassname(base,attrib,height,pagetop):
     t=int(attrib['t'])
     b=int(attrib['b'])
     thresh=height*edgethresh
-    threshplus=thresh*1.5
+    if pagetop:
+        thresh=thresh*0.75
     if (b<thresh):
-        return base+" pagehead"
+        return base+" abbyypagehead"
     if ((height-t)<thresh):
-        return base+" pagefoot"
+        return base+" abbyypagefoot"
     return base
 
+        
