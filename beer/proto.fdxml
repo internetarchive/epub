@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<?fdxml load="proto.scm" piescape="=" ?>
+<!DOCTYPE html> 
+<html xmlns="http://www.w3.org/1999/xhtml"> 
+  <head> 
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <title>Untitled Document</title> 
+    <style type="text/css"> 
+      <!--
+	  body {
+	  font-family: Palatino, "Times New Roman", Times, serif;
+	  padding: 20px;
+	  background-color: #e2dcc5;
+	  font-size: 1em;
+	  }
+	  .bookMeta {
+	  font-size: 1.25em;
+	  font-weight:bold;
+	  padding-top: 10px;
+	  padding-bottom: 10px;
+	  }
+	  .sideBySide {
+	  display: block;
+	  }
+	  td {vertical-align: top;}
+	  .pageImage {
+	  }
+	  .pageText {
+	  border: 1px solid black;
+	  background-color: white;
+	  padding: 20px;
+	  }
+	  .abbyypagehead { display: none;}
+	  .abbyypagefoot { display: none;}
+	  td#PAGETEXT img { display: none;}
+	  td#PAGETEXT p { display: none;}
+	  td#PAGETEXT p.displayed { display: block;}
+  	  td#PAGETEXT a.displayed p { display: block;}
+	-->
+    </style> 
+    <meta name="IMGTEMPLATE" content="$(getpageurl (cgiget 'olib))"/>
+    <script language="javascript" src="proto.js"></script>
+  </head> 
+  <body onload="init(); gotoPage();" data-startpage="$leaf"> 
+    <form action="proto.fdxml"> 
+      Enter OLIB identifier (e.g. OL1368406M) and leaf (page, sort of) number:<br /> 
+      <input type="text" NAME= "OLIB"
+	     value="$(CGIGET 'OLIB)" style="width: 70%" />
+      <input type="text" NAME= "LEAF" ID="PAGEINPUT"
+	     value="$(CGIGET 'LEAF)" style="width: 15%" />
+      <input type="submit" /> 
+    </form> 
+    <div class="bookMeta"> <a href="$" target="_blank"><?= (olib/get olib 'title)?></a> by <a href="$AUTHOR" target="_blank"><?= (olib/get (olib/get olib 'authors) 'name)?></a>, page <span id="PAGEDISPLAY"><?= leaf?></span>&nbsp;&nbsp;&nbsp;<a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>&nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a> <?= olib ?></div> 
+    <table class="sideByside"> 
+      <tr> 
+	<!--
+        <td class="pageImage"><img src="http://ia600109.us.archive.org/BookReader/BookReaderImages.php?zip=/4/items/handofethelberta01hard/handofethelberta01hard_jp2.zip&file=handofethelberta01hard_jp2/handofethelberta01hard_0022.jp2&scale=4&rotate=0" ID="PAGEIMAGE"/> </td> 
+	-->
+        <td class="pageImage">
+	  <img src="$(getpageurl olib leaf)"
+	       ID="PAGEIMAGE"/>
+	</td> 
+        <td class="pageText" id="PAGETEXT">
+	<showtext olib="$OLIB"/>
+	</td> 
+      </tr> 
+    </table> 
+  </body> 
+</html> 
