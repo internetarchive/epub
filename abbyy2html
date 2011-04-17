@@ -75,9 +75,13 @@ if "nowrap" in sys.argv:
     wrapbody=False
 
 pagemerge=(not ("nopagemerge" in sys.argv))
+# All the strings to be output (not strictly paragraphs, though)
 pars=[]
-waiting=[]
+# The current open paragraph
 openpar=False
+# The non-body elements processed since the open body paragraph
+waiting=[]
+# Whether the current paragraph ends with a hyphen
 openhyphen=False
 classmap={}
 if pagemerge:
@@ -90,16 +94,21 @@ if pagemerge:
                 firstlower=re.search("(?m)>\s*[a-z]",line)
                 if ((not firstletter or not firstlower) or
                     ((firstletter.start()) != (firstlower.start()))):
+                    # Not a continuation, so push the open paragraph
                     pars.append(openpar)
+                    # add any intervening elements
                     for elt in waiting:
                         pars.append(elt)
                     waiting=[]
+                    # and start with a new open paragraph
                     openpar=line
                 else:
-                    markup_end=line.find(">")
+                    # This paragraph continues the previous one, so
+                    #   we append it to openpar, with waiting elements
+                    #   added to the middle
                     if openhyphen:
                         par_end=openhyphen.start()
-                        openpar=openpar[0:par_end]+"<span class='hyphen'></span>"
+                        openpar=openpar[0:par_end]+"<span class='abbyydroppedhyphen'>-</span>"
                     else:
                         search_end=re.search("(?m)</p>",openpar)
                         if search_end:
@@ -108,12 +117,16 @@ if pagemerge:
                             openpar=openpar+" "
                     for elt in waiting:
                         openpar=openpar+elt
-                    openpar=openpar+line[markup_end+1:]
+                    waiting=[]
+                    textstart=line.find(">")
+                    openpar=openpar+line[textstart+1:]
             else:
+                # This is the first paragraph
                 openpar=line
                 for elt in waiting:
                     pars.append(elt)
-                    waiting=[]
+                waiting=[]
+            # Check if the current open paragraph ends with a hyphen
             openhyphen=re.search("(?m)-\s*</p>",openpar)
         else:
             waiting.append(line)

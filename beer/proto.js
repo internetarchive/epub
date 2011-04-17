@@ -54,14 +54,15 @@ function gotoPage(n)
 
 function toggleClass(elt,classname)
 {
-  var rx=new Regexp("\b"+classname+"\b");
-  var current=elt.className;
-  if (current===classname)
-    elt.className=null;
-  else if ((current)&&(current.search(rx)>=0))
-    elt.className=
-      current.replace(rx,"").replace(/\s+/," ").trim();
-  else if (current)
-    elt.className=current+" "+classname;
-  else elt.className=classname;
+    var rx=new RegExp("\\b"+classname+"\\b","g");
+    var current=elt.className;
+    if (!(current))
+	elt.className=classname;
+    else if (current===classname)
+	elt.className=null;
+    else if ((current)&&(current.search(rx)>=0))
+	elt.className=current.replace(rx,"").replace(/\s+/," ").trim();
+    else if (current)
+	elt.className=current+" "+classname;
+    else elt.className=classname;
 }

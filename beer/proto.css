@@ -1,0 +1,77 @@
+body {
+    font-family: Palatino, "Times New Roman", Times, serif;
+    padding: 20px;
+    background-color: #e2dcc5;
+    font-size: 1em;
+}
+.bookMeta {
+    font-size: 1.25em;
+    font-weight:bold;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.bookMeta .button {
+    float: right; cursor: pointer; font-weight: normal; font-size: 0.75em;
+    background-color: ivory;
+    border: solid lightblue 3px;
+    padding: 2px;
+    border-radius: 6px; -moz-border-radius: 6px; -webkit-border-radius: 6px;
+    margin-left: 6px;
+    vertical-align: top;
+}
+.bookMeta .label {
+    float: right; font-weight: bold; font-size: 125%;
+    vertical-align: top;
+}
+
+.sideBySide {
+    display: block;
+}
+
+td {vertical-align: top;}
+
+.pageImage {
+}
+.pageText {
+    border: 1px solid black;
+    background-color: white;
+    padding: 20px;
+}
+.abbyypagehead, .abbyypagefoot {
+    opacity: 0.7; background-color: silver;
+    padding-right: 4px; padding-left: 4px; 
+    display: none;}
+.abbyyblock, .abbyylineinfo {
+    padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
+    display: none;}
+.abbyyleafstart {
+    padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
+    background-color: silver;
+    display: none;}
+span.abbyydroppedhyphen {
+    content: '-'; opacity: 0.5; background-color: pink; color: blue;
+    display: none;}
+
+body.showblocks .displayed .abbyyblock,
+body.showlines .displayed .abbyylineinfo,
+body.showpages .displayed .abbyyleafstart {
+    display: inline;}
+body.showhidden .displayed .abbyypagehead,
+body.showhidden .displayed .abbyypagefoot, 
+body.showhidden .displayed .droppedhyphen {
+    display: inline;}
+
+body.showblocks .bookMeta .button#BLOCKSBUTTON,
+body.showlines .bookMeta .button#LINESBUTTON,
+body.showpages .bookMeta .button#PAGESBUTTON,
+body.showhidden .bookMeta .button#HIDDENBUTTON {
+    border-style: inset; border-color: blue; color: blue;}
+
+body.showhidden span.droppedhyphen {  display: inline; }
+
+td#PAGETEXT img { display: none;}
+td#PAGETEXT p { display: none;}
+td#PAGETEXT p.displayed { display: block;}
+td#PAGETEXT a.displayed p { display: block;}
+
