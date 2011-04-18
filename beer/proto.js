@@ -11,6 +11,14 @@ function init()
 	    img_template=meta_items[i].content;
 	    break;}
 	else i++;}
+    var lineinfo=document.getElementsByClassName("abbyylineinfo");
+    if (lineinfo) {
+	var i=0; var lim=lineinfo.length;
+	while (i<lim) {
+	    var info=lineinfo[i++];
+	    var newbreak=document.createElement("BR");
+	    newbreak.className="abbyybreak";
+	    info.parentNode.insertBefore(newbreak,info);}}
     return img_template;
 }
 

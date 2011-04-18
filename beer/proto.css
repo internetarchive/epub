@@ -31,13 +31,12 @@ body {
 
 td {vertical-align: top;}
 
-.pageImage {
-}
+.pageImage {}
 .pageText {
     border: 1px solid black;
     background-color: white;
-    padding: 20px;
-}
+    padding: 20px;}
+br.abbyybreak { display: none;}
 .abbyypagehead, .abbyypagefoot {
     opacity: 0.7; background-color: silver;
     padding-right: 4px; padding-left: 4px; 
@@ -57,13 +56,19 @@ body.showblocks .displayed .abbyyblock,
 body.showlines .displayed .abbyylineinfo,
 body.showpages .displayed .abbyyleafstart {
     display: inline;}
+
+body.showbreaks .displayed br.abbyybreak { display: inline;}
+body.showbreaks .displayed .abbyydroppedhyphen {
+    display: inline; font-size: 150%;}
+
 body.showhidden .displayed .abbyypagehead,
 body.showhidden .displayed .abbyypagefoot, 
-body.showhidden .displayed .droppedhyphen {
+body.showhidden .displayed .abbyydroppedhyphen {
     display: inline;}
 
 body.showblocks .bookMeta .button#BLOCKSBUTTON,
 body.showlines .bookMeta .button#LINESBUTTON,
+body.showbreaks .bookMeta .button#BREAKSBUTTON,
 body.showpages .bookMeta .button#PAGESBUTTON,
 body.showhidden .bookMeta .button#HIDDENBUTTON {
     border-style: inset; border-color: blue; color: blue;}
