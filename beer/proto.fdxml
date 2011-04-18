@@ -6,23 +6,23 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
     <title>Untitled Document</title> 
     <link rel="stylesheet" type="text/css" href="proto.css"/>
-    <meta name="IMGTEMPLATE" content="$(getpageurl (cgiget 'olib))"/>
+    <meta name="IMGTEMPLATE" content="$(getpageurl olib)"/>
     <script language="javascript" src="proto.js"></script>
   </head> 
   <body onload="init(); gotoPage();" data-startpage="$leaf"> 
     <form action="proto.fdxml"> 
       Enter OLIB identifier (e.g. OL1368406M) and leaf (page, sort of) number:<br /> 
       <input type="text" NAME= "OLIB"
-	     value="$(CGIGET 'OLIB)" style="width: 70%" />
+	     value="$OLIB" style="width: 70%" />
       <input type="text" NAME= "LEAF" ID="PAGEINPUT"
-	     value="$(CGIGET 'LEAF #t)" style="width: 15%" />
+	     value="$(-&gt;NUMBER LEAF)" style="width: 15%" />
       <input type="submit" />
-    </form> 
+    </form>
     <div class="bookMeta">
-      <a href="$" target="_blank"><?= (olib/get olib 'title)?></a>
-      by <a href="$AUTHOR" target="_blank">
+      <a href="$(GETBOOKLINK OLIB)" target="_blank"><?= (olib/get olib 'title)?></a>
+      by <a href="$(GETAUTHORLINK (PICK-ONE (olib/get olib 'authors)))" target="_blank">
 	<?= (olib/get (olib/get olib 'authors) 'name)?></a>,
-      page <span id="PAGEDISPLAY"><?= (cgiget 'leaf #t)?></span>
+      page <span id="PAGEDISPLAY"><?= (-&gt;number leaf)?></span>
       &nbsp;&nbsp;&nbsp;
       <a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>
       &nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a>
@@ -46,11 +46,11 @@
         <td class="pageImage"><img src="http://ia600109.us.archive.org/BookReader/BookReaderImages.php?zip=/4/items/handofethelberta01hard/handofethelberta01hard_jp2.zip&file=handofethelberta01hard_jp2/handofethelberta01hard_0022.jp2&scale=4&rotate=0" ID="PAGEIMAGE"/> </td> 
 	-->
         <td class="pageImage">
-	  <img src="$(getpageurl (cgiget 'olib) (cgiget 'leaf #t))"
+	  <img src="$(getpageurl olib (-&gt;number leaf))"
 	       ID="PAGEIMAGE"/>
 	</td> 
         <td class="pageText" id="PAGETEXT">
-	<showtext olib="$(cgiget 'OLIB)"/>
+	<showtext olib="$OLIB"/>
 	</td> 
       </tr> 
     </table> 

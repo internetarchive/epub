@@ -34,3 +34,9 @@
       "&file=" (printout bookid "_jp2/" bookid "_"
 		 (if pageno (padpageno pageno) "%%%%")
 		 ".jp2&scale=4&rotate=0"))))
+
+(define (getbooklink olib)
+  (stringout "http://openlibrary.org/books/" (olib/key olib)))
+
+(define (getauthorlink olib)
+  (stringout "http://openlibrary.org/authors/" (olib/key olib)))
