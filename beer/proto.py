@@ -1,13 +1,35 @@
+#!/usr/bin/env python
 from urllib2 import urlopen, HTTPError
 from urlparse import urlparse
 
 import sys
+import subprocess
 import os
 import string
 import StringIO
 import json
 import cgi
 import re
+import io
+
+abbyy2html="/src/epub/abbyy2html"
+tmp_cache="/tmp/%s"
+
+def getbooktext(olib):
+    path=tmp_cache%olib
+    if (os.path.exists(path)):
+        text=io.open(path,"rt",encoding="utf-8").read()
+    else:
+        args=[abbyy2html,olib,"nowrap"]
+        proc=subprocess.Popen(args,stdout=open(path,"w",encoding="utf-8"))
+        proc.wait()
+        text=io.open(path,"rt",encoding="utf-8").read()
+    body_start=re.search("(?i)<body[^>]*>",text)
+    body_end=re.search("(?i)</body[^>]*>",text)
+    if ((body_start) and (body_end)):
+        return text[body_start.end():body_end.start()]
+    else:
+        return text
 
 def getbookpath(iaid):
     tmp_url="http://www.archive.org/download/%s/%s_meta.xml"%(iaid,iaid)
@@ -56,13 +78,15 @@ rewrite=string.replace(
             string.replace(
                 string.replace(
                     string.replace(
-                        string.replace(template,"%%OLIB",olib),
-                        "%%LEAF",str(leaf)),
-                    "%%TTILE",olibinfo["title"]),
-                "%%IMGTEMPLATE",getimageurl(olib,bookpath)),
-            "%%BOOKLINK",getbooklink(olib)),
-        "%%AUTHORLINK",getauthorlink(authorid)),
-    "%%AUTHORNAME",authorinfo["name"])
+                        string.replace(
+                            string.replace(template,"%%OLIB",olib),
+                            "%%LEAF",str(leaf)),
+                        "%%TTILE",olibinfo["title"]),
+                    "%%IMGTEMPLATE",getimageurl(olib,bookpath)),
+                "%%BOOKLINK",getbooklink(olib)),
+            "%%AUTHORLINK",getauthorlink(authorid)),
+        "%%AUTHORNAME",authorinfo["name"]),
+    "%%BOOKTEXT",getbooktext(olib))
 
 print "Content-type: text/html"
 print
