@@ -3,6 +3,9 @@
 <!DOCTYPE html> 
 <html xmlns="http://www.w3.org/1999/xhtml"> 
   <head> 
+    <?= (unless (cgiget 'olib #F) (cgiset! 'olib "OL2588416M"))
+        (unless (cgiget 'leaf #F) (cgiset! 'leaf 17))
+     ?>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
     <title>Untitled Document</title> 
     <link rel="stylesheet" type="text/css" href="proto.css"/>
@@ -11,7 +14,7 @@
   </head> 
   <body onload="init(); gotoPage();" data-startpage="$leaf"> 
     <form action="proto.fdxml"> 
-      Enter OLIB identifier (e.g. OL1368406M) and leaf (page, sort of) number:<br /> 
+      Enter OLIB identifier (e.g. OL13684064M) and leaf (page, sort of) number:<br /> 
       <input type="text" NAME= "OLIB"
 	     value="$(CGIGET 'OLIB)" style="width: 70%" />
       <input type="text" NAME= "LEAF" ID="PAGEINPUT"

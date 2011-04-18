@@ -34,3 +34,4 @@
       "&file=" (printout bookid "_jp2/" bookid "_"
 		 (if pageno (padpageno pageno) "%%%%")
 		 ".jp2&scale=4&rotate=0"))))
+
