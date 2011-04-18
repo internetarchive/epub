@@ -1,0 +1,55 @@
+<!DOCTYPE html> 
+<html xmlns="http://www.w3.org/1999/xhtml"> 
+  <head> 
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <title>%%TITLE</title>
+    <link rel="stylesheet" type="text/css" href="proto.css"/>
+    <meta name="IMGTEMPLATE" content="%%IMGTEMPLATE"/>
+    <script language="javascript" src="proto.js"></script>
+  </head> 
+  <body onload="init(); gotoPage();" data-startpage="%%LEAF"> 
+    <form action="proto.fdxml"> 
+      Enter OLIB identifier (e.g. OL13684064M) and leaf (~page) number:<br /> 
+      <input type="text" NAME= "OLIB"
+	     value="%%OLIB" style="width: 70%" />
+      <input type="text" NAME= "LEAF" ID="PAGEINPUT"
+	     value="%%LEAF" style="width: 15%"
+	     onkeypress="leaf_keypress(event);"/>
+      <input type="submit" />
+    </form>
+    <div class="bookMeta">
+      <a href="%%BOOLINK" target="_blank">%%TITLE</a>
+      by <a href="%%AUTHORLINK" target="_blank">%%AUTHORNAME</a>,
+      page <span id="PAGEDISPLAY">%%LEAF</span>
+      &nbsp;&nbsp;&nbsp;
+      <a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>
+      &nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a>
+      %%OLIB
+      <span class="button" onclick="toggleClass(document.body,'showpages')"
+	    id="PAGESBUTTON">
+	pages</span>
+      <span class="button" onclick="toggleClass(document.body,'showhidden')"
+	    id="HIDDENBUTTON">
+	hidden</span>
+      <span class="button" onclick="toggleClass(document.body,'showlines')"
+	    id="LINESBUTTON">
+	line info</span>
+      <span class="button" onclick="toggleClass(document.body,'showblocks')"
+	    id="BLOCKSBUTTON">
+	blocks</span>
+      <span class="button" onclick="toggleClass(document.body,'showbreaks')"
+	    id="BREAKSBUTTON">
+	breaks</span>
+    </div> 
+    <table class="sideByside"> 
+      <tr> 
+        <td class="pageImage">
+	  <img ID="PAGEIMAGE"/>
+	</td> 
+        <td class="pageText" id="PAGETEXT">
+	<showtext olib="$OLIB"/>
+	</td> 
+      </tr> 
+    </table> 
+  </body> 
+</html> 
