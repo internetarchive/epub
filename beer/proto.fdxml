@@ -7,7 +7,7 @@
         (unless (cgiget 'leaf #F) (cgiset! 'leaf 17))
      ?>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
-    <title>Untitled Document</title> 
+    <title><?= (olib/get olib 'title) ?></title>
     <link rel="stylesheet" type="text/css" href="proto.css"/>
     <meta name="IMGTEMPLATE" content="$(getpageurl olib)"/>
     <script language="javascript" src="proto.js"></script>
