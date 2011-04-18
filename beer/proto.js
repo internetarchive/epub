@@ -74,3 +74,15 @@ function toggleClass(elt,classname)
 	elt.className=current+" "+classname;
     else elt.className=classname;
 }
+
+function leaf_keypress(evt)
+{
+    evt=evt||event;
+    if (evt.charCode===13) {
+	var leafinput=document.getElementById("PAGEINPUT");
+	gotoPage(parseInt(leafinput.value));
+	if (evt.preventDefault) evt.preventDefault();
+	else evt.returnValue=false;
+	evt.cancelBubble=true;
+	return false;}
+}

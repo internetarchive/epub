@@ -18,7 +18,8 @@
       <input type="text" NAME= "OLIB"
 	     value="$OLIB" style="width: 70%" />
       <input type="text" NAME= "LEAF" ID="PAGEINPUT"
-	     value="$(-&gt;NUMBER LEAF)" style="width: 15%" />
+	     value="$(-&gt;NUMBER LEAF)" style="width: 15%"
+	     onkeypress="leaf_keypress(event);"/>
       <input type="submit" />
     </form>
     <div class="bookMeta">
