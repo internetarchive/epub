@@ -90,8 +90,8 @@ if pagemerge:
             pars
         elif (line.startswith("<p")):
             if (openpar):
-                firstletter=re.search("(?m)>\s*[a-zA-z]",line)
-                firstlower=re.search("(?m)>\s*[a-z]",line)
+                firstletter=re.search("(?m)>(\s|'|\")*[a-zA-z]",line)
+                firstlower=re.search("(?m)>(\s|'|\")*[a-z]",line)
                 if ((not firstletter or not firstlower) or
                     ((firstletter.start()) != (firstlower.start()))):
                     # Not a continuation, so push the open paragraph
