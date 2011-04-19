@@ -16,5 +16,5 @@ $olib = escapeshellarg($olib_arg);
 $leaf = escapeshellarg($leaf_arg);
 
 set_time_limit(120);
-passthru("python proto.py $olib $leaf 2>&1");
+passthru("python proof.py $olib $leaf 2>&1");
 ?>

@@ -72,7 +72,7 @@ authorinfo=json.load(olibstream)
 
 bookpath=getbookpath(iaid)
 
-template=open(os.path.join(os.path.dirname(__file__),"proto.html"),"rt",).read()
+template=open(os.path.join(os.path.dirname(__file__),"proof.html"),"rt",).read()
 rewrite=string.replace(
     string.replace(
         string.replace(
