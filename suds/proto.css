@@ -37,6 +37,7 @@ td {vertical-align: top;}
     background-color: white;
     padding: 20px;}
 br.abbyybreak { display: none;}
+.abbyycentered { text-align: center;}
 .abbyypagehead, .abbyypagefoot {
     opacity: 0.7; background-color: silver;
     padding-right: 4px; padding-left: 4px; 

@@ -39,7 +39,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             leaf_count=leaf_count+1
             leaf_line_count=1
             page_top=True
-            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-book='%dx%d'>#p%d</a>"%
+            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-book='%dx%d'>#n%d</a>"%
                    (leaf_count,leaf_count,page_width,page_height,leaf_count))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
@@ -50,12 +50,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             b=int(blockinfo['b'])
             block_count=block_count+1
             if inline_blocks:
-                yield ("<a class='%s' name='abbyyblock%d' data-book='p%d/%dx%d+%d,%d'>#p%db%d</a>"%
-                       ((getclassname("abbyyblock",blockinfo,page_height,page_top)),
+                yield ("<a class='%s' name='abbyyblock%d' data-book='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
+                       ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t,leaf_count,block_count))
             else:
-                yield ("<div class='%s' id='abbyyblock%d' data-book='p%d/%dx%d+%d,%d'>"%
-                       ((getclassname("abbyyblock",blockinfo,page_height,page_top)),
+                yield ("<div class='%s' id='abbyyblock%d' data-book='n%d/%dx%d+%d,%d'>"%
+                       ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t))
             blocktype=blockinfo['blockType']
             if (blocktype=='Text'): continue
@@ -106,8 +106,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                 else:
                     line_no=1
                 leaf_line_count=leaf_line_count+1
-                lineclass=getclassname("abbyyline",lineinfo,page_height,page_top)
-                anchor=("<a class='%s' NAME='%sp%dn%d' data-book='p%d/%dx%d+%d,%d' data-baseline='%d'"%
+                lineclass=getclassname("abbyyline",lineinfo,page_width,page_height,page_top)
+                anchor=("<a class='%s' NAME='%sn%dl%d' data-book='n%d/%dx%d+%d,%d' data-baseline='%d'"%
                         (lineclass,book_id,
                          leaf_count,leaf_line_count,leaf_count,
                          r-l,b-t,l,t,
@@ -121,7 +121,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                     else:
                         text=text+anchor+">"
                         closeanchor="</a>"
-                text=text+("<span class='abbyylineinfo'>#p%dn%d</span>"%(leaf_count,line_count))
+                text=text+("<span class='abbyylineinfo'>#n%dl%d</span>"%(leaf_count,line_count))
                 for formatting in line:
                     fmt=formatting.attrib
                     classname=getcssname(fmt,curfmt,classmap)
@@ -136,7 +136,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             if (curfmt): text=text+"</span>"
             
             classname=getclassname("abbyypara",{"l": l,"t": t,"r": r,"b": b},
-                                   page_height,page_top)
+                                   page_width,page_height,page_top)
             if ((classname.find("abbyypagehead")>=0) or
                 (classname.find("abbyypagefoot")>=0)):
                 tagname="span"
@@ -192,9 +192,11 @@ def getcssname(format,curformat,classmap):
        return classname
     else: return False
 
-def getclassname(base,attrib,height,pagetop):
+def getclassname(base,attrib,width,height,pagetop):
     t=int(attrib['t'])
     b=int(attrib['b'])
+    l=int(attrib['l'])
+    r=int(attrib['r'])
     thresh=height*edgethresh
     if pagetop:
         thresh=thresh*0.75
@@ -204,6 +206,8 @@ def getclassname(base,attrib,height,pagetop):
         return base+" abbyypagefoot"
     elif ((height-b)<(thresh/2)):
         return base+" abbyypagefoot"
+    elif (((r-l)<(width*0.8)) and (l>(width*0.2))):
+        return base+" abbyycentered"
     return base
 
         

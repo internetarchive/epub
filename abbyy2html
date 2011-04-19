@@ -89,7 +89,21 @@ if pagemerge:
         if (len(line)==0):
             pars
         elif (line.startswith("<p")):
-            if (openpar):
+            if (line.find("abbyycentered")>0):
+                if (openpar):
+                    pars.append(openpar)
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    # and start with a new open paragraph
+                    pars.append(line)
+                    openpar=False
+                else:
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    pars.append(line)
+            elif (openpar):
                 firstletter=re.search("(?m)>(\s|'|\")*[a-zA-z]",line)
                 firstlower=re.search("(?m)>(\s|'|\")*[a-z]",line)
                 if ((not firstletter or not firstlower) or
@@ -127,7 +141,10 @@ if pagemerge:
                     pars.append(elt)
                 waiting=[]
             # Check if the current open paragraph ends with a hyphen
-            openhyphen=re.search("(?m)-\s*</p>",openpar)
+            if (openpar):
+                openhyphen=re.search("(?m)-\s*</p>",openpar)
+            else:
+                openhyphen=False
         else:
             waiting.append(line)
     if openpar:
