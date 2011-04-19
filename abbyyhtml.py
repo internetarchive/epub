@@ -77,10 +77,21 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             para_t=0
             para_r=page_width
             para_b=page_height
+            max_r=False
+            min_l=False
             para_count=para_count+1
             curfmt=False
             curclass=False
             line_no=0
+            for line in node:
+                lineinfo=line.attrib
+                l=int(lineinfo['l'])
+                r=int(lineinfo['r'])
+                if not max_r or (r>max_r):
+                    max_r=r
+                if not min_l or (l<min_l):
+                    min_l=l
+            par_width=max_r-min_l
             for line in node:
                 hyphenated=False
                 lineinfo=line.attrib
@@ -92,22 +103,31 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                 if (r>para_r): para_r=r
                 if (t<para_t): para_t=t
                 if (b>para_b): para_b=b
+                first_char = line[0][0]
                 if (text.endswith('-')):
-                    first_char = line[0][0]
                     if (first_char.attrib.get('wordStart') == 'false' or
                         first_char.attrib.get('wordFromDictionary') == 'false'):
                         text=text[:-1]+"<span class='abbyydroppedhyphen'>-</span>"
                         hyphenated=True
-                line_count=line_count+1
-                if (line_no>0) and (not hyphenated):
+                if ((line_no==0) and
+                    (not hyphenated) and
+                    (not (first_char.text.islower())) and
+                    (text!='')):
+                    yield "<p>%s</p>"%text
+                    text=''
+                #if ((l-min_l)>(par_width*0.1)):
+                #    yield "<p>%s</p>"%text
+                #    text=''
+                if (line_no>0) and (not hyphenated) and (text != ''):
                     text=text+' '
                 if (line_no>0):
                     line_no=line_no+1
                 else:
                     line_no=1
                 leaf_line_count=leaf_line_count+1
+                line_count=line_count+1
                 lineclass=getclassname("abbyyline",lineinfo,page_width,page_height,page_top)
-                anchor=("<a class='%s' NAME='%sn%dl%d' data-book='n%d/%dx%d+%d,%d' data-baseline='%d'"%
+                anchor=("<a class='%s' NAME='%sn%di%d' data-book='n%d/%dx%d+%d,%d' data-baseline='%d'"%
                         (lineclass,book_id,
                          leaf_count,leaf_line_count,leaf_count,
                          r-l,b-t,l,t,
@@ -121,7 +141,9 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                     else:
                         text=text+anchor+">"
                         closeanchor="</a>"
-                text=text+("<span class='abbyylineinfo'>#n%dl%d</span>"%(leaf_count,line_count))
+                text=text+("<span class='abbyylineinfo' data-book='%d/%dx%d+%d,%d[%d,%d]'>#n%di%d</span>"%
+                           (leaf_count,r-l,b-t,l,t,min_l,max_r,
+                            leaf_count,line_count))
                 for formatting in line:
                     fmt=formatting.attrib
                     classname=getcssname(fmt,curfmt,classmap)
@@ -133,6 +155,10 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                         text=text+("<span class='%s'>"%classname)
                     text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
+                #if ((max_r-r)>(par_width*0.1)):
+                #    yield "<p>%s</p>"%text
+                #    text=''
+
             if (curfmt): text=text+"</span>"
             
             classname=getclassname("abbyypara",{"l": l,"t": t,"r": r,"b": b},
@@ -146,10 +172,10 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                 newline="\n"
             stripped=text.strip()
             if len(stripped) > 0:
-                yield ("<%s class='%s' id='%s_%d' data-book='%d/%dx%d+%d,%d'>%s</%s>%s"%
+                yield ("<%s class='%s' id='%s_%d' data-book='%d/%dx%d+%d,%d[%d,%d]'>%s</%s>%s"%
                        (tagname,classname,
                         book_id,para_count,
-                        leaf_count,r-l,b-t,l,t,
+                        leaf_count,r-l,b-t,l,t,min_l,max_r,
                         stripped,tagname,newline))
             curfmt=False
             curclass=False
