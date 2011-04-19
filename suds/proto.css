@@ -53,6 +53,8 @@ span.abbyydroppedhyphen {
     content: '-'; opacity: 0.5; background-color: pink; color: blue;
     display: none;}
 
+.offpage { opacity: 0.3;}
+
 body.showblocks .displayed .abbyyblock,
 body.showlines .displayed .abbyylineinfo,
 body.showpages .displayed .abbyyleafstart {
