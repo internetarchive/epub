@@ -59,14 +59,11 @@ span.abbyyword { white-space: nowrap; cursor: pointer;}
 span.abbyyword:hover { text-decoration: underline;}
 
 span.abbyyword.replaced { display: none;}
-span.abbyyword.replacing { text-decoration: line-through; color: red;}
-span.abbyyword.editing {
-    background-color: yellow;
-    padding-left: 1em; padding-right: 1em;}
+span.abbyyword.editing { text-decoration: line-through; color: red;}
 span.abbyyword.edited { color: purple;}
-span.abbyyword.edited:hover { text-decoration: underline;}
 
-.offpage { opacity: 0.3;}
+.offpage { display: none; opacity: 0.3;}
+body.showpages span.offpage, body.showpages a.offpage { display: inline;}
 
 body.showblocks .displayed .abbyyblock,
 body.showlines .displayed .abbyylineinfo,
@@ -82,6 +79,10 @@ body.showhidden .displayed .abbyypagefoot,
 body.showhidden .displayed .abbyydroppedhyphen {
     display: inline;}
 
+body.showedits span.abbyword.replaced {
+    display: inline;}
+
+body.showedits .bookMeta .button#EDITSBUTTON,
 body.showblocks .bookMeta .button#BLOCKSBUTTON,
 body.showlines .bookMeta .button#LINESBUTTON,
 body.showbreaks .bookMeta .button#BREAKSBUTTON,
@@ -96,3 +97,5 @@ td#PAGETEXT p { display: none;}
 td#PAGETEXT p.displayed { display: block;}
 td#PAGETEXT a.displayed p { display: block;}
 
+input.wordeditor {
+    position: absolute; margin-top: -4ex;}

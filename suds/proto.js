@@ -39,13 +39,12 @@ function gotoPage(n)
     while (pagestring.length<4) pagestring="0"+pagestring;
     var img_elt=document.getElementById("PAGEIMAGE");
     img_elt.src=img_template.replace("%%%%",pagestring);
-    var found=document.getElementsByClassName("displayed");
-    var current=[]
-    var i=0; var lim=found.length;
-    while (i<lim) {current[i]=found[i]; i++;}
+    var current=copy_array(document.getElementsByClassName("displayed"));
+    var i=0; var lim=current.length;
     i=0; while (i<lim) {
-	var node=current[i++];
-	node.className=node.className.trim();}
+      var node=current[i++];
+      node.className=node.className.replace(/\bdisplayed\b/,"")
+	.replace(/\s+/," ").trim();}
     var leaf_start=document.getElementById("abbyyleaf"+n);
     var start=leaf_start;
     var leaf_end=document.getElementById("abbyyleaf"+(n+1));
@@ -154,7 +153,8 @@ function leaf_keypress(evt)
 }
 
 var editing=false;
-var replacing=false;
+var editor=false;
+var edit_list=[];
 var change_count=0;
 
 function editword_click(evt)
@@ -167,11 +167,8 @@ function editword_click(evt)
       break;
     else word=word.parentNode;}
   if (!(word)) return;
-  if (word===replacing) {
+  if (word===editing) {
     cancel_edit();
-    return;}
-  else if (word===editing) {
-    save_edit();
     return;}
   else if (editing) save_edit();
   var parent=word.parentNode;
@@ -179,60 +176,58 @@ function editword_click(evt)
   var editno=word.getAttribute("data-revision");
   if (editno) editno=parseInt(editno)+1;
   else editno=1;
-  var replacement=word.cloneNode(true);
-  replacement.setAttribute("data-revision",editno);
-  replacement.className=replacement.className+" editing";
-  if (word.nextSibling)
-    parent.insertBefore(replacement,word.nextSibling);
-  else parent.appendChild(replacement);
-  if (word.className.search(/\breplacing\b/)<0)
-    word.className=word.className+" replacing";
-  var children=copy_array(replacement.childNodes);
-  replacement.innerHTML="";
-  replacing=word;
-  editing=replacement;
+  if (word.className.search(/\bediting\b/)<0)
+    word.className=word.className+" editing";
+  editor=document.createElement("INPUT");
+  editor.type="TEXT";
+  editor.className='wordeditor';
+  editor.value=word.innerHTML;
+  editor.onkeydown=editor_keydown;
+  parent.insertBefore(editor,word);
+  editor.selectionStart=0;
+  editor.selectionEnd=editor.value.length;  
+  editor.focus();
+  editing=word;
   change_count++;
 }
 
 function save_edit()
 {
-  replacing.className=replacing.className.replace(/ replacing$/," replaced");
-  editing.className=editing.className.replace(/ editing$/," edited");
-  replacing=false;
+  var new_content=editor.value;
+  var replacement=editing.cloneNode(true);
+  var now=Date().toString();
+  edit_record={before:editing.innerHTML,
+	       after:new_content,
+	       abbyy: editing.getAttribute("data-abbyy"),
+	       olib: olib,
+	       user:"somebody",
+	       date:now};
+  edit_list.push(edit_record);
+  replacement.innerHTML=new_content;
+  replacement.className=replacement.className
+  editing.parentNode.insertBefore(replacement,editing);
+  editing.className=editing.className.replace(/ editing$/," replaced");
+  replacement.className=replacement.className.replace(/ editing$/," edited");
+  editing.parentNode.removeChild(editor);
   editing=false;
+  editor=false;
 }
 
 function cancel_edit()
 {
-  replacing.className=replacing.className.replace(/ replacing$/,"");
-  editing.parentNode.removeChild(editing);
-  replacing=false;
+  editing.className=editing.className.replace(/ editing$/,"");
+  editing.parentNode.removeChild(editor);
   editing=false;
+  editor=false;
 }
 
-function editword_keypress(evt)
-{
-  evt=evt||event;
-  var kc=evt.charCode;
-  if (!(editing)) return;
-  var text=editing.innerHTML;
-  editing.innerHTML=(text+String.fromCharCode(kc)).trim().replace(/_/,"");
-  editing.className=editing.className;
-}
-
-function editword_keydown(evt)
+function editor_keydown(evt)
 {
   evt=evt||event;
   var kc=evt.keyCode;
   if (!(editing)) return;
   if (kc===13) {
     save_edit();
-    if (evt.preventDefault) evt.preventDefault();
-    else evt.returnValue=false;
-    evt.cancelBubble=true;}
-  else if ((kc===8)||(kc===13)) {
-    var text=editing.innerHTML;
-    editing.innerHTML=text.slice(0,-1);
     if (evt.preventDefault) evt.preventDefault();
     else evt.returnValue=false;
     evt.cancelBubble=true;}
