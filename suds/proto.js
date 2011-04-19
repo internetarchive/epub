@@ -182,7 +182,9 @@ function editword_click(evt)
   var replacement=word.cloneNode(true);
   replacement.setAttribute("data-revision",editno);
   replacement.className=replacement.className+" editing";
-  parent.insertBefore(replacement,word);
+  if (word.nextSibling)
+    parent.insertBefore(replacement,word.nextSibling);
+  else parent.appendChild(replacement);
   if (word.className.search(/\breplacing\b/)<0)
     word.className=word.className+" replacing";
   var children=copy_array(replacement.childNodes);
@@ -228,7 +230,7 @@ function editword_keydown(evt)
     if (evt.preventDefault) evt.preventDefault();
     else evt.returnValue=false;
     evt.cancelBubble=true;}
-  else if (kc===7) {
+  else if ((kc===8)||(kc===13)) {
     var text=editing.innerHTML;
     editing.innerHTML=text.slice(0,-1);
     if (evt.preventDefault) evt.preventDefault();
