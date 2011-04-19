@@ -116,44 +116,15 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             curfmt=False
             curclass=False
             line_no=0
-            # Compute lots of stats about left and right extents
-            # We use these to identify paragraph breaks which abbyy missed
-            max_r=False
-            min_l=False
-            ln=0
-            sum_r=0
-            sum_l=0
-            sum_width=0
-            for line in node:
-                lineinfo=line.attrib
-                l=int(lineinfo['l'])
-                r=int(lineinfo['r'])
-                if not max_r or (r>max_r): max_r=r
-                if not min_l or (l<min_l): min_l=l
-                sum_r=sum_r+r
-                sum_l=sum_l+l
-                sum_width=sum_width+(r-l)
-                ln=ln+1;
-            # If there aren't any lines, just continue
-            if (ln==0): continue
-            mean_r=sum_r/ln
-            mean_l=sum_l/ln
-            mean_width=sum_width/ln
-            par_width=max_r-min_l
-            sum_r2=0
-            sum_l2=0
-            sum_width2=0
-            for line in node:
-                lineinfo=line.attrib
-                l=int(lineinfo['l'])
-                r=int(lineinfo['r'])
-                width=r-l
-                sum_r2=sum_r2+((r-mean_r)*(r-mean_r))
-                sum_l2=sum_l2+((l-mean_l)*(l-mean_l))
-                sum_width2=sum_width2+((width-mean_width)*(width-mean_width))
-            dev_r=sqrt(sum_r2/ln)
-            dev_l=sqrt(sum_r2/ln)
-            dev_width=sqrt(sum_width2/ln)
+            stats=ParaStats(node,page_width,page_height,page_top)
+            # Ignore if there aren't any lines
+            if (stats.n==0): continue
+            max_r=stats.max_r
+            min_l=stats.min_l
+            mean_lmargin=stats.mean_lmargin
+            mean_rmargin=stats.mean_rmargin
+            dev_lmargin=stats.dev_lmargin
+            dev_rmargin=stats.dev_rmargin
             # Walk the lines in the paragraph, gluing them together and
             # wrapping hyphens in abbyydroppedhyphen spans
             for line in node:
@@ -176,8 +147,10 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                         text=text[:-1]+"<span class='abbyydroppedhyphen'>-</span>"
                         hyphenated=True
                 width=r-l
+                lmargin=l-min_l
+                rmargin=max_r-r
                 # If the left margin is indented from the mean, start a new paragraph
-                if ((line_no>0) and ((abs(l-mean_l)>dev_l) or (abs(width-mean_width)>dev_width))):
+                if ((line_no>0) and (abs(lmargin-mean_lmargin)>dev_lmargin)):
                     paratext=getpara(text,book_id,leaf_count,para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
@@ -240,7 +213,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                     # would put word level position information
                     text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
-                if ((abs(r-mean_r))>(dev_r)):
+                if (abs(rmargin-mean_rmargin)>dev_rmargin):
                     # If the current line comes up short, close off the paragraph
                     paratext=getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,page_top)
                     text=''
@@ -262,6 +235,81 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             else:
                 continue
 
+class ParaStats:
+    def __init__(self,node,page_width,page_height,page_top):
+        # Compute lots of stats about left and right extents
+        # We use these to identify paragraph breaks which abbyy missed
+        n=0
+        max_r=False
+        min_l=False
+        sum_r=0
+        sum_l=0
+        sum_width=0
+        for line in node:
+            lineinfo=line.attrib
+            l=int(lineinfo['l'])
+            r=int(lineinfo['r'])
+            if not max_r or (r>max_r): max_r=r
+            if not min_l or (l<min_l): min_l=l
+            sum_r=sum_r+r
+            sum_l=sum_l+l
+            sum_width=sum_width+(r-l)
+            n=n+1;
+        # If there aren't any lines, just continue
+        if (n==0):
+            self.n=0
+            return None
+        mean_r=sum_r/n
+        mean_l=sum_l/n
+        mean_width=sum_width/n
+        par_width=max_r-min_l
+        sum_r2=0
+        sum_l2=0
+        sum_width2=0
+        sum_rmargin=0
+        sum_lmargin=0
+        for line in node:
+            lineinfo=line.attrib
+            l=int(lineinfo['l'])
+            r=int(lineinfo['r'])
+            width=r-l
+            rmargin=max_r-r
+            lmargin=l-min_l
+            sum_r2=sum_r2+((r-mean_r)*(r-mean_r))
+            sum_l2=sum_l2+((l-mean_l)*(l-mean_l))
+            sum_width2=sum_width2+((width-mean_width)*(width-mean_width))
+            sum_lmargin=sum_lmargin+lmargin
+            sum_rmargin=sum_rmargin+rmargin
+        dev_r=sqrt(sum_r2/n)
+        dev_l=sqrt(sum_r2/n)
+        dev_width=sqrt(sum_width2/n)
+        mean_lmargin=sum_lmargin/n
+        mean_rmargin=sum_rmargin/n
+        sum_rmargin2=0
+        sum_lmargin2=0
+        for line in node:
+            lineinfo=line.attrib
+            l=int(lineinfo['l'])
+            r=int(lineinfo['r'])
+            rmargin=max_r-r
+            lmargin=l-min_l
+            sum_lmargin2=sum_lmargin2+(lmargin*lmargin)
+            sum_rmargin2=sum_rmargin2+(rmargin*rmargin)
+        self.n=n
+        self.min_l=min_l
+        self.max_r=max_r
+        self.mean_l=mean_l
+        self.mean_r=mean_r
+        self.dev_l=dev_l
+        self.dev_r=dev_r
+        self.mean_width=mean_width
+        self.dev_width=dev_width
+        self.mean_lmargin=mean_lmargin
+        self.mean_rmargin=mean_rmargin
+        self.dev_lmargin=sqrt(sum_lmargin2/n)
+        self.dev_rmargin=sqrt(sum_rmargin2/n)
+        return None
+        
 def getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,page_top):
     # At this point, we have a text block to render as a paragraph.  If it's a
     #   header or footer, we render it as a span (because cross-page
