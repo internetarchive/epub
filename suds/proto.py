@@ -12,8 +12,8 @@ import cgi
 import re
 import io
 
-abbyy2html="/src/epub/abbyy2html"
-tmp_cache="/tmp/%s"
+abbyy2html=os.path.join(os.path.dirname(__file__),"../abbyy2html")
+tmp_cache=os.path.join(os.path.dirname(__file__),"../cache/%s.html")
 
 def getbooktext(olib):
     path=tmp_cache%olib
@@ -21,7 +21,7 @@ def getbooktext(olib):
         text=io.open(path,"rt",encoding="utf-8").read()
     else:
         args=[abbyy2html,olib,"nowrap"]
-        proc=subprocess.Popen(args,stdout=open(path,"w",encoding="utf-8"))
+        proc=subprocess.Popen(args,stdout=io.open(path,"wt",encoding="utf-8"))
         proc.wait()
         text=io.open(path,"rt",encoding="utf-8").read()
     body_start=re.search("(?i)<body[^>]*>",text)
@@ -34,15 +34,18 @@ def getbooktext(olib):
 def getbookpath(iaid):
     tmp_url="http://www.archive.org/download/%s/%s_meta.xml"%(iaid,iaid)
     urlstream=urlopen(tmp_url)
+    # read a little to get it to get the redirect
+    urlstream.read(3)
+    # Now get the actual URL
     real_url=urlstream.geturl()
     urlstream.close()
-    return real_url
+    return real_url.replace("_meta.xml","")
 
 def getimageurl(iaid,bookpath):
     parsed=urlparse(bookpath)
-    return (("http://"+parsed.netloc+"/BookReader/BookReader.php")+
+    return (("http://"+parsed.netloc+"/BookReader/BookReaderImages.php")+
             ("?zip="+parsed.path+"_jp2.zip")+
-            ("&file="+iaid+"/"+iaid+"_%%%%"+".jp2")+
+            ("&file="+iaid+"_jp2/"+iaid+"_%%%%"+".jp2")+
             ("&scale=4&rotate=0"))
 
 def getbooklink(olib):
@@ -51,27 +54,21 @@ def getbooklink(olib):
 def getauthorlink(olib):
     return "http://www.openlibrary.org/authors/"+olib
 
-olib="OL2588416M"
-leaf=42
-if (cgi.FieldStorage):
-    form=cgi.FieldStorage()
-    if ("olib" in form):
-        olib=form["olib"]
-    if ("leaf" in form):
-        leaf=int(form["leaf"])
+olib=sys.argv[1]
+leaf=sys.argv[2]
 
 olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%olib)
 olibinfo=json.load(olibstream)
 iaid=olibinfo["ocaid"]
 if (not(iaid)):
-    error ("No archive reference for %s"%olibid)
+    error ("No archive reference for %s"%olib)
 authorid=olibinfo["authors"][0]["key"]
 olibstream=urlopen("http://www.openlibrary.org%s.json"%authorid)
 authorinfo=json.load(olibstream)
 
-bookpath=getbookpath(olib)
+bookpath=getbookpath(iaid)
 
-template=open("proto.html").read()
+template=open(os.path.join(os.path.dirname(__file__),"proto.html"),"rt",).read()
 rewrite=string.replace(
     string.replace(
         string.replace(
@@ -81,14 +78,13 @@ rewrite=string.replace(
                         string.replace(
                             string.replace(template,"%%OLIB",olib),
                             "%%LEAF",str(leaf)),
-                        "%%TTILE",olibinfo["title"]),
-                    "%%IMGTEMPLATE",getimageurl(olib,bookpath)),
+                        "%%TITLE",olibinfo["title"]),
+                    "%%IMGTEMPLATE",getimageurl(iaid,bookpath)),
                 "%%BOOKLINK",getbooklink(olib)),
             "%%AUTHORLINK",getauthorlink(authorid)),
         "%%AUTHORNAME",authorinfo["name"]),
     "%%BOOKTEXT",getbooktext(olib))
 
-print "Content-type: text/html"
-print
-print rewrite
+print rewrite.encode('utf-8')
+
 
