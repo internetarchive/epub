@@ -217,13 +217,21 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         t=False
                         r=False
                         b=False
+                        confidence=100
                         for c in formatting:
                             cinfo=c.attrib
                             isspace=c.text.isspace()
+                            conf=int(cinfo["charConfidence"])
+                            if (conf<confidence): confidence=conf
                             if word:
                                 if isspace:
-                                    text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d'>%s</span>"%
-                                               (leaf_count,(r-l),(b-t),l,t,word))+c.text
+                                    if (word.endswith("-")):
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]'>%s</span>-"%
+                                                   (leaf_count,(r-l),(b-t),l,t,confidence,word[:-1]))+c.text
+                                    else:
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]'>%s</span>"%
+                                                   (leaf_count,(r-l),(b-t),l,t,confidence,word))+c.text
+
                                     word=False
                                 else:
                                     word=word+c.text
@@ -247,8 +255,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                                     r=int(cinfo["r"])
                                     b=int(cinfo["b"])
                         if word:
-                            text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d'>%s</span>"%
-                                       (leaf_count,(r-l),(b-t),l,t,word))
+                            if (word.endswith("-")):
+                                text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
+                                           (leaf_count,(r-l),(b-t),l,t,confidence,word[:-1]))
+                            else:
+                                text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
+                                           (leaf_count,(r-l),(b-t),l,t,confidence,word))
                             word=False
                     else: text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
