@@ -42,7 +42,7 @@ global_classmap={}
 #  spans.
 
 
-def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
+def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_words=True):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
     leaf_count=-1
@@ -67,7 +67,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             leaf_count=leaf_count+1
             leaf_line_count=1
             page_top=True
-            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-book='%dx%d'>#n%d</a>"%
+            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-box='%dx%d'>#n%d</a>"%
                    (leaf_count,leaf_count,page_width,page_height,leaf_count))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
@@ -82,11 +82,11 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
             #  contain paragraphs.  This gets in the way of some logical
             #  paragraph recognition, so we avoid it by default
             if inline_blocks:
-                yield ("<a class='%s' name='abbyyblock%d' data-book='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
+                yield ("<a class='%s' name='abbyyblock%d' data-box='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
                        ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t,leaf_count,block_count))
             else:
-                yield ("<div class='%s' id='abbyyblock%d' data-book='n%d/%dx%d+%d,%d'>"%
+                yield ("<div class='%s' id='abbyyblock%d' data-box='n%d/%dx%d+%d,%d'>"%
                        ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t))
             blocktype=blockinfo['blockType']
@@ -177,7 +177,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                     "abbyyline",lineinfo,page_width,page_height,page_top)
                 # If a line is a header or footer, wrap the content within
                 #  an anchor.  Otherwise, just insert the line break information
-                anchor=("<a class='%s' NAME='%sn%di%d' data-book='n%d/%dx%d+%d,%d' data-baseline='%d'"%
+                anchor=("<a class='%s' NAME='%sn%di%d' data-box='n%d/%dx%d+%d,%d' data-baseline='%d'"%
                         (lineclass,book_id,
                          leaf_count,leaf_line_count,leaf_count,
                          r-l,b-t,l,t,
@@ -195,7 +195,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                         text=text+anchor+">"
                         closeanchor="</a>"
                 # Insert the line break information
-                text=text+("<span class='abbyylineinfo' data-book='%d/%dx%d+%d,%d'>#n%di%d</span>"%
+                text=text+("<span class='abbyylineinfo' data-box='%d/%dx%d+%d,%d'>#n%di%d</span>"%
                            (leaf_count,r-l,b-t,l,t,
                             leaf_count,line_count))
                 # Turn the formatting elements into spans, adding an
@@ -211,7 +211,46 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True):
                         text=text+("<span class='%s'>"%classname)
                     # This is where we get the line text and where we
                     # would put word level position information
-                    text=text+''.join(c.text for c in formatting)
+                    if wrap_words:
+                        word=False
+                        l=False
+                        t=False
+                        r=False
+                        b=False
+                        for c in formatting:
+                            cinfo=c.attrib
+                            isspace=c.text.isspace()
+                            if word:
+                                if isspace:
+                                    text=text+("<span class='abbyyword' data-box='n%d/%dx%d+%d,%d'>%s</span>"%
+                                               (leaf_count,(r-l),(b-t),l,t,word))+c.text
+                                    word=False
+                                else:
+                                    word=word+c.text
+                                    cl=int(cinfo["t"])
+                                    ct=int(cinfo["t"])
+                                    cr=int(cinfo["r"])
+                                    cb=int(cinfo["b"])
+                                    if (ct<t): t=ct
+                                    if (cb>b): b=cb
+                                    # I'm not sure when these would ever happen, but
+                                    #  let's check them anyway
+                                    if (cl<l): l=cl
+                                    if (cr>r): r=cr
+                            else:
+                                if isspace:
+                                    text=text+c.text
+                                else:
+                                    word=c.text
+                                    l=int(cinfo["l"])
+                                    t=int(cinfo["t"])
+                                    r=int(cinfo["r"])
+                                    b=int(cinfo["b"])
+                        if word:
+                            text=text+("<span class='abbyyword' data-box='n%d/%dx%d+%d,%d'>%s</span>"%
+                                       (leaf_count,(r-l),(b-t),l,t,word))
+                            word=False
+                    else: text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
                 if (abs(rmargin-mean_rmargin)>dev_rmargin):
                     # If the current line comes up short, close off the paragraph
@@ -332,7 +371,7 @@ def getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,pa
         else:
             # It might be cool to do some abstraction of the embedded style
             # information into paragraph level class information
-            return ("<%s class='%s' id='%s_%d' data-book='%d/%dx%d+%d,%d'>%s</%s>%s"%
+            return ("<%s class='%s' id='%s_%d' data-box='%d/%dx%d+%d,%d'>%s</%s>%s"%
                     (tagname,classname,
                      book_id,para_count,
                      leaf_count,r-l,b-t,l,t,
