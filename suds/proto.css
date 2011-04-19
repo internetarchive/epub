@@ -24,6 +24,8 @@ body {
     float: right; font-weight: bold; font-size: 125%;
     vertical-align: top;
 }
+.bookMeta .button#SAVEBUTTON {
+    font-size: 125%; margin-left: 12px;}
 
 .sideBySide {
     display: block;
@@ -52,6 +54,17 @@ br.abbyybreak { display: none;}
 span.abbyydroppedhyphen {
     content: '-'; opacity: 0.5; background-color: pink; color: blue;
     display: none;}
+
+span.abbyyword { white-space: nowrap; cursor: pointer;}
+span.abbyyword:hover { text-decoration: underline;}
+
+span.abbyyword.replaced { display: none;}
+span.abbyyword.replacing { text-decoration: line-through; color: red;}
+span.abbyyword.editing {
+    background-color: yellow;
+    padding-left: 1em; padding-right: 1em;}
+span.abbyyword.edited { color: purple;}
+span.abbyyword.edited:hover { text-decoration: underline;}
 
 .offpage { opacity: 0.3;}
 

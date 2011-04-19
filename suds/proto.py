@@ -55,6 +55,10 @@ def getauthorlink(olib):
     return "http://www.openlibrary.org/authors/"+olib
 
 olib=sys.argv[1]
+if olib.startswith("/books/"):
+    olib=olib.slice(7)
+elif olib.startswith("books/"):
+    olib=olib.slice(6)
 leaf=sys.argv[2]
 
 olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%olib)

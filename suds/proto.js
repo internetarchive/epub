@@ -1,6 +1,14 @@
 var img_template=false;
 var pageno=false;
 
+function copy_array(array)
+{
+  var copy=[];
+  var i=0; var lim=array.length;
+  while (i<lim) copy.push(array[i++]);
+  return copy;
+}
+
 function init()
 {
   pagetext=document.getElementById("PAGETEXT");
@@ -12,7 +20,7 @@ function init()
       img_template=meta_items[i].content;
       break;}
     else i++;}
-  var lineinfo=document.getElementsByClassName("abbyylineinfo");
+  var lineinfo=copy_array(document.getElementsByClassName("abbyylineinfo"));
   if (lineinfo) {
     var i=0; var lim=lineinfo.length;
     while (i<lim) {
@@ -37,7 +45,7 @@ function gotoPage(n)
     while (i<lim) {current[i]=found[i]; i++;}
     i=0; while (i<lim) {
 	var node=current[i++];
-	node.className=node.className.replace(/\bdisplayed\b/g,"").trim();}
+	node.className=node.className.trim();}
     var leaf_start=document.getElementById("abbyyleaf"+n);
     var start=leaf_start;
     var leaf_end=document.getElementById("abbyyleaf"+(n+1));
@@ -62,14 +70,6 @@ function gotoPage(n)
     var inputelt=document.getElementById("PAGEINPUT");
     inputelt.value=(n).toString();
     markoffpage(leaf_start,leaf_end);
-}
-
-function copy_array(array)
-{
-  var copy=[];
-  var i=0; var lim=array.length;
-  while (i<lim) copy.push(array[i++]);
-  return copy;
 }
 
 var pagetext;
@@ -151,5 +151,88 @@ function leaf_keypress(evt)
 	else evt.returnValue=false;
 	evt.cancelBubble=true;
 	return false;}
+}
+
+var editing=false;
+var replacing=false;
+var change_count=0;
+
+function editword_click(evt)
+{
+  evt=evt||event;
+  var word=evt.target||evt.srcElement;
+  while (word) {
+    if ((word)&&(word.className)&&
+	(word.className.search(/\babbyyword\b/)>=0))
+      break;
+    else word=word.parentNode;}
+  if (!(word)) return;
+  if (word===replacing) {
+    cancel_edit();
+    return;}
+  else if (word===editing) {
+    save_edit();
+    return;}
+  else if (editing) save_edit();
+  var parent=word.parentNode;
+  var uuid=word.getAttribute("data-uuid");
+  var editno=word.getAttribute("data-revision");
+  if (editno) editno=parseInt(editno)+1;
+  else editno=1;
+  var replacement=word.cloneNode(true);
+  replacement.setAttribute("data-revision",editno);
+  replacement.className=replacement.className+" editing";
+  parent.insertBefore(replacement,word);
+  if (word.className.search(/\breplacing\b/)<0)
+    word.className=word.className+" replacing";
+  var children=copy_array(replacement.childNodes);
+  replacement.innerHTML="";
+  replacing=word;
+  editing=replacement;
+  change_count++;
+}
+
+function save_edit()
+{
+  replacing.className=replacing.className.replace(/ replacing$/," replaced");
+  editing.className=editing.className.replace(/ editing$/," edited");
+  replacing=false;
+  editing=false;
+}
+
+function cancel_edit()
+{
+  replacing.className=replacing.className.replace(/ replacing$/,"");
+  editing.parentNode.removeChild(editing);
+  replacing=false;
+  editing=false;
+}
+
+function editword_keypress(evt)
+{
+  evt=evt||event;
+  var kc=evt.charCode;
+  if (!(editing)) return;
+  var text=editing.innerHTML;
+  editing.innerHTML=(text+String.fromCharCode(kc)).trim().replace(/_/,"");
+  editing.className=editing.className;
+}
+
+function editword_keydown(evt)
+{
+  evt=evt||event;
+  var kc=evt.keyCode;
+  if (!(editing)) return;
+  if (kc===13) {
+    save_edit();
+    if (evt.preventDefault) evt.preventDefault();
+    else evt.returnValue=false;
+    evt.cancelBubble=true;}
+  else if (kc===7) {
+    var text=editing.innerHTML;
+    editing.innerHTML=text.slice(0,-1);
+    if (evt.preventDefault) evt.preventDefault();
+    else evt.returnValue=false;
+    evt.cancelBubble=true;}
 }
 

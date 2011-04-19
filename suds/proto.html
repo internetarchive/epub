@@ -7,7 +7,9 @@
     <meta name="IMGTEMPLATE" content="%%IMGTEMPLATE"/>
     <script language="javascript" src="proto.js"></script>
   </head> 
-  <body onload="init(); gotoPage();" data-startpage="%%LEAF"> 
+  <body onload="init(); gotoPage();" data-startpage="%%LEAF"
+	onkeypress="editword_keypress(event);"
+	onkeydown="editword_keydown(event);"> 
     <form action="proto.fdxml"> 
       Enter OLIB identifier (e.g. OL13684064M) and leaf (~page) number:<br /> 
       <input type="text" NAME= "OLIB"
@@ -24,7 +26,9 @@
       &nbsp;&nbsp;&nbsp;
       <a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>
       &nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a>
-      %%OLIB
+      <span class="button" onclick="alert('someday this will be saved')"
+	    id="SAVEBUTTON">
+	Save</span>
       <span class="button" onclick="toggleClass(document.body,'showpages')"
 	    id="PAGESBUTTON">
 	pages</span>
@@ -46,7 +50,9 @@
         <td class="pageImage">
 	  <img ID="PAGEIMAGE"/>
 	</td> 
-        <td class="pageText" id="PAGETEXT">
+        <td class="pageText" id="PAGETEXT"
+	    onblur="stop_editing();"
+	    onclick="editword_click(event);">
 	%%BOOKTEXT
 	</td> 
       </tr> 
