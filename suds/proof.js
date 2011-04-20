@@ -180,6 +180,7 @@ function editword_click(evt)
     word.className=word.className+" editing";
   editor=document.createElement("INPUT");
   editor.type="TEXT";
+  editor.setAttribute("SPELLCHECK","true");
   editor.className='wordeditor';
   editor.value=word.innerHTML;
   editor.onkeydown=editor_keydown;
