@@ -152,7 +152,7 @@ function leaf_keypress(evt)
 }
 
 var editing=false;
-var extended=false;
+var extended=[];
 var editor=false;
 var edit_list=[];
 var change_count=0;
