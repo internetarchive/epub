@@ -186,10 +186,10 @@ function extend_edit(word)
 	     (((extended.length===0)&&
 	       (word===getNextElement(editing)))||
 	      ((extended.length)&&
-	       (word===getNextElement(extended[-1]))))) {
+	       (word===getNextElement(extended[extended.length-1]))))) {
 	// There's no span and it's after the current word
 	var postfix="";
-	var last=((extended.length)?(extended[-1]):(editing));
+	var last=((extended.length)?(extended[extended.length-1]):(editing));
 	var scan=last.nextSibling;
 	while ((scan)&&(scan!==word)) {
 	    extended.push(scan);

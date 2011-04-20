@@ -59,7 +59,8 @@ span.abbyyword { white-space: nowrap; cursor: pointer;}
 span.abbyyword:hover { text-decoration: underline;}
 
 .replaced {
-    text-decoration: line-through; color: red;
+    text-decoration: line-through;
+    color: red; background-color: yellow;
     padding-left: 4px;
     display: none; }
 span.abbyyword.editing { text-decoration: line-through; color: red;}
