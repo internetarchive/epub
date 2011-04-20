@@ -42,7 +42,7 @@ global_classmap={}
 #  spans.
 
 
-def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_words=True):
+def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_words=True,olid="OLdddddM",iaid="iarchiveorg003kahl"):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
     leaf_count=-1
@@ -93,8 +93,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             if (blocktype=='Text'): continue
             elif (blocktype=='Picture'):
                 # We should generate a valid URL of some sort here
-                yield ("<img title='%s/%d[%d,%d,%d,%d]'/>"%
-                       (book_id,leaf_count,l,t,r,b))
+                yield ("<img title='%s/%d[%d,%d,%d,%d]' src='http://www.archive.org/download/%s/page/%s_leaf%d_medium.jpg?l=%d&t=%d&r=%d&b=%d'/>"%
+                       (book_id,leaf_count,l,t,r,b,iaid,iaid,leaf_count,l,t,r,b))
                 continue
             else: continue
         elif ((node.tag == block_tag) and (event=='end')):

@@ -96,7 +96,7 @@ if pagemerge:
     #  When we get a paragraph that starts with a lowercase letter, we
     #    add it to the open paragraph together with all of the waiting
     #    non-body elements which have accumulated.
-    for line in abbyyhtml.getblocks(f,bookid,classmap,inline_blocks=True):
+    for line in abbyyhtml.getblocks(f,bookid,classmap,olid=olibid,iaid=iaid,inline_blocks=True):
         if (len(line)==0):
             pars
         elif (line.startswith("<p")):
@@ -173,7 +173,7 @@ if pagemerge:
     for elt in waiting:
         pars.append(elt)
 else:
-    for line in abbyyhtml.getblocks(f,bookid,classmap,inline_blocks=True):
+    for line in abbyyhtml.getblocks(f,bookid,classmap,olid=olibid,iaid=iaid,inline_blocks=True):
         if (len(line)==0):
             pars
         else:
