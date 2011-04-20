@@ -58,7 +58,10 @@ span.abbyydroppedhyphen {
 span.abbyyword { white-space: nowrap; cursor: pointer;}
 span.abbyyword:hover { text-decoration: underline;}
 
-span.abbyyword.replaced { display: none;}
+.replaced {
+    text-decoration: line-through; color: red;
+    padding-left: 4px;
+    display: none; }
 span.abbyyword.editing { text-decoration: line-through; color: red;}
 span.abbyyword.edited { color: purple;}
 
@@ -79,8 +82,10 @@ body.showhidden .displayed .abbyypagefoot,
 body.showhidden .displayed .abbyydroppedhyphen {
     display: inline;}
 
-body.showedits span.abbyword.replaced {
+body.showedits span.replaced, body.showedits a.replaced {
     display: inline;}
+body.showedits div.replaced {
+    display: block;}
 
 body.showedits .bookMeta .button#EDITSBUTTON,
 body.showblocks .bookMeta .button#BLOCKSBUTTON,

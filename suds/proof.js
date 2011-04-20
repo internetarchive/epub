@@ -1,3 +1,5 @@
+/* -*- Mode: javascript; -*- */
+
 var img_template=false;
 var pageno=false;
 
@@ -218,8 +220,11 @@ function editword_click(evt)
     if (word===editing) {
 	cancel_edit();
 	return;}
-    else if ((editing)&&(evt.shiftKey)) 
-	return extend_edit(word);
+    else if ((editing)&&(evt.shiftKey)) {
+      extend_edit(word);
+      editor.selectionStart=0;
+      editor.selectionEnd=editor.value.length;
+      return;}
     // If we're editing another word, we finish it up
     else if (editing) save_edit();
     var parent=word.parentNode;
@@ -246,6 +251,7 @@ function editword_click(evt)
 function save_edit()
 {
     var new_content=editor.value;
+    editing.parentNode.removeChild(editor);
     if (new_content!==editor.defaultValue) {
 	var replacement=editing.cloneNode(true);
 	var now=Date().toString();
@@ -285,20 +291,22 @@ function save_edit()
 		var replaced=extended[i++];
 		wrapper.appendChild(replaced);
 		if (replaced.nodeType===1) {
-		    replaced.className=replaced.className.replace(/ editing$/," replaced");}}}
+		    replaced.className=replaced.className.replace(/ editing$/," replaced");}}
+	    if (replacement.nextSibling)
+	      replacement.parentNode.insertBefore(wrapper,replacement.nextSibling);
+	    else replacement.parentNode.appendChild(wrapper);}
 	else editing.className=editing.className.replace(/ editing$/," replaced");
 	replacement.className=replacement.className.replace(/ editing$/," edited");}
-    editing.parentNode.removeChild(editor);
     editing=false;
     extended=[];
     editor=false;
 }
 
-var abbyword_rx=/n(\d+)\/i(\d+)\/(\d+)x(\d+)\+(\d+),(\d+)/;
+var abbyyword_rx=/n(\d+)\/i(\d+)\/(\d+)x(\d+)\+(\d+),(\d+)/;
 
 function parseAbbyyHTML(string)
 {
-    var match=v1.match(abbyyword_rx);
+    var match=string.match(abbyyword_rx);
     if (!(match)) return false;
     var n=parseInt(match[1]);
     var i=parseInt(match[2]);
@@ -312,12 +320,12 @@ function parseAbbyyHTML(string)
 function mergeAbbyyHTML(v1,v2)
 {
     var p1=parseAbbyyHTML(v1);
-    var p2=parseAbbyyHTML(p2);
+    var p2=parseAbbyyHTML(v2);
     var l=((p1.l<p2.l)?(p1.l):(p2.l));
     var t=((p1.t<p2.t)?(p1.t):(p2.t));
     var r=((p1.r>p2.r)?(p1.r):(p2.r));
     var b=((p1.b>p2.b)?(p1.b):(p2.b));
-    return ("n%d/i%d/%dx%d+%d+%d"%(p1.n,p1.i,r-l,b-t,l,t));
+    return "n"+p1.n+"/i"+p1.i+"/"+(r-l)+"x"+(b-t)+"/"+l+","+t;;
 }
 
 function cancel_edit()

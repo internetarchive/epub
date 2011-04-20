@@ -259,11 +259,11 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                                     b=int(cinfo["b"])
                         if word:
                             if (word.endswith("-")):
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
-                                           (leaf_count,(r-l),(b-t),l,t,confidence,word[:-1]))
+                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
+                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word[:-1]))
                             else:
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
-                                           (leaf_count,(r-l),(b-t),l,t,confidence,word))
+                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
+                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word))
                             word=False
                     else: text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
