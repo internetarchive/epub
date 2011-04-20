@@ -225,13 +225,13 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                             if word:
                                 if isspace:
                                     if (word.endswith("-")):
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>-"%
-                                                   (leaf_count,(r-l),(b-t),l,t,confidence,
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>-"%
+                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,
                                                     confidence,leaf_count,(r-l),(b-t),l,t,
                                                     word[:-1]))+c.text
                                     else:
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>"%
-                                                   (leaf_count,(r-l),(b-t),l,t,confidence,
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>"%
+                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,
                                                     confidence,leaf_count,(r-l),(b-t),l,t,
                                                     word))+c.text
 

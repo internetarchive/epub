@@ -124,7 +124,6 @@ function markafterpage(end)
     markafterpage(parent);}
 }
 
-
 function toggleClass(elt,classname)
 {
     var rx=new RegExp("\\b"+classname+"\\b","g");
@@ -153,84 +152,197 @@ function leaf_keypress(evt)
 }
 
 var editing=false;
+var extended=false;
 var editor=false;
 var edit_list=[];
 var change_count=0;
 
+function getNextElement(node)
+{
+    node=node.nextSibling;
+    while (node) {
+	if (node.nodeType===1) return node;
+	else node=node.nextSibling;}
+    return node;
+}
+
+function extend_edit(word)
+{
+    var next=getNextElement(word);
+    if ((editing)&&(next===editing)) {
+	// It's before the current span
+	var before=[]; var prefix=word.innerHTML;
+	var scan=word.nextSibling;
+	while ((scan)&&(scan!==editing)) {
+	    if (scan.nodeType===3) prefix=prefix+scan.nodeValue;
+	    before.push(scan);
+	    scan=scan.nextSibling;}
+	extended=before.concat(extended);
+	editing=word;
+	editor.value=prefix+editor.value;}
+    else if ((editing)&&
+	     (((extended.length===0)&&
+	       (word===getNextElement(editing)))||
+	      ((extended.length)&&
+	       (word===getNextElement(extended[-1]))))) {
+	// There's no span and it's after the current word
+	var postfix="";
+	var last=((extended.length)?(extended[-1]):(editing));
+	var scan=last.nextSibling;
+	while ((scan)&&(scan!==word)) {
+	    extended.push(scan);
+	    if (scan.nodeType===3) postfix=postfix+scan.nodeValue;
+	    scan=scan.nextSibling;}
+	postfix=postfix+word.innerHTML;
+	extended.push(word);
+	editor.value=editor.value+postfix;}
+    else {
+	alert("Multiple words need to be contiguous and on the same line.");
+	return false;}
+    /* We've added it, so we change the class to editing and return true. */
+    if (word.className.search(/\bediting\b/)<0)
+	word.className=word.className+" editing";
+    return true;
+}
+
 function editword_click(evt)
 {
-  evt=evt||event;
-  var word=evt.target||evt.srcElement;
-  while (word) {
-    if ((word)&&(word.className)&&
-	(word.className.search(/\babbyyword\b/)>=0))
-      break;
-    else word=word.parentNode;}
-  if (!(word)) return;
-  if (word===editing) {
-    cancel_edit();
-    return;}
-  else if (editing) save_edit();
-  var parent=word.parentNode;
-  var uuid=word.getAttribute("data-uuid");
-  var editno=word.getAttribute("data-revision");
-  if (editno) editno=parseInt(editno)+1;
-  else editno=1;
-  if (word.className.search(/\bediting\b/)<0)
-    word.className=word.className+" editing";
-  editor=document.createElement("INPUT");
-  editor.type="TEXT";
-  editor.setAttribute("SPELLCHECK","true");
-  editor.className='wordeditor';
-  editor.value=word.innerHTML;
-  editor.onkeydown=editor_keydown;
-  parent.insertBefore(editor,word);
-  editor.selectionStart=0;
-  editor.selectionEnd=editor.value.length;  
-  editor.focus();
-  editing=word;
-  change_count++;
+    evt=evt||event;
+    var word=evt.target||evt.srcElement;
+    while (word) {
+	if ((word)&&(word.className)&&
+	    (word.className.search(/\babbyyword\b/)>=0))
+	    break;
+	else word=word.parentNode;}
+    if (!(word)) return;
+    if (word===editing) {
+	cancel_edit();
+	return;}
+    else if ((editing)&&(evt.shiftKey)) 
+	return extend_edit(word);
+    // If we're editing another word, we finish it up
+    else if (editing) save_edit();
+    var parent=word.parentNode;
+    var uuid=word.getAttribute("data-uuid");
+    var editno=word.getAttribute("data-revision");
+    if (editno) editno=parseInt(editno)+1;
+    else editno=1;
+    if (word.className.search(/\bediting\b/)<0)
+	word.className=word.className+" editing";
+    editor=document.createElement("INPUT");
+    editor.type="TEXT";
+    editor.setAttribute("SPELLCHECK","true");
+    editor.className='wordeditor';
+    editor.defaultValue=editor.value=word.innerHTML;
+    editor.onkeydown=editor_keydown;
+    parent.insertBefore(editor,word);
+    editor.selectionStart=0;
+    editor.selectionEnd=editor.value.length;  
+    editor.focus();
+    editing=word;
+    change_count++;
 }
 
 function save_edit()
 {
-  var new_content=editor.value;
-  var replacement=editing.cloneNode(true);
-  var now=Date().toString();
-  edit_record={before:editing.innerHTML,
-	       after:new_content,
-	       abbyy: editing.getAttribute("data-abbyy"),
-	       olib: olib,
-	       user:"somebody",
-	       date:now};
-  edit_list.push(edit_record);
-  replacement.innerHTML=new_content;
-  replacement.className=replacement.className
-  editing.parentNode.insertBefore(replacement,editing);
-  editing.className=editing.className.replace(/ editing$/," replaced");
-  replacement.className=replacement.className.replace(/ editing$/," edited");
-  editing.parentNode.removeChild(editor);
-  editing=false;
-  editor=false;
+    var new_content=editor.value;
+    if (new_content!==editor.defaultValue) {
+	var replacement=editing.cloneNode(true);
+	var now=Date().toString();
+	var before=editing.innerHTML;
+	var abbyy=[editing.getAttribute("data-abbyy")];
+	var new_abbyy=abbyy[0];
+	if ((extended)&&(extended.length)) {
+	    new_abbyy=editing.getAttribute("data-abbyy");
+	    var i=0; var lim=extended.length;
+	    while (i<lim) {
+		var node=extended[i++];
+		if (node.nodeType===1) {
+		    if (node.getAttribute("data-abbyy")) {
+			new_abbyy=mergeAbbyyHTML(node.getAttribute("data-abbyy"),new_abbyy);
+			abbyy.push(node.getAttribute("data-abbyy"));}
+		    before=before+node.innerHTML;}
+		else if (node.nodeType===1)
+		    before=before+node.nodeValue;}}
+	edit_record={before:before,
+		     after:new_content,
+		     abbyy: abbyy,
+		     new_abbyy: new_abbyy,
+		     olib: olib,
+		     user:"somebody",
+		     date:now};
+	edit_list.push(edit_record);
+	replacement.innerHTML=new_content;
+	editing.parentNode.insertBefore(replacement,editing);
+	if ((extended)&&(extended.length)) {
+	    replacement.setAttribute("data-abbyy",new_abbyy);
+	    var wrapper=document.createElement("span");
+	    wrapper.className="replaced";
+	    editing.className=editing.className.replace(/ editing$/," replaced");
+	    wrapper.appendChild(editing);
+	    var i=0; var lim=extended.length;
+	    while (i<lim) {
+		var replaced=extended[i++];
+		wrapper.appendChild(replaced);
+		if (replaced.nodeType===1) {
+		    replaced.className=replaced.className.replace(/ editing$/," replaced");}}}
+	else editing.className=editing.className.replace(/ editing$/," replaced");
+	replacement.className=replacement.className.replace(/ editing$/," edited");}
+    editing.parentNode.removeChild(editor);
+    editing=false;
+    extended=[];
+    editor=false;
+}
+
+var abbyword_rx=/n(\d+)\/i(\d+)\/(\d+)x(\d+)\+(\d+),(\d+)/;
+
+function parseAbbyyHTML(string)
+{
+    var match=v1.match(abbyyword_rx);
+    if (!(match)) return false;
+    var n=parseInt(match[1]);
+    var i=parseInt(match[2]);
+    var w=parseInt(match[3]);
+    var h=parseInt(match[4]);
+    var l=parseInt(match[5]);
+    var t=parseInt(match[6]);
+    return {n: n,i: i,w: w,h: h,l: l,t: t,r: l+w,b: t+h};
+}
+
+function mergeAbbyyHTML(v1,v2)
+{
+    var p1=parseAbbyyHTML(v1);
+    var p2=parseAbbyyHTML(p2);
+    var l=((p1.l<p2.l)?(p1.l):(p2.l));
+    var t=((p1.t<p2.t)?(p1.t):(p2.t));
+    var r=((p1.r>p2.r)?(p1.r):(p2.r));
+    var b=((p1.b>p2.b)?(p1.b):(p2.b));
+    return ("n%d/i%d/%dx%d+%d+%d"%(p1.n,p1.i,r-l,b-t,l,t));
 }
 
 function cancel_edit()
 {
-  editing.className=editing.className.replace(/ editing$/,"");
-  editing.parentNode.removeChild(editor);
-  editing=false;
-  editor=false;
+    editing.className=editing.className.replace(/ editing$/,"").replace(/\s+/," ").trim();
+    editing.parentNode.removeChild(editor);
+    if ((extended)&&(extended.length)) {
+	var i=0; var lim=extended.length;
+	while (i<lim) {
+	    var word=extended[i++];
+	    word.className=word.className.replace(/ editing$/,"").replace(/\s+/," ").trim();}
+	extended=false;}
+    editing=false;
+    editor=false;
 }
 
 function editor_keydown(evt)
 {
-  evt=evt||event;
-  var kc=evt.keyCode;
-  if (!(editing)) return;
-  if (kc===13) {
-    save_edit();
-    if (evt.preventDefault) evt.preventDefault();
-    else evt.returnValue=false;
-    evt.cancelBubble=true;}
+    evt=evt||event;
+    var kc=evt.keyCode;
+    if (!(editing)) return;
+    if (kc===13) {
+	save_edit();
+	if (evt.preventDefault) evt.preventDefault();
+	else evt.returnValue=false;
+	evt.cancelBubble=true;}
 }
 
