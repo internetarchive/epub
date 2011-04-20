@@ -196,8 +196,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         closeanchor="</a>"
                 # Insert the line break information
                 text=text+("<span class='abbyylineinfo' data-abbyy='%d/%dx%d+%d,%d'>#n%di%d</span>"%
-                           (leaf_count,r-l,b-t,l,t,
-                            leaf_count,line_count))
+                           (leaf_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
                 for formatting in line:
@@ -222,15 +221,19 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                             cinfo=c.attrib
                             isspace=c.text.isspace()
                             conf=int(cinfo["charConfidence"])
-                            if (conf<confidence): confidence=conf
+                            if ((conf) and (conf<confidence)): confidence=conf
                             if word:
                                 if isspace:
                                     if (word.endswith("-")):
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]'>%s</span>-"%
-                                                   (leaf_count,(r-l),(b-t),l,t,confidence,word[:-1]))+c.text
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>-"%
+                                                   (leaf_count,(r-l),(b-t),l,t,confidence,
+                                                    confidence,leaf_count,(r-l),(b-t),l,t,
+                                                    word[:-1]))+c.text
                                     else:
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]'>%s</span>"%
-                                                   (leaf_count,(r-l),(b-t),l,t,confidence,word))+c.text
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>"%
+                                                   (leaf_count,(r-l),(b-t),l,t,confidence,
+                                                    confidence,leaf_count,(r-l),(b-t),l,t,
+                                                    word))+c.text
 
                                     word=False
                                 else:
