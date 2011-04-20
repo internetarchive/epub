@@ -48,6 +48,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
     leaf_count=-1
     block_count=0
     para_count=0
+    leaf_para_count=0
     line_count=0
     leaf_line_count=0
     page_height=-1
@@ -65,7 +66,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             page_height=int(pageinfo["height"])
             page_width=int(pageinfo["width"])
             leaf_count=leaf_count+1
-            leaf_line_count=1
+            leaf_para_count=0
+            leaf_line_count=0
             page_top=True
             yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='%dx%d'>#n%d</a>"%
                    (leaf_count,leaf_count,page_width,page_height,leaf_count))
@@ -106,12 +108,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             continue
         elif ((node.tag == par_tag) and (event=='end')):
             # This is where most of the work happens
-            # 
             text=''
             para_l=0
             para_t=0
             para_r=page_width
             para_b=page_height
+            leaf_para_count=leaf_para_count+1
             para_count=para_count+1
             curfmt=False
             curclass=False
@@ -128,6 +130,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             # Walk the lines in the paragraph, gluing them together and
             # wrapping hyphens in abbyydroppedhyphen spans
             for line in node:
+                # This is the line count for the book
+                line_count=line_count+1
+                # This is the line count for the leaf
+                leaf_line_count=leaf_line_count+1
+                # This is the line count for the paragraph
+                line_no=line_no+1
                 hyphenated=False
                 lineinfo=line.attrib
                 l=int(lineinfo['l'])
@@ -151,7 +159,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 rmargin=max_r-r
                 # If the left margin is indented from the mean, start a new paragraph
                 if ((line_no>0) and (abs(lmargin-mean_lmargin)>dev_lmargin)):
-                    paratext=getpara(text,book_id,leaf_count,para_count,
+                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if (paratext): yield paratext
@@ -164,12 +172,6 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 if (line_no>0) and (not hyphenated) and (text != ''):
                     # if it's not hyphenated, add one
                     text=text+' '
-                # This is the line count for the book
-                line_count=line_count+1
-                # This is the line count for the leaf
-                leaf_line_count=leaf_line_count+1
-                # This is the line count for the paragraph
-                line_no=line_no+1
                 # This is the classname for the line entry
                 #  getclassname adds information based on page position
                 #  it is where headers and footers get recognized
@@ -177,9 +179,9 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                     "abbyyline",lineinfo,page_width,page_height,page_top)
                 # If a line is a header or footer, wrap the content within
                 #  an anchor.  Otherwise, just insert the line break information
-                anchor=("<a class='%s' NAME='%sn%di%d' data-abbyy='n%d/%dx%d+%d,%d' data-baseline='%d'"%
+                anchor=("<a class='%s' NAME='%sn%di%d' data-abbyy='n%d/i%d/%dx%d+%d,%d' data-baseline='%d'"%
                         (lineclass,book_id,
-                         leaf_count,leaf_line_count,leaf_count,
+                         leaf_count,leaf_line_count,leaf_count,leaf_line_count,
                          r-l,b-t,l,t,
                          int(lineinfo['baseline'])))
                 closeanchor=""
@@ -195,18 +197,17 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         text=text+anchor+">"
                         closeanchor="</a>"
                 # Insert the line break information
-                text=text+("<span class='abbyylineinfo' data-abbyy='%d/%dx%d+%d,%d'>#n%di%d</span>"%
-                           (leaf_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
+                text=text+("<span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'>#n%di%d</span>"%
+                           (leaf_count,leaf_line_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
                 for formatting in line:
                     fmt=formatting.attrib
-                    classname=getcssname(fmt,curfmt,classmap)
+                    classname=getcssname(fmt,curclass,classmap)
                     if (classname):
                         curfmt=fmt
+                        if (curclass): text=text+"</span>"
                         curclass=classname
-                    if (classname):
-                        if (curfmt): text=text+"</span>"
                         text=text+("<span class='%s'>"%classname)
                     # This is where we get the line text and where we
                     # would put word level position information
@@ -269,7 +270,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 text=text+closeanchor
                 if (abs(rmargin-mean_rmargin)>dev_rmargin):
                     # If the current line comes up short, close off the paragraph
-                    paratext=getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,page_top)
+                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                                     l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if paratext: yield paratext
                     
@@ -282,7 +284,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             
             # At this point, we've accumulated all of the lines into _text_
             #   and create the paragraph element.
-            paratext=getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,page_top)
+            paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                             l,t,r,b,page_width,page_height,page_top)
             text=''
             if paratext:
                 yield paratext
@@ -364,7 +367,7 @@ class ParaStats:
         self.dev_rmargin=sqrt(sum_rmargin2/n)
         return None
         
-def getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,page_top):
+def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_width,page_height,page_top):
     # At this point, we have a text block to render as a paragraph.  If it's a
     #   header or footer, we render it as a span (because cross-page
     #   merging may wrap it in a single paragraph and you can't have
@@ -386,10 +389,11 @@ def getpara(text,book_id,leaf_count,para_count,l,t,r,b,page_width,page_height,pa
         else:
             # It might be cool to do some abstraction of the embedded style
             # information into paragraph level class information
-            return ("<%s class='%s' id='%s_%d' data-abbyy='%d/%dx%d+%d,%d'>%s</%s>%s"%
+            return ("<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>#n%dp%d</a>%s</%s>%s"%
                     (tagname,classname,
                      book_id,para_count,
-                     leaf_count,r-l,b-t,l,t,
+                     leaf_count,leaf_para_count,r-l,b-t,l,t,
+                     leaf_count,leaf_para_count,leaf_count,leaf_para_count,
                      stripped,tagname,newline))
 
 # This is all stuff for synthesizing CSS class names from formatting
@@ -401,22 +405,22 @@ def getfontname(s):
        return fontmap[s]
     else: return "'%s'"%s
 
-def getcssname(format,curformat,classmap):
+def getcssname(format,curclass,classmap):
     if ('%histogram' in classmap):
         classhist=classmap['%histogram']
     else:
         classhist={}
         classmap['%histogram']=classhist
-    if ((curformat) and ((not(format)) or (format!=curformat))):
+    if (format):
        style=""
        classname=""
-       if ("ff" in curformat):
-       	  style=style+"font-family: "+getfontname(curformat["ff"])+";"
-       if ("fs" in curformat):
-       	  style=style+"font-size: "+curformat["fs"][0:-1]+"px;"
-       if ("bold" in curformat):
+       if ("ff" in format):
+       	  style=style+"font-family: "+getfontname(format["ff"])+";"
+       if ("fs" in format):
+       	  style=style+"font-size: "+format["fs"][0:-1]+"px;"
+       if ("bold" in format):
        	  style=style+"font-weight: bold;"
-       if ("italic" in curformat):
+       if ("italic" in format):
        	  style=style+"font-style: italic;"
        if style in classmap:
        	  classname=classmap[style]
@@ -430,7 +434,9 @@ def getcssname(format,curformat,classmap):
            classname="abbyy%d"%classcount
            classmap[style]=classname
            classhist[classname]=1
-       return classname
+       if (classname==curclass):
+           return False
+       else: return classname
     else: return False
 
 def getclassname(base,attrib,width,height,pagetop):
