@@ -15,21 +15,35 @@ import io
 abbyy2html=os.path.join(os.path.dirname(__file__),"../abbyy2html")
 tmp_cache=os.path.join(os.path.dirname(__file__),"../cache/%s.html")
 
-def getbooktext(olib):
+class BookHTML:
+    def __init__(self,body,style):
+        self.body=body
+        if (style):
+            self.style=style
+        else: self.style=""
+
+def getbookhtml(olib):
     path=tmp_cache%olib
     if (os.path.exists(path)):
         text=io.open(path,"rt",encoding="utf-8").read()
     else:
-        args=[abbyy2html,olib,"nowrap"]
+        args=[abbyy2html,olib]
         proc=subprocess.Popen(args,stdout=io.open(path,"wt",encoding="utf-8"))
         proc.wait()
         text=io.open(path,"rt",encoding="utf-8").read()
+    style_start=re.search("(?i)<style[^>]*>",text)
+    style_end=re.search("(?i)</style[^>]*>",text)
     body_start=re.search("(?i)<body[^>]*>",text)
     body_end=re.search("(?i)</body[^>]*>",text)
+    body=False
+    style=False
     if ((body_start) and (body_end)):
-        return text[body_start.end():body_end.start()]
+        if ((style_start) and (style_end)):
+            style=text[style_start.end():style_end.start()]
+        body=text[body_start.end():body_end.start()]
     else:
-        return text
+        body=text
+    return BookHTML(body,style)
 
 def getbookpath(iaid):
     tmp_url="http://www.archive.org/download/%s/%s_meta.xml"%(iaid,iaid)
@@ -73,6 +87,7 @@ authorinfo=json.load(olibstream)
 bookpath=getbookpath(iaid)
 
 template=open(os.path.join(os.path.dirname(__file__),"proof.html"),"rt",).read()
+html=getbookhtml(olib)
 rewrite=string.replace(
     string.replace(
         string.replace(
@@ -80,14 +95,16 @@ rewrite=string.replace(
                 string.replace(
                     string.replace(
                         string.replace(
-                            string.replace(template,"%%OLIB",olib),
-                            "%%LEAF",str(leaf)),
-                        "%%TITLE",olibinfo["title"]),
-                    "%%IMGTEMPLATE",getimageurl(iaid,bookpath)),
-                "%%BOOKLINK",getbooklink(olib)),
-            "%%AUTHORLINK",getauthorlink(authorid)),
-        "%%AUTHORNAME",authorinfo["name"]),
-    "%%BOOKTEXT",getbooktext(olib))
+                            string.replace(
+                                string.replace(template,"%%OLIB",olib),
+                                "%%LEAF",str(leaf)),
+                            "%%TITLE",olibinfo["title"]),
+                        "%%IMGTEMPLATE",getimageurl(iaid,bookpath)),
+                    "%%BOOKLINK",getbooklink(olib)),
+                "%%AUTHORLINK",getauthorlink(authorid)),
+            "%%AUTHORNAME",authorinfo["name"]),
+        "%%BOOKTEXT",html.body),
+    "%%STYLE",html.style)
 
 print rewrite.encode('utf-8')
 

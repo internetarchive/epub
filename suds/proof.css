@@ -44,7 +44,7 @@ br.abbyybreak { display: none;}
     opacity: 0.7; background-color: silver;
     padding-right: 4px; padding-left: 4px; 
     display: none;}
-.abbyyblock, .abbyylineinfo {
+.abbyyblock, .abbyylineinfo, .abbyyparmark {
     padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
     display: none;}
 .abbyyleafstart {
@@ -68,8 +68,10 @@ span.abbyyword.edited { color: purple;}
 
 .offpage { display: none; opacity: 0.3;}
 body.showpages span.offpage, body.showpages a.offpage { display: inline;}
+body.showblocks span.offpage, body.showblocks a.offpage { display: inline;}
 
 body.showblocks .displayed .abbyyblock,
+body.showblocks .displayed .abbyyparmark,
 body.showlines .displayed .abbyylineinfo,
 body.showpages .displayed .abbyyleafstart {
     display: inline;}
