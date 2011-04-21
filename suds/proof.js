@@ -5,32 +5,24 @@ var pageno=false;
 
 function copy_array(array)
 {
-  var copy=[];
-  var i=0; var lim=array.length;
-  while (i<lim) copy.push(array[i++]);
-  return copy;
+    var copy=[];
+    var i=0; var lim=array.length;
+    while (i<lim) copy.push(array[i++]);
+    return copy;
 }
 
 function init()
 {
-  pagetext=document.getElementById("PAGETEXT");
-  if (img_template) return img_template;
-  var meta_items=document.getElementsByTagName("meta");
-  var i=0; var lim=meta_items.length;
-  while (i<lim) {
-    if (meta_items[i].name==="IMGTEMPLATE") {
-      img_template=meta_items[i].content;
-      break;}
-    else i++;}
-  var lineinfo=copy_array(document.getElementsByClassName("abbyylineinfo"));
-  if (lineinfo) {
-    var i=0; var lim=lineinfo.length;
+    pagetext=document.getElementById("PAGETEXT");
+    if (img_template) return img_template;
+    var meta_items=document.getElementsByTagName("meta");
+    var i=0; var lim=meta_items.length;
     while (i<lim) {
-      var info=lineinfo[i++];
-      var newbreak=document.createElement("BR");
-      newbreak.className="abbyybreak";
-      info.parentNode.insertBefore(newbreak,info);}}
-  return img_template;
+	if (meta_items[i].name==="IMGTEMPLATE") {
+	    img_template=meta_items[i].content;
+	    break;}
+	else i++;}
+    return img_template;
 }
 
 function gotoPage(n)
@@ -44,9 +36,9 @@ function gotoPage(n)
     var current=copy_array(document.getElementsByClassName("displayed"));
     var i=0; var lim=current.length;
     i=0; while (i<lim) {
-      var node=current[i++];
-      node.className=node.className.replace(/\bdisplayed\b/,"")
-	.replace(/\s+/," ").trim();}
+	var node=current[i++];
+	node.className=node.className.replace(/\bdisplayed\b/,"")
+	    .replace(/\s+/," ").trim();}
     var leaf_start=document.getElementById("abbyyleaf"+n);
     var start=leaf_start;
     var leaf_end=document.getElementById("abbyyleaf"+(n+1));
@@ -77,53 +69,53 @@ var pagetext;
 
 function markoffpage(start,end)
 {
-  var cleanup=copy_array(document.getElementsByClassName("offpage"));
-  var i=0; var lim=cleanup.length;
-  while (i<lim) {
-    var span=cleanup[i++];
-    var parent=span.parentNode;
-    var children=copy_array(span.childNodes);
-    var j=0; var jlim=children.length;
-    while (j<jlim) {
-      var child=children[j++];
-      parent.insertBefore(child,span);}
-    parent.removeChild(span);}
-  markbeforepage(start);
-  markafterpage(end);
+    var cleanup=copy_array(document.getElementsByClassName("offpage"));
+    var i=0; var lim=cleanup.length;
+    while (i<lim) {
+	var span=cleanup[i++];
+	var parent=span.parentNode;
+	var children=copy_array(span.childNodes);
+	var j=0; var jlim=children.length;
+	while (j<jlim) {
+	    var child=children[j++];
+	    parent.insertBefore(child,span);}
+	parent.removeChild(span);}
+    markbeforepage(start);
+    markafterpage(end);
 }
 
 function markbeforepage(start)
 {
-  if (start.parentNode===pagetext) return;
-  else {
-    var parent=start.parentNode;
-    var offpage=document.createElement("span");
-    offpage.className="offpage";
-    var children=copy_array(parent.childNodes);
-    var i=0; var lim=children.length;
-    while (i<lim)
-      if (children[i]===start) break;
-      else offpage.appendChild(children[i++]);
-    parent.insertBefore(offpage,start);
-    markbeforepage(parent);}
+    if (start.parentNode===pagetext) return;
+    else {
+	var parent=start.parentNode;
+	var offpage=document.createElement("span");
+	offpage.className="offpage";
+	var children=copy_array(parent.childNodes);
+	var i=0; var lim=children.length;
+	while (i<lim)
+	    if (children[i]===start) break;
+	else offpage.appendChild(children[i++]);
+	parent.insertBefore(offpage,start);
+	markbeforepage(parent);}
 }
 
 function markafterpage(end)
 {
-  if (end.parentNode===pagetext) return;
-  else {
-    var parent=end.parentNode;
-    var offpage=document.createElement("span");
-    offpage.className="offpage";
-    var children=copy_array(parent.childNodes);
-    var i=0; var lim=children.length; var hide=false;
-    while (i<lim) {
-      if (hide) offpage.appendChild(children[i]);
-      else if (children[i]===end) hide=true;
-      else {}
-      i++;}
-    parent.appendChild(offpage);
-    markafterpage(parent);}
+    if (end.parentNode===pagetext) return;
+    else {
+	var parent=end.parentNode;
+	var offpage=document.createElement("span");
+	offpage.className="offpage";
+	var children=copy_array(parent.childNodes);
+	var i=0; var lim=children.length; var hide=false;
+	while (i<lim) {
+	    if (hide) offpage.appendChild(children[i]);
+	    else if (children[i]===end) hide=true;
+	    else {}
+	    i++;}
+	parent.appendChild(offpage);
+	markafterpage(parent);}
 }
 
 function toggleClass(elt,classname)
@@ -221,10 +213,10 @@ function editword_click(evt)
 	cancel_edit();
 	return;}
     else if ((editing)&&(evt.shiftKey)) {
-      extend_edit(word);
-      editor.selectionStart=0;
-      editor.selectionEnd=editor.value.length;
-      return;}
+	extend_edit(word);
+	editor.selectionStart=0;
+	editor.selectionEnd=editor.value.length;
+	return;}
     // If we're editing another word, we finish it up
     else if (editing) save_edit();
     var parent=word.parentNode;
@@ -293,7 +285,7 @@ function save_edit()
 		if (replaced.nodeType===1) {
 		    replaced.className=replaced.className.replace(/ editing$/," replaced");}}
 	    if (replacement.nextSibling)
-	      replacement.parentNode.insertBefore(wrapper,replacement.nextSibling);
+		replacement.parentNode.insertBefore(wrapper,replacement.nextSibling);
 	    else replacement.parentNode.appendChild(wrapper);}
 	else editing.className=editing.className.replace(/ editing$/," replaced");
 	replacement.className=replacement.className.replace(/ editing$/," edited");}

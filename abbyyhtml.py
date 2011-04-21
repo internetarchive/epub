@@ -197,7 +197,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         text=text+anchor+">"
                         closeanchor="</a>"
                 # Insert the line break information
-                text=text+("<span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'>#n%di%d</span>"%
+                text=text+("<br class='abbyybreak'/><span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'>#n%di%d</span>"%
                            (leaf_count,leaf_line_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
