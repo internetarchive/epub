@@ -4,6 +4,7 @@ from zipfile import ZipFile
 from urllib2 import urlopen, HTTPError
 
 import abbyyhtml
+import bighead
 
 import sys
 import getopt
@@ -28,6 +29,8 @@ iaid=False
 max_width = 600
 max_height = 780
 wrapbody=True
+
+abbyy_css=open(os.path.join(os.path.dirname(__file__),"abbyy.css")).read()
 
 def tryenv(var,dflt):
     if (os.environ.get(var)):
@@ -184,40 +187,19 @@ if wrapbody:
     print "<!DOCTYPE html>"
     print "<html>"
     print "<head>"
-    print ("<meta name='ia.item' content='%s'/>"%iaid)
-    if olibid:
-        print ("<meta name='olib.item' content='%s'/>"%olibid)
-    if title and creator:
-        print ("<title>%s by %s</title>"%(title,creator)).encode("utf-8")
-    elif title:
-        print ("<title>%s</title>"%title).encode("utf-8")
-    elif creator:
-        print ("<title>by %s</title>"%creator).encode("utf-8")
-    if title:
-        print ("<meta name='DC.TITLE' content='%s'/>"%title).encode("utf-8")
-    if creator:
-        print ("<meta name='DC.CREATOR' content='%s'/>"%creator).encode("utf-8")
-    if "publisher" in metadata:
-        print ("<meta name='DC.PUBLISHER' content='%s'/>"%
-               (metadata["publisher"][0])).encode("utf-8")
-    if "date" in metadata:
-        print ("<meta name='DC.DATE' content='%s'/>"%(metadata["date"][0])).encode("utf-8")
-    if "description" in metadata:
-        print ("<meta name='DC.DESCRIPTION' content='%s'/>"%(metadata["description"][0])).encode("utf-8")
-    print "<link rel='sbook.refuri' href='http://www.archive.org/sbooks/%s/index.html'/>"%bookid
-    print "<style>"
-    print ".abbyypagehead { display: none;}"
-    print ".abbyypagefoot { display: none;}"
+    style=abbyy_css
     classhist=classmap['%histogram']
     for x in classmap:
         if not(x.startswith('%')):
-            print ".%s { %s } /* %d times */"%(classmap[x],x,classhist[classmap[x]])
-    print "</style>"
+            style=style+(".%s { %s } /* %d times */\n"%
+                         (classmap[x],x,classhist[classmap[x]]))
+    print bighead.bighead(olibid,style).encode("utf-8")
     print "</head>"
     print "<body>"
 
 for par in pars:
     print par.encode('utf-8')
+
 if wrapbody:
     print "</body>"
     print "</html>"

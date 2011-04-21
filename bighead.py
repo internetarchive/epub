@@ -29,7 +29,7 @@ def olibget(spec):
     olibstream.close()
     return olibinfo
 
-def bighead(spec,style,script):
+def bighead(spec,style=False,script=False):
     h=""
     info=olibget(spec)
     h=h+"<link rel='schema.IA' href='http://archive.org'/>\n"
@@ -37,22 +37,22 @@ def bighead(spec,style,script):
     h=h+"<link rel='schema.OK' href='http://openknotes.org'/>\n"
     h=h+"<link rel='schema.DC' href='http://purl.org/dc/elements/1.1/'/>\n"
     h=h+"<link rel='schema.DCTERMS' href='http://purl.org/dc/terms/'/>\n"    
-    h=h+("<meta name='OL.ref' content='%s'/>\n"%(os.dir.basename(spec)))
+    h=h+("<meta name='OL.ref' content='%s'/>\n"%(os.path.basename(spec)))
     h=h+"<meta name='DC.type' scheme='DCTERMS.DCMIType' content='Text'/>\n"
-    if 'ocaid' in bookinfo:
+    if 'ocaid' in info:
         h=h+("<meta name='IA.item' content='%s'/>\n"%info['ocaid'])
     titlestring=""
     if 'title' in info: titlestring=info['title']
     if 'by_statement' in info:
         titlestring=titlestring+(" %s"%info['by_statement'])
-    h=h+("<title>%s</title>\n"%title)
+    h=h+("<title>%s</title>\n"%titlestring)
     if 'title' in info:
         h=h+("<meta name='DC.title' content='%s'/>\n"%info['title'])
     if 'authors' in info:
         for author in info['authors']:
             h=h+("<link rel='DC.creator' href='http://openlibrary.org%s'/>\n"%
                  author)
-            ainfo=olibget(author)
+            ainfo=olibget(author['key'])
             aname=ainfo['name']
             if 'birth_date' in aname:
                 aname=aname+((" %s-")%(ainfo['birth_date']))
@@ -83,3 +83,4 @@ def bighead(spec,style,script):
         h=h+("<style>\n%s\n</style>\n"%style)
     if (script):
         h=h+("<script language='javascript'>\n<![CDATA[\n%s\n]!>\n</style>\n"%script)
+    return h
