@@ -188,21 +188,22 @@ if wrapbody:
     if olibid:
         print ("<meta name='olib.item' content='%s'/>"%olibid)
     if title and creator:
-        print "<title>%s by %s</title>"%(title,creator)
+        print ("<title>%s by %s</title>"%(title,creator)).encode("utf-8")
     elif title:
-        print "<title>%s</title>"%title
+        print ("<title>%s</title>"%title).encode("utf-8")
     elif creator:
-        print "<title>by %s</title>"%creator
+        print ("<title>by %s</title>"%creator).encode("utf-8")
     if title:
-        print "<meta name='DC.TITLE' content='%s'/>"%title
+        print ("<meta name='DC.TITLE' content='%s'/>"%title).encode("utf-8")
     if creator:
-        print "<meta name='DC.CREATOR' content='%s'/>"%creator
+        print ("<meta name='DC.CREATOR' content='%s'/>"%creator).encode("utf-8")
     if "publisher" in metadata:
-        print "<meta name='DC.PUBLISHER' content='%s'/>"%(metadata["publisher"][0])
+        print ("<meta name='DC.PUBLISHER' content='%s'/>"%
+               (metadata["publisher"][0])).encode("utf-8")
     if "date" in metadata:
-        print "<meta name='DC.DATE' content='%s'/>"%(metadata["date"][0])
+        print ("<meta name='DC.DATE' content='%s'/>"%(metadata["date"][0])).encode("utf-8")
     if "description" in metadata:
-        print "<meta name='DC.DESCRIPTION' content='%s'/>"%(metadata["description"][0])
+        print ("<meta name='DC.DESCRIPTION' content='%s'/>"%(metadata["description"][0])).encode("utf-8")
     print "<link rel='sbook.refuri' href='http://www.archive.org/sbooks/%s/index.html'/>"%bookid
     print "<style>"
     print ".abbyypagehead { display: none;}"
