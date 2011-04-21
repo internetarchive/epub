@@ -159,6 +159,10 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 rmargin=max_r-r
                 # If the left margin is indented from the mean, start a new paragraph
                 if ((line_no>0) and (abs(lmargin-mean_lmargin)>dev_lmargin)):
+                    if (curfmt):
+                        text=text+"</span>"
+                        curfmt=False
+                        curclass=False
                     paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
@@ -264,6 +268,11 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 text=text+closeanchor
                 if (abs(rmargin-mean_rmargin)>dev_rmargin):
                     # If the current line comes up short, close off the paragraph
+                    # Close out any active formatting
+                    if (curfmt):
+                        text=text+"</span>"
+                        curfmt=False
+                        curclass=False
                     paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
@@ -278,7 +287,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 text=text+"</span>"
                 curfmt=False
                 curclass=False
-            
+           
             # At this point, we've accumulated all of the lines into _text_
             #   and create the paragraph element.
             paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
