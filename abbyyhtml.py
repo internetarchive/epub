@@ -221,20 +221,14 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         for c in formatting:
                             cinfo=c.attrib
                             isspace=c.text.isspace()
-                            conf=int(cinfo["charConfidence"])
-                            if ((conf) and (conf<confidence)): confidence=conf
                             if word:
                                 if isspace:
                                     if (word.endswith("-")):
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>-"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,
-                                                    confidence,leaf_count,(r-l),(b-t),l,t,
-                                                    word[:-1]))+c.text
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>-"%
+                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word[:-1]))+c.text
                                     else:
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[c=%d%%]' title='confidence %d%% n%d[%dx%d+%d,%d]'>%s</span>"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,
-                                                    confidence,leaf_count,(r-l),(b-t),l,t,
-                                                    word))+c.text
+                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>"%
+                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word))+c.text
 
                                     word=False
                                 else:
@@ -280,7 +274,10 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                 #    text=''
 
             # Close out any active formatting
-            if (curfmt): text=text+"</span>"
+            if (curfmt):
+                text=text+"</span>"
+                curfmt=False
+                curclass=False
             
             # At this point, we've accumulated all of the lines into _text_
             #   and create the paragraph element.
