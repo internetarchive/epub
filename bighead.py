@@ -45,13 +45,13 @@ def bighead(spec,style=False,script=False):
     if 'title' in info: titlestring=info['title']
     if 'by_statement' in info:
         titlestring=titlestring+(" %s"%info['by_statement'])
-    h=h+("<title>%s</title>\n"%titlestring)
+    h=h+("<title>%s</title>\n"%cgi.escape(titlestring,True))
     if 'title' in info:
-        h=h+("<meta name='DC.title' content='%s'/>\n"%info['title'])
+        h=h+("<meta name='DC.title' content='%s'/>\n"%cgi.escape(info['title'],True))
     if 'authors' in info:
         for author in info['authors']:
             h=h+("<link rel='DC.creator' href='http://openlibrary.org%s'/>\n"%
-                 author)
+                 author['key'])
             ainfo=olibget(author['key'])
             aname=ainfo['name']
             if 'birth_date' in aname:
@@ -60,25 +60,26 @@ def bighead(spec,style=False,script=False):
                     aname=aname+ainfo['death_date']
             elif 'death_date' in aname:
                 aname=aname+ainfo['death_date']
-            h=h+("<meta name='DC.creator' content='%s'/>\n"%aname)
+            h=h+("<meta name='DC.creator' content='%s'/>\n"%cgi.escape(aname,True))
     if 'publishers' in info:
         for publisher in info['publishers']:
             h=h+("<meta name='DC.publisher' content='%s'/>\n"%
-                 publisher)
+                 cgi.escape(publisher,True))
     description=False
     if 'description' in info:
         description=info['description']
-        h=h+("<meta name='DESCRIPTION' content='%s'/>\n"%description)
+        h=h+("<meta name='DESCRIPTION' content='%s'/>\n"%cgi.escape(description,True))
     if 'works' in info:
         for work in info['works']:
             workinfo=olibget(work['key'])
             h=h+("<link rel='OL.work' href='http://openlibrary.org%s'/>\n"%
                  work['key'])
             if not description and 'description' in workinfo:
-                h=h+("<meta name='DESCRIPTION' content='%s'/><!-- from %s ->> \n"%
-                     (workinfo['description'],workinfo['title']))
+                h=h+("<meta name='DESCRIPTION' content='%s'/><!-- from %s --> \n"%
+                     (cgi.escape(re.sub("\s+"," ",workinfo['description']),True),
+                      cgi.escape(workinfo['title'],True)))
     if 'publish_date' in info:
-        h=h+("<meta name='DC.date' content='%s'/>\n"%info['publish_date'])
+        h=h+("<meta name='DC.date' content='%s'/>\n"%cgi.escape(info['publish_date'],True))
     if (style):
         h=h+("<style>\n%s\n</style>\n"%style)
     if (script):
