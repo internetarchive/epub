@@ -75,9 +75,18 @@ def bighead(spec,style=False,script=False):
             h=h+("<link rel='OL.work' href='http://openlibrary.org%s'/>\n"%
                  work['key'])
             if not description and 'description' in workinfo:
-                h=h+("<meta name='DESCRIPTION' content='%s'/><!-- from %s --> \n"%
-                     (cgi.escape(re.sub("\s+"," ",workinfo['description']),True),
-                      cgi.escape(workinfo['title'],True)))
+                d=workinfo['description']
+                if type(d) is dict:
+                    d=d['value']
+                if isinstance(d,basestring): # odd result from olib
+                    ""
+                elif 'title' in workinfo:
+                    h=h+("<meta name='DESCRIPTION' content='%s'/><!-- from %s --> \n"%
+                         (cgi.escape(re.sub("\s+"," ",workinfo['description']),True),
+                          cgi.escape(workinfo['title'],True)))
+                else:
+                    h=h+("<meta name='DESCRIPTION' content='%s'/><!-- from %s --> \n"%
+                         (cgi.escape(re.sub("\s+"," ",workinfo['description']),True)))
     if 'publish_date' in info:
         h=h+("<meta name='DC.date' content='%s'/>\n"%cgi.escape(info['publish_date'],True))
     if (style):
