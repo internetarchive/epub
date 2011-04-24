@@ -2,9 +2,12 @@
 from gzip import GzipFile
 from zipfile import ZipFile
 from urllib2 import urlopen, HTTPError
+from httplib import HTTPConnection
+from boto.s3.connection import S3Connection
 
 import abbyyhtml
 import bighead
+import s3auth
 
 import sys
 import getopt
@@ -17,6 +20,14 @@ import cgi
 import re
 
 import iarchive
+
+def s3save(url,data):
+    c=HTTPConnection("s3.us.archive.org")
+    c.request("PUT",url,data,{"Authorization":auth})
+    r=c.getresponse()
+    print r.getheaders()
+    print r.read()
+
 
 cache="/tmp/abbyy2html/"
 
@@ -37,11 +48,10 @@ def tryenv(var,dflt):
         return os.environ.get(var)
     else: return dflt
 
-def abbyy2html(spec,nowrap=False,pagemerge=True):
+def abbyy2html(spec,nowrap=False,mergepages=True):
     olid=False
     iaid=False
     olib=False
-    details=False
     if (spec.startswith('OL')):
         olid=spec
     else:
@@ -49,22 +59,20 @@ def abbyy2html(spec,nowrap=False,pagemerge=True):
     if not iaid:
         olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%olid)
         olib=json.load(olibstream)
-        iaid=olibinfo["ocaid"]
+        iaid=olib["ocaid"]
         if (not(iaid)):
             error ("No archive reference for %s"%olid)
     if not olid:
-        detailstream=urlopen("http://www.archive.org/details/%s?output=json"%iaid)
-        details=json.load(detailstream)
-        if 'olib' in details:
-            olib=details['olib']
-        else:
-            error ("No open library reference for %s"%iaid)
-    if not olib:
-        olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%olid)
+        olibstream=urlopen("http://www.openlibrary.org/ia/%s.json"%iaid)
         olib=json.load(olibstream)
-    if not details:
-        detailstream=urlopen("http://www.archive.org/details/%s?output=json"%iaid)
-        details=json.load(detailstream)
+        olid=os.path.basename(olib['key'])
+    conn=S3Connection(s3auth.key,s3auth.secret,host='s3.us.archive.org',is_secure=False)
+    # bucket=conn.get_bucket(iaid)
+    bucket=conn.get_bucket('abbyyhtml')
+    key=bucket.get_key("%s_source.html"%iaid)
+    if key:
+        return key.get_contents_as_string().decode('utf-8')
+    print "Fetching abbyy..."
     try:
         abbyystream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid))
         zipdata=abbyystream.read()
@@ -75,16 +83,36 @@ def abbyy2html(spec,nowrap=False,pagemerge=True):
         zipfile=ZipFile(StringIO.StringIO(zipdata))
         names=zipfile.namelist()
         f=zipfile.open(names[0])
-    if "metadata" in details:
-        # Extract some metadata
-       metadata=details["metadata"]
-       if "title" in metadata: title=string.replace(metadata["title"][0],"'","&apos;")
-       if "creator" in metadata: creator=string.replace(metadata["creator"][0],"'","&apos;")
-    try:
-        s3stream=urlopen("http://s3.us.archive.org/%s/%s_source.html"%(iaid,iaid))
-    except HTTPError:
-    
     # Do the generation
+    print "Generating content"
+    classmap={}
+    if not mergepages:
+        for line in abbyyhtml.getblocks(f,olid,classmap,olid=olid,iaid=iaid,inline_blocks=True):
+            if (len(line)==0):
+                pars
+            else:
+                pars.append(line)
+    else:
+        pars=pagemerge(f,olid,classmap,olid,iaid)
+    if wrapbody:
+        result="<?xml version='1.0' encoding='utf-8' ?>\n<?xml version='1.0' encoding='utf-8' ?>\n<!DOCTYPE html>\n"
+        result=result+"<html>\n<head>\n"
+        style=abbyy_css
+        classhist=classmap['%histogram']
+        for x in classmap:
+            if not(x.startswith('%')):
+                style=style+(".%s { %s } /* %d times */\n"%
+                             (classmap[x],x,classhist[classmap[x]]))
+        result=result+bighead.bighead(olid,style).encode("utf-8")
+        result=result+"\n</head>\n<body>"
+    for par in pars:
+        result=result+"\n"+par
+    print "Saving content to IA S3"
+    key=bucket.new_key("%s_source.html"%iaid)
+    key.set_contents_from_string(result.encode('utf-8'))
+    return result
+    
+def pagemerge(f,bookid,classmap,olid,iaid,inline_blocks=True):
     # All the strings to be output (not strictly paragraphs, though)
     pars=[]
     # The current open paragraph
@@ -93,14 +121,6 @@ def abbyy2html(spec,nowrap=False,pagemerge=True):
     waiting=[]
     # Whether the current paragraph ends with a hyphen
     openhyphen=False
-    classmap={}
-    if not pagemerge:
-        for line in abbyyhtml.getblocks(f,bookid,classmap,olid=olibid,iaid=iaid,inline_blocks=True):
-            if (len(line)==0):
-                pars
-            else:
-                pars.append(line)
-    else:
     # If we're doing pagemerge, we read a stream of blocks,
     #    potentially merging blocks which cross page boundaries.  All
     #    the content blocks are paragraph <p> blocks, and the
@@ -110,7 +130,7 @@ def abbyy2html(spec,nowrap=False,pagemerge=True):
     #  When we get a paragraph that starts with a lowercase letter, we
     #    add it to the open paragraph together with all of the waiting
     #    non-body elements which have accumulated.
-    for line in abbyyhtml.getblocks(f,bookid,classmap,olid=olibid,iaid=iaid,inline_blocks=True):
+    for line in abbyyhtml.getblocks(f,bookid,classmap,olid=olid,iaid=iaid,inline_blocks=True):
         if (len(line)==0):
             pars
         elif (line.startswith("<p")):
@@ -186,25 +206,5 @@ def abbyy2html(spec,nowrap=False,pagemerge=True):
         pars.append(openpar)
     for elt in waiting:
         pars.append(elt)
-
-if wrapbody:
-    print "<?xml version='1.0' encoding='utf-8' ?>"
-    print "<!DOCTYPE html>"
-    print "<html>"
-    print "<head>"
-    style=abbyy_css
-    classhist=classmap['%histogram']
-    for x in classmap:
-        if not(x.startswith('%')):
-            style=style+(".%s { %s } /* %d times */\n"%
-                         (classmap[x],x,classhist[classmap[x]]))
-    print bighead.bighead(olibid,style).encode("utf-8")
-    print "</head>"
-    print "<body>"
-
-for par in pars:
-    print par.encode('utf-8')
-
-if wrapbody:
-    print "</body>"
-    print "</html>"
+    return pars
+        
