@@ -1,3 +1,4 @@
+# -*- Mode: Python; Character-encoding: utf-8; -*-
 from lxml.etree import iterparse, tostring
 from math import sqrt
 import re
@@ -167,12 +168,6 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if (paratext): yield paratext
-                # if ((line_no==0) and
-                #     (not hyphenated) and
-                #     (not (first_char.text.islower())) and
-                #     (text!='')):
-                #     yield "<p>%s</p>"%text
-                #     text=''
                 if (line_no>0) and (not hyphenated) and (text != ''):
                     # if it's not hyphenated, add one
                     text=text+' '
@@ -201,8 +196,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         text=text+anchor+">"
                         closeanchor="</a>"
                 # Insert the line break information
-                text=text+("<br class='abbyybreak'/><span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'>#n%di%d</span>"%
-                           (leaf_count,leaf_line_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
+                text=text+("<span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'><br class='abbyybreak'/></span>"%
+                           (r-l,b-t,l,t,leaf_count,leaf_line_count))
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
                 for formatting in line:
@@ -277,10 +272,6 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if paratext: yield paratext
-                    
-                #if ((max_r-r)>(par_width*0.1)):
-                #    yield "<p>%s</p>"%text
-                #    text=''
 
             # Close out any active formatting
             if (curfmt):
@@ -395,7 +386,7 @@ def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_widt
         else:
             # It might be cool to do some abstraction of the embedded style
             # information into paragraph level class information
-            return ("<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>#n%dp%d</a>%s</%s>%s"%
+            return ("<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
                     (tagname,classname,
                      book_id,para_count,
                      leaf_count,leaf_para_count,r-l,b-t,l,t,
