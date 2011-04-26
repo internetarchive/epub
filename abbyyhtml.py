@@ -1,7 +1,16 @@
 # -*- Mode: Python; Character-encoding: utf-8; -*-
 from lxml.etree import iterparse, tostring
+from urllib2 import urlopen, HTTPError
+from urlparse import urlparse
+from xml.dom.minidom import parse
+from os.path import dirname
 from math import sqrt
+from gzip import GzipFile
+from zipfile import ZipFile
 import re
+import string
+import StringIO
+import json
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
@@ -43,7 +52,10 @@ global_classmap={}
 #  spans.
 
 
-def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_words=True,olid="OLdddddM",iaid="iarchiveorg003kahl"):
+def getblocks(f,book_id="BOOK",classmap=global_classmap,
+              inline_blocks=True,wrap_words=True,
+              olid="OLdddddM",iaid="iarchiveorg003kahl",
+              pagenums=False,imguri=False):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
     leaf_count=-1
@@ -70,8 +82,16 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             leaf_para_count=0
             leaf_line_count=0
             page_top=True
-            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='%dx%d'>#n%d</a>"%
-                   (leaf_count,leaf_count,page_width,page_height,leaf_count))
+            pagenum=""
+            if pagenums:
+                pagenum=pagenums[leaf_count]
+                yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#n%dp%s</a>"%
+                   (pagenum,pagenum,leaf_count,pagenum))
+                pagenum="p"+pagenum
+            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d%s</a>"%
+                   (leaf_count,leaf_count,
+                    leaf_count,page_width,page_height,leaf_count,
+                    pagenum))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib
@@ -96,8 +116,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             if (blocktype=='Text'): continue
             elif (blocktype=='Picture'):
                 # We should generate a valid URL of some sort here
-                yield ("<img title='%s/%d[%d,%d,%d,%d]' src='http://www.archive.org/download/%s/page/%s_leaf%d_medium.jpg?l=%d&t=%d&r=%d&b=%d'/>"%
-                       (book_id,leaf_count,l,t,r,b,iaid,iaid,leaf_count,l,t,r,b))
+                if imguri:
+                    imgsrc=imguri%(leaf_count,l,t,r,b)
+                else:
+                    imgsrc=""
+                yield ("<img title='%s/%d[%d,%d,%d,%d]' src='%s'/>"%
+                       (book_id,leaf_count,l,t,r,b,imgsrc))
                 continue
             else: continue
         elif ((node.tag == block_tag) and (event=='end')):
@@ -454,4 +478,160 @@ def getclassname(base,attrib,width,height,pagetop):
     #    return base+" abbyycentered"
     return base
 
+# Merging pageinfo
+
+def pagemerge(f,bookid,classmap,olid,iaid,
+              inline_blocks=True,pagenums={},imguri=False):
+    # All the strings to be output (not strictly paragraphs, though)
+    pars=[]
+    # The current open paragraph
+    openpar=False
+    # The non-body elements processed since the open body paragraph
+    waiting=[]
+    # Whether the current paragraph ends with a hyphen
+    openhyphen=False
+    # If we're doing pagemerge, we read a stream of blocks,
+    #    potentially merging blocks which cross page boundaries.  All
+    #    the content blocks are paragraph <p> blocks, and the
+    #    algorithm works by keeping the last paragraph block in
+    #    _openpar_ and accumulating non paragraph blocks in the
+    #    _waiting_ array. 
+    #  When we get a paragraph that starts with a lowercase letter, we
+    #    add it to the open paragraph together with all of the waiting
+    #    non-body elements which have accumulated.
+    for line in getblocks(f,bookid,classmap,
+                          olid=olid,iaid=iaid,
+                          inline_blocks=True,
+                          pagenums=pagenums,imguri=imguri):
+        if (len(line)==0):
+            pars
+        elif (line.startswith("<p")):
+            # We don't merge centered paragraphs
+            if (line.find("abbyycentered")>0):
+                if (openpar):
+                    pars.append(openpar)
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    # and start with a new open paragraph
+                    pars.append(line)
+                    openpar=False
+                else:
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    pars.append(line)
+            elif (openpar):
+                # We check if the first letter is lowercase by finding
+                # the first post-markup letter and the first
+                # post-markup lowercase letter and seeing if they're
+                # in the same place.  Note that paragraphs whose text
+                # starts with punctuation will not pass this test
+                # (which I think is the right thing)
+                firstletter=re.search("(?m)>(\s|'|\")*[a-zA-z]",line)
+                firstlower=re.search("(?m)>(\s|'|\")*[a-z]",line)
+                if ((not firstletter or not firstlower) or
+                    ((firstletter.start()) != (firstlower.start()))):
+                    # Not a continuation, so push the open paragraph
+                    pars.append(openpar)
+                    # add any intervening elements
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    # and start with a new open paragraph
+                    openpar=line
+                else:
+                    # This paragraph continues the previous one, so
+                    #   we append it to openpar, with waiting elements
+                    #   added to the middle
+                    if openhyphen:
+                        # Replace the closing hyphen (and the closing
+                        # </p> tag) with an abbyydroppedhyphen span
+                        par_end=openhyphen.start()
+                        openpar=openpar[0:par_end]+"<span class='abbyydroppedhyphen'>-</span>"
+                    else:
+                        # Strip off the closing tag from the open par
+                        search_end=re.search("(?m)</p>",openpar)
+                        if search_end:
+                            openpar=openpar[0:(search_end.start())]+" "
+                        else: 
+                            openpar=openpar+" "
+                    for elt in waiting:
+                        openpar=openpar+elt
+                    waiting=[]
+                    textstart=line.find(">")
+                    openpar=openpar+line[textstart+1:]
+            else:
+                # This is the first paragraph
+                openpar=line
+                for elt in waiting:
+                    pars.append(elt)
+                waiting=[]
+            # Check if the current open paragraph ends with a hyphen
+            if (openpar):
+                openhyphen=re.search("(?m)-\s*</p>",openpar)
+            else:
+                openhyphen=False
+        else:
+            waiting.append(line)
+    if openpar:
+        pars.append(openpar)
+    for elt in waiting:
+        pars.append(elt)
+    return pars
         
+def makehtml(olid,iaid,classmap,mergepages=True):
+    scandata=parse(urlopen(
+            ("http://www.archive.org/download/%s/%s_scandata.xml"%(iaid,iaid))))
+    pagenums=[]
+    for x in scandata.getElementsByTagName('leaf'):
+        leafno=int(x.getAttribute('leafNum'))
+        pagenum=x.getElementsByTagName('pageNumber')
+        if (pagenum and (pagenum.length>0) and
+            pagenum[0] and (pagenum[0].childNodes.length==1)):
+            pagenums[leafno]=pagenum[0].childNodes[0].nodeValue
+        else:
+            pagenums[leafno]=False
+    filestream=urlopen(
+        ("http://www.archive.org/download/%s/%s_files.xml"%(iaid,iaid)))
+    filedata=parse(filestream)
+    baseuri=urlparse(filestream.url)
+    imguri=False
+    for x in filedata.getElementsByTagName('file'):
+        filename=x.getAttribute('name')
+        if filename.endswith('_jp2.zip'):
+            imguri=(("http://%s/jp2Crop.php?zip=%s/%s"%
+                     (baseuri.netloc,dirname(baseuri.path),filename))+
+                    ("&file=%s/%s_%%04d.jp2"%(iaid,iaid))+
+                    "&l=%d&t=%d&r=%d&b=%d")
+        elif filename.endswith('_jpeg.zip'):
+            imguri=(""%(iaid,iaid))
+    try:
+        abbyystream=urlopen(
+            ("http://www.archive.org/download/%s/%s_abbyy.xml"%(iaid,iaid)))
+        f=abbyystream
+    except HTTPError:
+        abbyystream=urlopen(
+            ("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid)))
+        zipdata=abbyystream.read()
+        f=GzipFile(fileobj=StringIO.StringIO(zipdata))
+    except HTTPError:
+        abbyystream=urlopen(
+            ("http://www.archive.org/download/%s/%s_abbyy.zip"%(iaid,iaid)))
+        zipdata=abbyystream.read()
+        zipfile=ZipFile(StringIO.StringIO(zipdata))
+        names=zipfile.namelist()
+        f=zipfile.open(names[0])
+    # Do the generation
+    if not mergepages:
+        for line in getblocks(f,olid,classmap,
+                              olid=olid,iaid=iaid,inline_blocks=True,
+                              pagenums=pagenums,imguri=imguri):
+            if (len(line)==0):
+                pars
+            else:
+                pars.append(line)
+    else:
+        pars=pagemerge(f,olid,classmap,olid,iaid,
+                       pagenums=pagenums,imguri=imguri)
+    return pars
