@@ -75,13 +75,13 @@ def gethtml(spec,nowrap=False,mergepages=True,force=False):
         edit_entry=db[olid]
     else:
         edit_entry={}
+    if (("_attachments" in edit_entry) and
+        ("source.html" in edit_entry["_attachments"])):
+        return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
     edit_entry['iaid']=iaid
     edit_entry['_id']=olid
     edit_entry['olid']=olid
     edit_entry['saved']=math.trunc(time.time())
-    if (("_attachments" in edit_entry) and
-        ("source.html" in edit_entry["_attachments"])):
-        return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
     print "No stored copy, generating from abbyy scan file"
     print "Fetching abbyy..."
     try:
