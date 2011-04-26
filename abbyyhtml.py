@@ -80,7 +80,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             r=int(blockinfo['r'])
             b=int(blockinfo['b'])
             block_count=block_count+1
-            # 'inline blocks' indicate block starts with self-contained
+            # 'inline blocks' has block starts encoded as self-contained
             #  anchor tags; otherwise blocks are implemented as DIVs which
             #  contain paragraphs.  This gets in the way of some logical
             #  paragraph recognition, so we avoid it by default
