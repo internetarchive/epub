@@ -55,7 +55,7 @@ global_classmap={}
 def getblocks(f,book_id="BOOK",classmap=global_classmap,
               inline_blocks=True,wrap_words=True,
               olid="OLdddddM",iaid="iarchiveorg003kahl",
-              pagenums=False,imguri=False):
+              scaninfo=False,imguri=False):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
     leaf_count=-1
@@ -67,11 +67,13 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
     page_height=-1
     page_width=-1
     page_top=True
+    skip_page=False
     for event,node in iterparse(f,events):
         if ((node.tag == page_tag) and (event=='end')):
             # We process a page at a time and clear the pages
             #  information when we're done with it
             node.clear()
+            skip_page=False
             continue
         elif ((node.tag == page_tag) and (event=='start')):
             # We output a simple marker when pages start
@@ -82,16 +84,33 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             leaf_para_count=0
             leaf_line_count=0
             page_top=True
-            pagenum=""
-            if pagenums:
-                pagenum=pagenums[leaf_count]
-                yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#n%dp%s</a>"%
-                   (pagenum,pagenum,leaf_count,pagenum))
+            if scaninfo:
+                info=scaninfo[leaf_count]
+            else:
+                info={}
+            if 'page' in info:
+                pagenum=info['page']
+            else:
+                pagenum=False
+            if 'ignore' in info:
+                leafclass='abbyypagestart abbyyignored'
+                skip_page=True
+            else:
+                leafclass='abbyypagestart'
+            if pagenum or skip_page:
+                yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
+                       (leafclass,leaf_count,leaf_count,
+                        leaf_count,page_width,page_height,leaf_count,
+                        pagenum))
+                yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#p%s</a>"%
+                       (pagenum,pagenum,leaf_count,pagenum))
                 pagenum="p"+pagenum
-            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d%s</a>"%
-                   (leaf_count,leaf_count,
-                    leaf_count,page_width,page_height,leaf_count,
-                    pagenum))
+
+            else:
+                yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d%s</a>"%
+                       (leaf_count,leaf_count,
+                        leaf_count,page_width,page_height,leaf_count,
+                        pagenum))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib
@@ -481,7 +500,7 @@ def getclassname(base,attrib,width,height,pagetop):
 # Merging pageinfo
 
 def pagemerge(f,bookid,classmap,olid,iaid,
-              inline_blocks=True,pagenums={},imguri=False):
+              inline_blocks=True,scaninfo={},imguri=False):
     # All the strings to be output (not strictly paragraphs, though)
     pars=[]
     # The current open paragraph
@@ -502,7 +521,7 @@ def pagemerge(f,bookid,classmap,olid,iaid,
     for line in getblocks(f,bookid,classmap,
                           olid=olid,iaid=iaid,
                           inline_blocks=True,
-                          pagenums=pagenums,imguri=imguri):
+                          scaninfo=scaninfo,imguri=imguri):
         if (len(line)==0):
             pars
         elif (line.startswith("<p")):
@@ -583,15 +602,22 @@ def pagemerge(f,bookid,classmap,olid,iaid,
 def makehtml(olid,iaid,classmap,mergepages=True):
     scandata=parse(urlopen(
             ("http://www.archive.org/download/%s/%s_scandata.xml"%(iaid,iaid))))
-    pagenums=[]
+    scaninfo=[]
     for x in scandata.getElementsByTagName('leaf'):
         leafno=int(x.getAttribute('leafNum'))
+        info={}
+        scaninfo[leafno]=info
         pagenum=x.getElementsByTagName('pageNumber')
         if (pagenum and (pagenum.length>0) and
             pagenum[0] and (pagenum[0].childNodes.length==1)):
-            pagenums[leafno]=pagenum[0].childNodes[0].nodeValue
+            info['pageno']=pagenum[0].childNodes[0].nodeValue
+        doscan=x.getElementsByTagName('addToAccessFormats')
+        if (pagenum and (pagenum.length>0) and
+            pagenum[0] and (pagenum[0].childNodes.length==1) and
+            pagenum[0].childNodes[0].nodeValue=='false'):
+            info['ignore']=True
         else:
-            pagenums[leafno]=False
+            info['ignore']=False
     filestream=urlopen(
         ("http://www.archive.org/download/%s/%s_files.xml"%(iaid,iaid)))
     filedata=parse(filestream)
@@ -605,7 +631,15 @@ def makehtml(olid,iaid,classmap,mergepages=True):
                     ("&file=%s/%s_%%04d.jp2"%(iaid,iaid))+
                     "&l=%d&t=%d&r=%d&b=%d")
         elif filename.endswith('_jpeg.zip'):
-            imguri=(""%(iaid,iaid))
+            imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
+                     (baseuri.netloc,dirname(baseuri.path),filename))+
+                    ("&file=%s/%s_%%04d.jpeg"%(iaid,iaid))+
+                    "&l=%d&t=%d&r=%d&b=%d")
+        elif filename.endswith('_jpg.zip'):
+            imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
+                     (baseuri.netloc,dirname(baseuri.path),filename))+
+                    ("&file=%s/%s_%%04d.jpg"%(iaid,iaid))+
+                    "&l=%d&t=%d&r=%d&b=%d")
     try:
         abbyystream=urlopen(
             ("http://www.archive.org/download/%s/%s_abbyy.xml"%(iaid,iaid)))
@@ -626,12 +660,12 @@ def makehtml(olid,iaid,classmap,mergepages=True):
     if not mergepages:
         for line in getblocks(f,olid,classmap,
                               olid=olid,iaid=iaid,inline_blocks=True,
-                              pagenums=pagenums,imguri=imguri):
+                              scaninfo=scaninfo,imguri=imguri):
             if (len(line)==0):
                 pars
             else:
                 pars.append(line)
     else:
         pars=pagemerge(f,olid,classmap,olid,iaid,
-                       pagenums=pagenums,imguri=imguri)
+                       scaninfo=scaninfo,imguri=imguri)
     return pars

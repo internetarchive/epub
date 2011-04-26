@@ -32,7 +32,6 @@ def s3save(url,data):
     print r.getheaders()
     print r.read()
 
-
 cache="/tmp/abbyy2html/"
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
