@@ -5,9 +5,10 @@ from urllib2 import urlopen, HTTPError
 from httplib import HTTPConnection
 from boto.s3.connection import S3Connection
 
+import couchdb
 import abbyyhtml
 import bighead
-import s3auth
+import appauth
 
 import sys
 import getopt
@@ -18,6 +19,8 @@ import StringIO
 import json
 import cgi
 import re
+import math
+import time
 
 import iarchive
 
@@ -43,12 +46,14 @@ wrapbody=True
 
 abbyy_css=open(os.path.join(os.path.dirname(__file__),"abbyy.css")).read()
 
+db=couchdb.client.Server(('http://%s:%s@ol-couch0:5984/'%(appauth.couchuser,appauth.couchpass)))['corrections']
+
 def tryenv(var,dflt):
     if (os.environ.get(var)):
         return os.environ.get(var)
     else: return dflt
 
-def abbyy2html(spec,nowrap=False,mergepages=True):
+def gethtml(spec,nowrap=False,mergepages=True,force=False):
     olid=False
     iaid=False
     olib=False
@@ -66,12 +71,18 @@ def abbyy2html(spec,nowrap=False,mergepages=True):
         olibstream=urlopen("http://www.openlibrary.org/ia/%s.json"%iaid)
         olib=json.load(olibstream)
         olid=os.path.basename(olib['key'])
-    conn=S3Connection(s3auth.key,s3auth.secret,host='s3.us.archive.org',is_secure=False)
-    # bucket=conn.get_bucket(iaid)
-    bucket=conn.get_bucket('abbyyhtml')
-    key=bucket.get_key("%s_source.html"%iaid)
-    if key:
-        return key.get_contents_as_string().decode('utf-8')
+    if olid in db:
+        edit_entry=db[olid]
+    else:
+        edit_entry={}
+    edit_entry['iaid']=iaid
+    edit_entry['_id']=olid
+    edit_entry['olid']=olid
+    edit_entry['saved']=math.trunc(time.time())
+    if (("_attachments" in edit_entry) and
+        ("source.html" in edit_entry["_attachments"])):
+        return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
+    print "No stored copy, generating from abbyy scan file"
     print "Fetching abbyy..."
     try:
         abbyystream=urlopen("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid))
@@ -107,9 +118,10 @@ def abbyy2html(spec,nowrap=False,mergepages=True):
         result=result+"\n</head>\n<body>"
     for par in pars:
         result=result+"\n"+par
-    print "Saving content to IA S3"
-    key=bucket.new_key("%s_source.html"%iaid)
-    key.set_contents_from_string(result.encode('utf-8'))
+    print "Saving content to CouchDB"
+    db[olid]=edit_entry
+    new_entry=db[olid]
+    db.put_attachment(new_entry,result.encode('utf-8'),'source.html','text/html')
     return result
     
 def pagemerge(f,bookid,classmap,olid,iaid,inline_blocks=True):

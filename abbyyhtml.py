@@ -386,11 +386,11 @@ def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_widt
         else:
             # It might be cool to do some abstraction of the embedded style
             # information into paragraph level class information
-            return ("<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
+            return (u"<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
                     (tagname,classname,
                      book_id,para_count,
                      leaf_count,leaf_para_count,r-l,b-t,l,t,
-                     leaf_count,leaf_para_count,leaf_count,leaf_para_count,
+                     leaf_count,leaf_para_count,
                      stripped,tagname,newline))
 
 # This is all stuff for synthesizing CSS class names from formatting
