@@ -262,6 +262,10 @@ function save_edit()
 		    before=before+node.innerHTML;}
 		else if (node.nodeType===1)
 		    before=before+node.nodeValue;}}
+	var scan=editing;
+	while (scan) {
+	  if (scan.id) break;
+	  else scan=scan.parentNode;}
 	edit_record={before:before,
 		     after:new_content,
 		     abbyy: abbyy,
@@ -269,6 +273,7 @@ function save_edit()
 		     olib: olib,
 		     user:"somebody",
 		     date:now};
+	if (scan) edit_record.passage=scan.id
 	edit_list.push(edit_record);
 	replacement.innerHTML=new_content;
 	editing.parentNode.insertBefore(replacement,editing);
