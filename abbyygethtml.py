@@ -81,7 +81,7 @@ def gethtml(spec,nowrap=False,mergepages=True,force=False):
     edit_entry['saved']=math.trunc(time.time())
     if (("_attachments" in edit_entry) and
         ("source.html" in edit_entry["_attachments"])):
-        return db.get_attachment(olid,"source.html")
+        return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
     print "No stored copy, generating from abbyy scan file"
     print "Fetching abbyy..."
     try:
@@ -121,7 +121,7 @@ def gethtml(spec,nowrap=False,mergepages=True,force=False):
     print "Saving content to CouchDB"
     db[olid]=edit_entry
     new_entry=db[olid]
-    db.put_attachment(new_entry,json.dumps(result),'source.html','text/html')
+    db.put_attachment(new_entry,result.encode('utf-8'),'source.html','text/html')
     return result
     
 def pagemerge(f,bookid,classmap,olid,iaid,inline_blocks=True):
