@@ -79,17 +79,9 @@ def gethtml(spec,nowrap=False,mergepages=True,force=False):
     edit_entry['_id']=olid
     edit_entry['olid']=olid
     edit_entry['saved']=math.trunc(time.time())
-    if (("attachments" in edit_entry) and
-        ("source.html" in edit_entry["attachments"])):
-    db[olid]=edit_entry
-    conn=S3Connection(appauth.key,appauth.secret,host='s3.us.archive.org',is_secure=False)
-    try:
-        bucket=conn.get_bucket(olid)
-    except Exception:
-        bucket=conn.create_bucket(olid)
-    key=bucket.get_key("source.xhtml")
-    if key:
-        return key.get_contents_as_string().decode('utf-8')
+    if (("_attachments" in edit_entry) and
+        ("source.html" in edit_entry["_attachments"])):
+        return db.get_attachment(olid,"source.html")
     print "No stored copy, generating from abbyy scan file"
     print "Fetching abbyy..."
     try:
@@ -126,9 +118,10 @@ def gethtml(spec,nowrap=False,mergepages=True,force=False):
         result=result+"\n</head>\n<body>"
     for par in pars:
         result=result+"\n"+par
-    print "Saving content to IA S3"
-    key=bucket.new_key("%s_source.html"%iaid)
-    key.set_contents_from_string(result.encode('utf-8'))
+    print "Saving content to CouchDB"
+    db[olid]=edit_entry
+    new_entry=db[olid]
+    db.put_attachment(new_entry,json.dumps(result),'source.html','text/html')
     return result
     
 def pagemerge(f,bookid,classmap,olid,iaid,inline_blocks=True):
