@@ -107,3 +107,6 @@ td#PAGETEXT a.displayed p { display: block;}
 
 input.wordeditor {
     position: absolute; margin-top: -4ex;}
+
+.abbyytext .abbynormal, .abbyytext .abbyyunknown {
+    background-color: yellow;}
