@@ -94,8 +94,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                 info=scaninfo[leaf_count]
             else:
                 info={}
-            if 'page' in info:
-                pagenum=info['page']
+            if 'pageno' in info:
+                pagenum=info['pageno']
             else:
                 pagenum=False
             if 'ignore' in info:
@@ -103,20 +103,21 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                 skip_page=True
             else:
                 leafclass='abbyypagestart'
-            if pagenum or skip_page:
+            if pagenum:
                 yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
                        (leafclass,leaf_count,leaf_count,
                         leaf_count,page_width,page_height,leaf_count,
                         pagenum))
                 yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#p%s</a>"%
                        (pagenum,pagenum,leaf_count,pagenum))
-                pagenum="p"+pagenum
-
-            else:
-                yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d%s</a>"%
-                       (leaf_count,leaf_count,
+            elif skip_page:
+                yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
+                       (leafclass,leaf_count,leaf_count,
                         leaf_count,page_width,page_height,leaf_count,
                         pagenum))
+            else:
+                yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
+                       (leaf_count,leaf_count,leaf_count,page_width,page_height,leaf_count))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib

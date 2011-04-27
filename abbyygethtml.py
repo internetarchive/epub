@@ -71,6 +71,7 @@ def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
         olibstream=urlopen("http://www.openlibrary.org/ia/%s.json"%iaid)
         olib=json.load(olibstream)
         olid=os.path.basename(olib['key'])
+    print "olid=%s; iaid=%s"%(olid,iaid)
     if usedb:
         if olid in db:
             edit_entry=db[olid]
@@ -107,5 +108,15 @@ def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
         new_entry=db[olid]
         db.put_attachment(new_entry,result.encode('utf-8'),
                           'source.html','text/html')
+    try:
+        conn=S3Connection(appauth.key,appauth.secret,host='s3.us.archive.org',is_secure=False)
+        # bucket=conn.get_bucket(iaid)
+        bucket=conn.get_bucket('abbyyhtml')
+        key=bucket.get_key("%s_source.html"%iaid)
+        if not key:
+            key=bucket.new_key("%s_source.html"%iaid)
+            key.set_contents_from_string(result.encode('utf-8'))
+    except:
+        print "Error saving to IA S3"
     return result
 
