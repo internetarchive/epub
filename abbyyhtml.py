@@ -99,25 +99,21 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             else:
                 pagenum=False
             if 'ignore' in info:
-                leafclass='abbyypagestart abbyyignored'
+                leafclass='abbyyleafstart abbyyignored'
                 skip_page=True
             else:
                 leafclass='abbyypagestart'
+            #print "leaf=%d, page=%s"%(leaf_count,pagenum)
             if pagenum:
                 yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
                        (leafclass,leaf_count,leaf_count,
-                        leaf_count,page_width,page_height,leaf_count,
-                        pagenum))
+                        leaf_count,page_width,page_height,leaf_count))
                 yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#p%s</a>"%
-                       (pagenum,pagenum,leaf_count,pagenum))
-            elif skip_page:
+                       (pagenum,pagenum,pagenum))
+            else:
                 yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
                        (leafclass,leaf_count,leaf_count,
-                        leaf_count,page_width,page_height,leaf_count,
-                        pagenum))
-            else:
-                yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
-                       (leaf_count,leaf_count,leaf_count,page_width,page_height,leaf_count))
+                        leaf_count,page_width,page_height,leaf_count))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib
@@ -219,7 +215,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                     text=''
                     if (paratext): yield paratext
                 if (line_no>0) and (not hyphenated) and (text != ''):
-                    # if it's not hyphenated, add one
+                    # if it's not hyphenated, add one space
                     text=text+' '
                 # This is the classname for the line entry
                 #  getclassname adds information based on page position
@@ -258,6 +254,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                         if (curclass): text=text+"</span>"
                         curclass=classname
                         text=text+("<span class='%s'>"%classname)
+                    wordclass='abbyyword'
                     # This is where we get the line text and where we
                     # would put word level position information
                     if wrap_words:
@@ -270,45 +267,54 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                         for c in formatting:
                             cinfo=c.attrib
                             isspace=c.text.isspace()
-                            if word:
-                                if isspace:
-                                    if (word.endswith("-")):
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>-"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word[:-1]))+c.text
-                                    else:
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word))+c.text
-
+                            wordend=isspace or cinfo['wordStart']=='true'
+                            if word and wordend:
+                                if (word.endswith("-")):
+                                    text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>-"%
+                                               (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,word[:-1]))+c.text
+                                else:
+                                    text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>"%
+                                               (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,word))+c.text
                                     word=False
-                                else:
-                                    word=word+c.text
-                                    cl=int(cinfo["t"])
-                                    ct=int(cinfo["t"])
-                                    cr=int(cinfo["r"])
-                                    cb=int(cinfo["b"])
-                                    if (ct<t): t=ct
-                                    if (cb>b): b=cb
-                                    # I'm not sure when these would ever happen, but
-                                    #  let's check them anyway
-                                    if (cl<l): l=cl
-                                    if (cr>r): r=cr
+                                    wordclass="abbyyword"
+                            if isspace:
+                                text=text+c.text
+                            elif word:
+                                word=word+c.text
+                                cl=int(cinfo["t"])
+                                ct=int(cinfo["t"])
+                                cr=int(cinfo["r"])
+                                cb=int(cinfo["b"])
+                                if (ct<t): t=ct
+                                if (cb>b): b=cb
+                                # I'm not sure when these would ever happen, but
+                                #  let's check them anyway
+                                if (cl<l): l=cl
+                                if (cr>r): r=cr
                             else:
-                                if isspace:
-                                    text=text+c.text
-                                else:
-                                    word=c.text
-                                    l=int(cinfo["l"])
-                                    t=int(cinfo["t"])
-                                    r=int(cinfo["r"])
-                                    b=int(cinfo["b"])
-                        if word:
-                            if (word.endswith("-")):
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
-                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word[:-1]))
-                            else:
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
-                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word))
-                            word=False
+                                word=c.text
+                                l=int(cinfo["l"])
+                                t=int(cinfo["t"])
+                                r=int(cinfo["r"])
+                                b=int(cinfo["b"])
+                            if  cinfo['wordStart']=='true':
+                                wordend=True
+                                wordclass='abbyyword'
+                                if cinfo['wordNumeric']=='true':
+                                    wordclass=wordclass+' abbyynumber'
+                                if cinfo['wordNormal']=='false':
+                                    wordclass=wordclass+' abbyynormal'
+                                if cinfo['wordFromDictionary']=='false':
+                                    wordclass=wordclass+' abbyyunknown'
+                        if not word:
+                            ignore='yes'
+                        elif (word.endswith("-")):
+                            text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
+                                       (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word[:-1]))
+                        else:
+                            text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
+                                       (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word))
+                        word=False
                     else: text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
                 if (abs(rmargin-mean_rmargin)>dev_rmargin):
@@ -609,10 +615,11 @@ def pagemerge(f,bookid,classmap,olid,iaid,
 def makehtml(olid,iaid,classmap,mergepages=True):
     scandata=parse(urlopen(
             ("http://www.archive.org/download/%s/%s_scandata.xml"%(iaid,iaid))))
-    scaninfo=[]
-    for x in scandata.getElementsByTagName('leaf'):
+    pages=scandata.getElementsByTagName('page')
+    scaninfo={}
+    for x in pages:
         leafno=int(x.getAttribute('leafNum'))
-        info={}
+        info={"leafno": leafno}
         scaninfo[leafno]=info
         pagenum=x.getElementsByTagName('pageNumber')
         if (pagenum and (pagenum.length>0) and
@@ -647,6 +654,7 @@ def makehtml(olid,iaid,classmap,mergepages=True):
                      (baseuri.netloc,dirname(baseuri.path),filename))+
                     ("&file=%s/%s_%%04d.jpg"%(iaid,iaid))+
                     "&l=%d&t=%d&r=%d&b=%d")
+    print "Fetching abbyy data"
     try:
         abbyystream=urlopen(
             ("http://www.archive.org/download/%s/%s_abbyy.xml"%(iaid,iaid)))
