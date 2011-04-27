@@ -25,6 +25,10 @@ import time
 
 import iarchive
 
+# Useful test cases
+# OL13684064M giftformsfunctio00maus
+# OL2588416M handofethelberta01hard
+
 def s3save(url,data):
     c=HTTPConnection("s3.us.archive.org")
     c.request("PUT",url,data,{"Authorization":auth})
@@ -53,7 +57,7 @@ def tryenv(var,dflt):
         return os.environ.get(var)
     else: return dflt
 
-def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
+def gethtml(spec,nowrap=False,mergepages=True,usecouch=True,skipcache=False):
     olid=False
     iaid=False
     olib=False
@@ -71,8 +75,7 @@ def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
         olibstream=urlopen("http://www.openlibrary.org/ia/%s.json"%iaid)
         olib=json.load(olibstream)
         olid=os.path.basename(olib['key'])
-    print "olid=%s; iaid=%s"%(olid,iaid)
-    if usedb:
+    if usecouch:
         if olid in db:
             edit_entry=db[olid]
         else:
@@ -81,11 +84,26 @@ def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
         edit_entry['_id']=olid
         edit_entry['olid']=olid
         edit_entry['saved']=math.trunc(time.time())
-        if (("_attachments" in edit_entry) and
+        if ((not skipcache) and ("_attachments" in edit_entry) and
             ("source.html" in edit_entry["_attachments"])):
             return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
+    if not skipcache:
+        try:
+            archivestream=urlopen(
+                ("http://www.archive.org/download/%s/%s_corrected.html"%
+                 (iaid,iaid)))
+        except HTTPError:
+            archivestream=urlopen(
+                ("http://www.archive.org/download/%s/%s_source.html"%
+                 (iaid,iaid)))
+        except HTTPError:
+            archivestream=False
+    else:
+        archivestream=False
+    if archivestream:
+        return archivestream.read()
+
     print "No stored copy, generating from abbyy scan file"
-    print "Fetching abbyy..."
     classmap={}
     print "Generating content"
     pars=abbyyhtml.makehtml(olid,iaid,classmap)
@@ -99,10 +117,10 @@ def gethtml(spec,nowrap=False,mergepages=True,usedb=True):
                 style=style+(".%s { %s } /* used %d times */\n"%
                              (classmap[x],x,classhist[classmap[x]]))
         result=result+bighead.bighead(olid,style).encode("utf-8")
-        result=result+"\n</head>\n<body>"
+        result=result+"\n</head>\n<body class='abbyytext'>"
     for par in pars:
         result=result+"\n"+par
-    if usedb:
+    if usecouch:
         print "Saving content to CouchDB"
         db[olid]=edit_entry
         new_entry=db[olid]
