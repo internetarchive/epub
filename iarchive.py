@@ -6,7 +6,11 @@ import re
 import gzip
 import os
 import zipfile
+import json
+from urllib2 import urlopen, HTTPError
+from httplib import HTTPConnection
 from subprocess import Popen, PIPE
+from abbyygethtml import gethtml
 
 try:
     from lxml import etree
@@ -28,6 +32,7 @@ class Book(object):
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
+        self.olib = False
         self.imgstack_archive_fmt = None
         self.imgstack_image_fmt = None
         self.imgstack_name = None
@@ -94,8 +99,7 @@ class Book(object):
                 self.scandata = objectify.fromstring(scandata_str)
                 self.scandata_pages = self.scandata.pageData.page
             else:
-                self.scandata = objectify.parse(self.
-                                                get_scandata_path()).getroot()
+                self.scandata = objectify.parse(self.get_scandata_path()).getroot()
                 self.scandata_pages = self.scandata.xpath('/book/pageData/page')
             self.leaves = {}
             for page in self.scandata_pages:
@@ -143,6 +147,17 @@ class Book(object):
             bookdata = scandata.bookData
         return bookdata
 
+    def get_olib(self):
+        if (self.olib is False):
+            try:
+                f=urlopen('http://www.openlibrary.org/ia/%s'%self.book_id)
+                self.olib=json.load(f)
+            except:
+                self.olib=None
+            return self.olib
+        else:
+            return self.olib
+
     def get_scandata_ns(self):
         scandata = self.get_scandata()
         bookData = scandata.find('bookData')
@@ -155,6 +170,8 @@ class Book(object):
         return int(self.get_page_scandata(i).get('leafNum'))
 
     def get_metadata(self):
+        if (self.metadata):
+            return self.metadata
         # metadata is by book_id, not by doc
         md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
         md = objectify.parse(md_path).getroot()
@@ -165,6 +182,7 @@ class Book(object):
             else:
                 result_text = el.text
             result.append({ 'tag':el.tag, 'text':result_text })
+        self.metadata=result
         return result
 
     def get_toc(self):
@@ -199,6 +217,12 @@ class Book(object):
             return open(djvu_xml, 'r')
         raise 'No djvu.xml file found'
 
+
+    def get_html(self):
+        html_path = os.path.join(self.book_path, self.doc + '_abbyy.html')
+        if os.path.exists(html_path):
+            return open(html_path, 'r')
+        raise 'No abbyy.html file found'
 
     def get_pdfxml_xml(self):
         pdfxml_xml = os.path.join(self.book_path, self.doc + '_pdfxml.xml')
