@@ -51,6 +51,10 @@ br.abbyybreak { display: none;}
     padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
     background-color: silver;
     display: none;}
+.abbyypagestart {
+    padding-left: 4px; padding-right: 4px; color: purple; opacity: 0.8;
+    background-color: silver;
+    display: none;}
 span.abbyydroppedhyphen {
     content: '-'; opacity: 0.5; background-color: pink; color: blue;
     display: none;}
@@ -73,7 +77,8 @@ body.showblocks span.offpage, body.showblocks a.offpage { display: inline;}
 body.showblocks .displayed .abbyyblock,
 body.showblocks .displayed .abbyyparmark,
 body.showlines .displayed .abbyylineinfo,
-body.showpages .displayed .abbyyleafstart {
+body.showpages .displayed .abbyyleafstart,
+body.showpages .displayed .abbyypagestart {
     display: inline;}
 
 body.showbreaks .displayed br.abbyybreak { display: inline;}

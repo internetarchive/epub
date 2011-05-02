@@ -10,7 +10,6 @@ import json
 from urllib2 import urlopen, HTTPError
 from httplib import HTTPConnection
 from subprocess import Popen, PIPE
-from abbyygethtml import gethtml
 
 try:
     from lxml import etree
