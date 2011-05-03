@@ -36,17 +36,17 @@ def s3save(url,data):
     print r.getheaders()
     print r.read()
 
-cache="/tmp/abbyy2html/"
-
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
 block_tag = ns + 'block'
 olibid=False
 iabook=False
-iaid=False
+bookid=False
 max_width = 600
 max_height = 780
 wrapbody=True
+
+tmp_cache=os.path.join(os.path.dirname(os.path.abspath(__file__)),"cache/%s.html")
 
 abbyy_css=open(os.path.join(os.path.dirname(__file__),"abbyy.css")).read()
 
@@ -57,57 +57,22 @@ def tryenv(var,dflt):
         return os.environ.get(var)
     else: return dflt
 
-def gethtml(spec,nowrap=False,mergepages=True,usecouch=True,skipcache=False):
-    olid=False
-    iaid=False
+def makehtml(bookid,nowrap=False,mergepages=True):
     olib=False
-    if (spec.startswith('OL')):
-        olid=spec
-    else:
-        iaid=spec
-    if not iaid:
-        olibstream=urlopen("http://www.openlibrary.org/books/%s.json"%olid)
-        olib=json.load(olibstream)
-        iaid=olib["ocaid"]
-        if (not(iaid)):
-            error ("No archive reference for %s"%olid)
-    if not olid:
-        olibstream=urlopen("http://www.openlibrary.org/ia/%s.json"%iaid)
+    olid=False
+    try:
+        oliburl="http://www.openlibrary.org/ia/%s.json"%bookid
+        olibstream=urlopen(oliburl)
         olib=json.load(olibstream)
         olid=os.path.basename(olib['key'])
-    if usecouch:
-        if olid in db:
-            edit_entry=db[olid]
-        else:
-            edit_entry={}
-        edit_entry['iaid']=iaid
-        edit_entry['_id']=olid
-        edit_entry['olid']=olid
-        edit_entry['saved']=math.trunc(time.time())
-        if ((not skipcache) and ("_attachments" in edit_entry) and
-            ("source.html" in edit_entry["_attachments"])):
-            return (db.get_attachment(olid,"source.html")).read().decode("utf-8")
-    if not skipcache:
-        try:
-            archivestream=urlopen(
-                ("http://www.archive.org/download/%s/%s_corrected.html"%
-                 (iaid,iaid)))
-        except HTTPError:
-            archivestream=urlopen(
-                ("http://www.archive.org/download/%s/%s_source.html"%
-                 (iaid,iaid)))
-        except HTTPError:
-            archivestream=False
-    else:
-        archivestream=False
-    if archivestream:
-        return archivestream.read()
-
-    print "No stored copy, generating from abbyy scan file"
+    except HTTPError:
+        error ("Can't get openlibrary info for %s"%bookid)
+    olid=olib['key']
+    print "Generating HTML file from abbyy scan file"
     classmap={}
-    print "Generating content"
-    pars=abbyyhtml.makehtml(olid,iaid,classmap)
-    if wrapbody:
+    print "Generating body content"
+    pars=abbyyhtml.makehtmlbody(olid,bookid,classmap)
+    if not nowrap:
         result="<?xml version='1.0' encoding='utf-8' ?>\n<?xml version='1.0' encoding='utf-8' ?>\n<!DOCTYPE html>\n"
         result=result+"<html>\n<head>\n"
         style=abbyy_css
@@ -118,23 +83,70 @@ def gethtml(spec,nowrap=False,mergepages=True,usecouch=True,skipcache=False):
                              (classmap[x],x,classhist[classmap[x]]))
         result=result+bighead.bighead(olid,style).encode("utf-8")
         result=result+"\n</head>\n<body class='abbyytext'>"
+    else:
+        result=""
     for par in pars:
         result=result+"\n"+par
-    if usecouch:
-        print "Saving content to CouchDB"
-        db[olid]=edit_entry
-        new_entry=db[olid]
-        db.put_attachment(new_entry,result.encode('utf-8'),
-                          'source.html','text/html')
-    try:
-        conn=S3Connection(appauth.key,appauth.secret,host='s3.us.archive.org',is_secure=False)
-        # bucket=conn.get_bucket(iaid)
-        bucket=conn.get_bucket('abbyyhtml')
-        key=bucket.get_key("%s_source.html"%iaid)
-        if not key:
-            key=bucket.new_key("%s_source.html"%iaid)
-            key.set_contents_from_string(result.encode('utf-8'))
-    except:
-        print "Error saving to IA S3"
+    if not nowrap:
+        result=result+"\n</body>\n</html>\n"
     return result
 
+def gethtml(spec,nowrap=False,mergepages=True,filecache=tmp_cache,skipcache=False):
+    olid=False
+    bookid=False
+    olib=False
+    if (spec.startswith('OL')):
+        olid=spec
+        oliburl="http://www.openlibrary.org/books/%s.json"%olid
+        olibstream=urlopen(oliburl)
+        olib=json.load(olibstream)
+        bookid=olib["ocaid"]
+        if (not(bookid)):
+            error ("No archive reference for %s"%olid)
+    else:
+        bookid=spec
+    cachestream=False
+    if not skipcache:
+        try:
+            cachestream=urlopen(
+                ("http://www.archive.org/download/%s/%s_corrected.html"%(bookid,bookid)))
+        except HTTPError:
+            try:
+                cachestream=urlopen(
+                    ("http://www.archive.org/download/%s/%s_abbyy.html"%(bookid,bookid)))
+            except HTTPError:
+                if filecache and os.path.exists(filecache%bookid):
+                    cachestream=open(tmp_cache%bookid)
+                else: cachestream=False
+    if cachestream:
+        return cachestream.read().decode('utf8')
+    print "No stored copy, generating from abbyy scan file"
+    result=makehtml(bookid,nowrap=nowrap,mergepages=mergepages)
+    resultdata=result.encode('utf-8')
+    if filecache:
+        open(filecache%bookid,"w").write(resultdata)
+    return result
+
+
+class BookContent:
+    def __init__(self,body,style):
+        self.body=body
+        if (style):
+            self.style=style
+        else: self.style=""
+
+def getbookcontent(spec):
+    text=gethtml(spec)
+    style_start=re.search("(?i)<style[^>]*>",text)
+    style_end=re.search("(?i)</style[^>]*>",text)
+    body_start=re.search("(?i)<body[^>]*>",text)
+    body_end=re.search("(?i)</body[^>]*>",text)
+    body=False
+    style=False
+    if ((body_start) and (body_end)):
+        if ((style_start) and (style_end)):
+            style=text[style_start.end():style_end.start()]
+        body=text[body_start.end():body_end.start()]
+    else:
+        body=text
+    return BookContent(body,style)

@@ -60,7 +60,7 @@ def padnum(n,pad):
 
 def getblocks(f,book_id="BOOK",classmap=global_classmap,
               inline_blocks=True,wrap_words=True,
-              olid="OLdddddM",iaid="iarchiveorg003kahl",
+              olid="OLdddddM",bookid="iarchiveorg003kahl",
               scaninfo=False,imguri=False):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
@@ -127,7 +127,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             #  contain paragraphs.  This gets in the way of some logical
             #  paragraph recognition, so we avoid it by default
             if inline_blocks:
-                yield ("<a class='%s' name='abbyyblock%d' data-abbyy='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
+                yield ("<a class='%s' id='abbyyblock%d' data-abbyy='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
                        ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t,leaf_count,block_count))
             else:
@@ -220,15 +220,15 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                 # This is the classname for the line entry
                 #  getclassname adds information based on page position
                 #  it is where headers and footers get recognized
-                lineclass=getclassname(
-                    "abbyyline",lineinfo,page_width,page_height,page_top)
+                lineclass=getclassname("abbyyline",lineinfo,page_width,page_height,page_top)
                 # If a line is a header or footer, wrap the content within
                 #  an anchor.  Otherwise, just insert the line break information
-                anchor=("<a class='%s' NAME='%sn%di%d' data-abbyy='n%d/i%d/%dx%d+%d,%d' data-baseline='%d'"%
-                        (lineclass,book_id,
-                         leaf_count,leaf_line_count,leaf_count,leaf_line_count,
+                # print "lineclass='%s', lcount=%d"%(lineclass,line_count)
+                anchor=("<br class='abbyybreak'/><a class='%s' id='%s_n%di%d' data-abbyy='l%d/n%d/i%d/%dx%d+%d,%d' data-baseline='%d'><span class='lineinfo'>#n%di%d</span>"%
+                        (lineclass,book_id,leaf_count,leaf_line_count,
+                         line_count,leaf_count,leaf_line_count,
                          r-l,b-t,l,t,
-                         int(lineinfo['baseline'])))
+                         int(lineinfo['baseline']),leaf_count,leaf_line_count,))
                 closeanchor=""
                 if ((lineclass.find("abbyypagehead")>=0) or
                     (lineclass.find("abbyypagefoot")>=0)):
@@ -236,14 +236,14 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                     #  we don't have it's span broken by the anchor element
                     #  (which would be malformed markup)
                     if curfmt:
-                        text=text+"</span>"+anchor+">"+"<span class='"+curclass+"'>"
+                        text=text+"</span>"+anchor+"<span class='"+curclass+"'>"
                         closeanchor="</span></a>"
                     else:
-                        text=text+anchor+">"
+                        text=text+anchor
                         closeanchor="</a>"
-                # Insert the line break information
-                text=text+("<span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'><br class='abbyybreak'/></span>"%
-                           (r-l,b-t,l,t,leaf_count,leaf_line_count))
+                else:
+                    text=text+anchor+"</a>"
+                    closeanchor=""
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
                 for formatting in line:
@@ -339,6 +339,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             #   and create the paragraph element.
             paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
                              l,t,r,b,page_width,page_height,page_top)
+            # print u"text=%s"%text
+            # print u"para="+unicode(paratext)
             text=''
             if paratext:
                 yield paratext
@@ -434,20 +436,18 @@ def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_widt
     else:
         tagname="p"
         newline="\n"
-        stripped=text.strip()
-        curfmt=False
-        curclass=False
-        if len(stripped) == 0:
-            return False
-        else:
-            # It might be cool to do some abstraction of the embedded style
-            # information into paragraph level class information
-            return (u"<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
-                    (tagname,classname,
-                     book_id,para_count,
-                     leaf_count,leaf_para_count,r-l,b-t,l,t,
-                     leaf_count,leaf_para_count,
-                     stripped,tagname,newline))
+    stripped=text.strip()
+    if len(stripped) == 0:
+        return False
+    else:
+        # It might be cool to do some abstraction of the embedded style
+        # information into paragraph level class information
+        return (u"<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
+                (tagname,classname,
+                 book_id,para_count,
+                 leaf_count,leaf_para_count,r-l,b-t,l,t,
+                 leaf_count,leaf_para_count,
+                 stripped,tagname,newline))
 
 # This is all stuff for synthesizing CSS class names from formatting
 #  attributes
@@ -512,7 +512,7 @@ def getclassname(base,attrib,width,height,pagetop):
 
 # Merging pageinfo
 
-def pagemerge(f,bookid,classmap,olid,iaid,
+def pagemerge(f,xmlid,classmap,olid,bookid,
               inline_blocks=True,scaninfo={},imguri=False):
     # All the strings to be output (not strictly paragraphs, though)
     pars=[]
@@ -531,8 +531,8 @@ def pagemerge(f,bookid,classmap,olid,iaid,
     #  When we get a paragraph that starts with a lowercase letter, we
     #    add it to the open paragraph together with all of the waiting
     #    non-body elements which have accumulated.
-    for line in getblocks(f,bookid,classmap,
-                          olid=olid,iaid=iaid,
+    for line in getblocks(f,xmlid,classmap,
+                          olid=olid,bookid=bookid,
                           inline_blocks=True,
                           scaninfo=scaninfo,imguri=imguri):
         if (len(line)==0):
@@ -612,9 +612,9 @@ def pagemerge(f,bookid,classmap,olid,iaid,
         pars.append(elt)
     return pars
         
-def makehtml(olid,iaid,classmap,mergepages=True):
+def makehtmlbody(olid,bookid,classmap,mergepages=True):
     scandata=parse(urlopen(
-            ("http://www.archive.org/download/%s/%s_scandata.xml"%(iaid,iaid))))
+            ("http://www.archive.org/download/%s/%s_scandata.xml"%(bookid,bookid))))
     pages=scandata.getElementsByTagName('page')
     scaninfo={}
     for x in pages:
@@ -633,7 +633,7 @@ def makehtml(olid,iaid,classmap,mergepages=True):
         else:
             info['ignore']=False
     filestream=urlopen(
-        ("http://www.archive.org/download/%s/%s_files.xml"%(iaid,iaid)))
+        ("http://www.archive.org/download/%s/%s_files.xml"%(bookid,bookid)))
     filedata=parse(filestream)
     baseuri=urlparse(filestream.url)
     imguri=False
@@ -642,31 +642,31 @@ def makehtml(olid,iaid,classmap,mergepages=True):
         if filename.endswith('_jp2.zip'):
             imguri=(("http://%s/jp2Crop.php?zip=%s/%s"%
                      (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jp2"%(iaid,iaid))+
+                    ("&file=%s/%s_%%04d.jp2"%(bookid,bookid))+
                     "&l=%d&t=%d&r=%d&b=%d")
         elif filename.endswith('_jpeg.zip'):
             imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
                      (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jpeg"%(iaid,iaid))+
+                    ("&file=%s/%s_%%04d.jpeg"%(bookid,bookid))+
                     "&l=%d&t=%d&r=%d&b=%d")
         elif filename.endswith('_jpg.zip'):
             imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
                      (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jpg"%(iaid,iaid))+
+                    ("&file=%s/%s_%%04d.jpg"%(bookid,bookid))+
                     "&l=%d&t=%d&r=%d&b=%d")
     print "Fetching abbyy data"
     try:
         abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.xml"%(iaid,iaid)))
+            ("http://www.archive.org/download/%s/%s_abbyy.xml"%(bookid,bookid)))
         f=abbyystream
     except HTTPError:
         abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.gz"%(iaid,iaid)))
+            ("http://www.archive.org/download/%s/%s_abbyy.gz"%(bookid,bookid)))
         zipdata=abbyystream.read()
         f=GzipFile(fileobj=StringIO.StringIO(zipdata))
     except HTTPError:
         abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.zip"%(iaid,iaid)))
+            ("http://www.archive.org/download/%s/%s_abbyy.zip"%(bookid,bookid)))
         zipdata=abbyystream.read()
         zipfile=ZipFile(StringIO.StringIO(zipdata))
         names=zipfile.namelist()
@@ -674,13 +674,13 @@ def makehtml(olid,iaid,classmap,mergepages=True):
     # Do the generation
     if not mergepages:
         for line in getblocks(f,olid,classmap,
-                              olid=olid,iaid=iaid,inline_blocks=True,
+                              olid=olid,bookid=bookid,inline_blocks=True,
                               scaninfo=scaninfo,imguri=imguri):
             if (len(line)==0):
                 pars
             else:
                 pars.append(line)
     else:
-        pars=pagemerge(f,olid,classmap,olid,iaid,
+        pars=pagemerge(f,olid,classmap,olid,bookid,
                        scaninfo=scaninfo,imguri=imguri)
     return pars
