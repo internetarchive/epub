@@ -11,9 +11,8 @@
   </head> 
   <body onload="init(); gotoPage();" data-startpage="%%LEAF" class="showbreaks"> 
     <form action="proof.php" method="POST"> 
-      Enter OLIB identifier (e.g. OL13684064M) and leaf (~page) number:<br /> 
-      <input type="text" NAME= "OLIB"
-	     value="%%OLIB" style="width: 70%" />
+      Enter a book id (e.g. OL13684064M) or an openlibrary id (e.g. OL13684064M) and leaf (~page) number:<br /> 
+      <input type="text" NAME= "SPEC" value="%%SPEC" style="width: 70%" />
       <input type="text" NAME= "LEAF" ID="PAGEINPUT"
 	     value="%%LEAF" style="width: 15%"
 	     onkeypress="leaf_keypress(event);"/>
@@ -29,18 +28,12 @@
       <span class="button" onclick="alert('someday this will be saved')"
 	    id="SAVEBUTTON">
 	Save</span>
-      <span class="button" onclick="toggleClass(document.body,'showpages')"
-	    id="PAGESBUTTON">
-	pages</span>
       <span class="button" onclick="toggleClass(document.body,'showhidden')"
 	    id="HIDDENBUTTON">
 	hidden</span>
-      <span class="button" onclick="toggleClass(document.body,'showlines')"
-	    id="LINESBUTTON">
-	line info</span>
-      <span class="button" onclick="toggleClass(document.body,'showblocks')"
-	    id="BLOCKSBUTTON">
-	blocks</span>
+      <span class="button" onclick="toggleClass(document.body,'showinfo')"
+	    id="INFOBUTTON">
+	info</span>
       <span class="button" onclick="toggleClass(document.body,'showbreaks')"
 	    id="BREAKSBUTTON">
 	breaks</span>

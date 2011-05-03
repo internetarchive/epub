@@ -133,6 +133,20 @@ function toggleClass(elt,classname)
     else elt.className=classname;
 }
 
+function dropClass(elt,classname)
+{
+    var rx=new RegExp("\\b"+classname+"\\b","g");
+    var current=elt.className;
+    if (!(current)) return;
+    else if (current===classname) {
+	elt.className=null;
+	return;}
+    else if ((current)&&(current.search(rx)>=0)) {
+	elt.className=current.replace(rx,"").replace(/\s+/," ").trim();
+	return;}
+    else return;
+}
+
 function leaf_keypress(evt)
 {
     evt=evt||event;
@@ -293,7 +307,9 @@ function save_edit()
 		replacement.parentNode.insertBefore(wrapper,replacement.nextSibling);
 	    else replacement.parentNode.appendChild(wrapper);}
 	else editing.className=editing.className.replace(/ editing$/," replaced");
-	replacement.className=replacement.className.replace(/ editing$/," edited");}
+	replacement.className=replacement.className.replace(/ editing$/," edited");
+	dropClass(replacement,"abbyyweird");
+	dropClass(replacement,"abbyyunknown");}
     editing=false;
     extended=[];
     editor=false;

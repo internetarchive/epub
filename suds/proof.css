@@ -38,25 +38,22 @@ td {vertical-align: top;}
     border: 1px solid black;
     background-color: white;
     padding: 20px;}
-br.abbyybreak { display: none;}
+
 .abbyycentered { text-align: center;}
+
+/* Special information */
+
 .abbyypagehead, .abbyypagefoot {
     opacity: 0.7; background-color: silver;
     padding-right: 4px; padding-left: 4px; 
     display: none;}
-.abbyyblock, .abbyylineinfo, .abbyyparmark {
-    padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
-    display: none;}
-.abbyyleafstart {
-    padding-left: 4px; padding-right: 4px; color: blue; opacity: 0.8;
-    background-color: silver;
-    display: none;}
-.abbyypagestart {
-    padding-left: 4px; padding-right: 4px; color: purple; opacity: 0.8;
-    background-color: silver;
+a.abbyyblock, .abbyyparmark, .abbyyline .lineinfo, .abbyyleafstart, .abbyypagestart {
+    padding: 2px; padding-left: 4px; padding-right: 4px; color: purple; opacity: 0.8;
+    color: red; background-color: lightblue;
     display: none;}
 span.abbyydroppedhyphen {
     content: '-'; opacity: 0.5; background-color: pink; color: blue;
+    font-size: 125%;
     display: none;}
 
 span.abbyyword { white-space: nowrap; cursor: pointer;}
@@ -70,20 +67,24 @@ span.abbyyword:hover { text-decoration: underline;}
 span.abbyyword.editing { text-decoration: line-through; color: red;}
 span.abbyyword.edited { color: purple;}
 
-.offpage { display: none; opacity: 0.3;}
+.offpage { display: none; opacity: 0.5;}
+
+/* Selective display */
+
+br.abbyybreak { display: none;}
+body.showbreaks .displayed br.abbyybreak { display: inline;}
+body.showbreaks .displayed .abbyydroppedhyphen {
+    display: inline;}
+
 body.showpages span.offpage, body.showpages a.offpage { display: inline;}
 body.showblocks span.offpage, body.showblocks a.offpage { display: inline;}
 
-body.showblocks .displayed .abbyyblock,
-body.showblocks .displayed .abbyyparmark,
-body.showlines .displayed .abbyylineinfo,
-body.showpages .displayed .abbyyleafstart,
-body.showpages .displayed .abbyypagestart {
+body.showinfo .displayed a.abbyyblock,
+body.showinfo .displayed .abbyyparmark,
+body.showinfo .displayed .abbyyline .lineinfo,
+body.showinfo .displayed .abbyyleafstart,
+body.showinfo .displayed .abbyypagestart {
     display: inline;}
-
-body.showbreaks .displayed br.abbyybreak { display: inline;}
-body.showbreaks .displayed .abbyydroppedhyphen {
-    display: inline; font-size: 150%;}
 
 body.showhidden .displayed .abbyypagehead,
 body.showhidden .displayed .abbyypagefoot, 
@@ -96,8 +97,7 @@ body.showedits div.replaced {
     display: block;}
 
 body.showedits .bookMeta .button#EDITSBUTTON,
-body.showblocks .bookMeta .button#BLOCKSBUTTON,
-body.showlines .bookMeta .button#LINESBUTTON,
+body.showinfo .bookMeta .button#INFOBUTTON,
 body.showbreaks .bookMeta .button#BREAKSBUTTON,
 body.showpages .bookMeta .button#PAGESBUTTON,
 body.showhidden .bookMeta .button#HIDDENBUTTON {
