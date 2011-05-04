@@ -20,6 +20,8 @@ body {
     margin-left: 6px;
     vertical-align: top;
 }
+.bookMeta form { float: right;}
+
 .bookMeta .label {
     float: right; font-weight: bold; font-size: 125%;
     vertical-align: top;

@@ -612,68 +612,15 @@ def pagemerge(f,xmlid,classmap,olid,bookid,
         pars.append(elt)
     return pars
         
-def makehtmlbody(olid,bookid,classmap,mergepages=True):
-    scandata=parse(urlopen(
-            ("http://www.archive.org/download/%s/%s_scandata.xml"%(bookid,bookid))))
-    pages=scandata.getElementsByTagName('page')
-    scaninfo={}
-    for x in pages:
-        leafno=int(x.getAttribute('leafNum'))
-        info={"leafno": leafno}
-        scaninfo[leafno]=info
-        pagenum=x.getElementsByTagName('pageNumber')
-        if (pagenum and (pagenum.length>0) and
-            pagenum[0] and (pagenum[0].childNodes.length==1)):
-            info['pageno']=pagenum[0].childNodes[0].nodeValue
-        doscan=x.getElementsByTagName('addToAccessFormats')
-        if (pagenum and (pagenum.length>0) and
-            pagenum[0] and (pagenum[0].childNodes.length==1) and
-            pagenum[0].childNodes[0].nodeValue=='false'):
-            info['ignore']=True
-        else:
-            info['ignore']=False
-    filestream=urlopen(
-        ("http://www.archive.org/download/%s/%s_files.xml"%(bookid,bookid)))
-    filedata=parse(filestream)
-    baseuri=urlparse(filestream.url)
-    imguri=False
-    for x in filedata.getElementsByTagName('file'):
-        filename=x.getAttribute('name')
-        if filename.endswith('_jp2.zip'):
-            imguri=(("http://%s/jp2Crop.php?zip=%s/%s"%
-                     (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jp2"%(bookid,bookid))+
-                    "&l=%d&t=%d&r=%d&b=%d")
-        elif filename.endswith('_jpeg.zip'):
-            imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
-                     (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jpeg"%(bookid,bookid))+
-                    "&l=%d&t=%d&r=%d&b=%d")
-        elif filename.endswith('_jpg.zip'):
-            imguri=(("http://%s/jpegCrop.php?zip=%s/%s"%
-                     (baseuri.netloc,dirname(baseuri.path),filename))+
-                    ("&file=%s/%s_%%04d.jpg"%(bookid,bookid))+
-                    "&l=%d&t=%d&r=%d&b=%d")
-    print "Fetching abbyy data"
-    try:
-        abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.xml"%(bookid,bookid)))
-        f=abbyystream
-    except HTTPError:
-        abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.gz"%(bookid,bookid)))
-        zipdata=abbyystream.read()
-        f=GzipFile(fileobj=StringIO.StringIO(zipdata))
-    except HTTPError:
-        abbyystream=urlopen(
-            ("http://www.archive.org/download/%s/%s_abbyy.zip"%(bookid,bookid)))
-        zipdata=abbyystream.read()
-        zipfile=ZipFile(StringIO.StringIO(zipdata))
-        names=zipfile.namelist()
-        f=zipfile.open(names[0])
+def makehtmlbody(abbyystream,olid,bookid,doc=False,
+                 mergepages=True,
+                 classmap={},scaninfo={}):
+    if not doc: doc=bookid
+    imguri=(("http://www.archive.org/download/%s/%s"%(bookid,bookid))+
+            "/page/leaf%d_l%d_t%d_r%d_b%d.jpg")
     # Do the generation
     if not mergepages:
-        for line in getblocks(f,olid,classmap,
+        for line in getblocks(abbyystream,olid,classmap,
                               olid=olid,bookid=bookid,inline_blocks=True,
                               scaninfo=scaninfo,imguri=imguri):
             if (len(line)==0):
@@ -681,6 +628,6 @@ def makehtmlbody(olid,bookid,classmap,mergepages=True):
             else:
                 pars.append(line)
     else:
-        pars=pagemerge(f,olid,classmap,olid,bookid,
+        pars=pagemerge(abbyystream,olid,classmap,olid,bookid,
                        scaninfo=scaninfo,imguri=imguri)
     return pars

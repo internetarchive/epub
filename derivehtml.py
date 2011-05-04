@@ -29,7 +29,6 @@ def main(argv):
     outfile=argv[3]
     bookid=argv[4]
     doc=argv[5]
-    docpath=argv[6]
     try:
         already=urlopen(
             ("http://www.archive.org/download/%s/%s_ondemand.html"%(bookid,doc)))

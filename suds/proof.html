@@ -7,7 +7,7 @@
     <meta name="IMGTEMPLATE" content="%%IMGTEMPLATE"/>
     <script language="javascript"> var olib="%%OLIB";</script>
     <script language="javascript" src="proof.js"></script>
-    <style>%%STYLE</style>
+    <style id="ABBYYSTYLE">%%STYLE</style>
   </head> 
   <body onload="init(); gotoPage();" data-startpage="%%LEAF" class="showbreaks"> 
     <form action="proof.php" method="POST"> 
@@ -25,9 +25,13 @@
       &nbsp;&nbsp;&nbsp;
       <a href="javascript:gotoPage(pageno-1);">&lt;&nbsp;prev</a>
       &nbsp;| <a href="javascript:gotoPage(pageno+1);">next &gt;</a>
-      <span class="button" onclick="alert('someday this will be saved')"
-	    id="SAVEBUTTON">
-	Save</span>
+      <form action="save.php" target="_blank" method="POST"
+	    onsubmit="onsave_submit(event);">
+	<input type="SUBMIT" name="ACTION" value="Save"/>
+	<input type="HIDDEN" name="CONTENT" value="" id="SAVECONTENT"/>
+	<input type="HIDDEN" name="OLID" value="%%OLID" id="SAVEOLID"/>
+	<input type="HIDDEN" name="BOOKID" value="%%BOOKID" id="BOOKID"/>
+      </form>
       <span class="button" onclick="toggleClass(document.body,'showhidden')"
 	    id="HIDDENBUTTON">
 	hidden</span>

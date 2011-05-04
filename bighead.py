@@ -90,7 +90,7 @@ def bighead(spec,style=False,script=False):
     if 'publish_date' in info:
         h=h+("<meta name='DC.date' content='%s'/>\n"%cgi.escape(info['publish_date'],True))
     if (style):
-        h=h+("<style>\n%s\n</style>\n"%style)
+        h=h+("<style id='ABBYYSTYLE'>\n%s\n</style>\n"%style)
     if (script):
         h=h+("<script language='javascript'>\n<![CDATA[\n%s\n]!>\n</style>\n"%script)
     return h

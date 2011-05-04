@@ -30,9 +30,8 @@ function gotoPage(n)
     if (!(n)) n=pageno;
     if (!(n)) n=parseInt(document.body.getAttribute("data-startpage"));
     var pagestring=n.toString();
-    while (pagestring.length<4) pagestring="0"+pagestring;
     var img_elt=document.getElementById("PAGEIMAGE");
-    img_elt.src=img_template.replace("%%%%",pagestring);
+    img_elt.src=img_template.replace("%",pagestring);
     var current=copy_array(document.getElementsByClassName("displayed"));
     var i=0; var lim=current.length;
     i=0; while (i<lim) {
@@ -365,5 +364,18 @@ function editor_keydown(evt)
 	if (evt.preventDefault) evt.preventDefault();
 	else evt.returnValue=false;
 	evt.cancelBubble=true;}
+}
+
+function onsave_submit(evt)
+{
+  evt=evt||event;
+  var textcell=document.getElementById("PAGETEXT");
+  var content=textcell.innerHTML;
+  var style=document.getElementById('ABBYYSTYLE');
+  var content_elt=document.getElementById("SAVECONTENT");
+  var doc="<html>\n<head>/\n<style>\n"+
+    style.innerText+"\n</style>\n</head><body class='abbyytext'>"+
+    content+"</body>\n"
+  content_elt.value=doc;
 }
 

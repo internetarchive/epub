@@ -14,6 +14,6 @@ if ((!($leaf_arg))||(strlen($leaf_arg)==0)) $leaf_arg="42";
 $spec = escapeshellarg($spec_arg);
 $leaf = escapeshellarg($leaf_arg);
 
-set_time_limit(120);
-passthru("python ../correctform.py $spec $leaf 2>&1");
+set_time_limit(720);
+passthru("python ../correctform.py $spec $leaf ./cache/ 2>&1");
 ?>
