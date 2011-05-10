@@ -160,7 +160,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             para_t=0
             para_r=page_width
             para_b=page_height
-            parfmt=node.attribs
+            parfmt=node.attrib
             leaf_para_count=leaf_para_count+1
             para_count=para_count+1
             curfmt=False
@@ -431,7 +431,9 @@ def getpara(text,fmt,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_
     #   header or footer, we render it as a span (because cross-page
     #   merging may wrap it in a single paragraph and you can't have
     #   nested paragraphs).  Otherwise, it's just an HTML paragraph.
-    if (fmt["align"]=="Center"):
+    if not "align" in fmt:
+        classname="abbyypara"
+    elif (fmt["align"]=="Center"):
         classname="abbyypara abbyycenter"
     elif (fmt["align"]=="Right"):
         classname="abbyypara abbyyright"
@@ -480,7 +482,7 @@ def getcssname(format,curclass,classmap):
        	  style=style+"font-family: "+getfontname(format["ff"])+";"
        if ("fs" in format):
            size=float(format["fs"])/16
-           style=style+"font-size: "+size+"em;"
+           style=style+"font-size: "+str(size)+"em;"
        if ("bold" in format):
        	  style=style+"font-weight: bold;"
        if ("italic" in format):

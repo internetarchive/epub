@@ -3,5 +3,5 @@
 .abbyyleafstart, .abbyyblock, .abbyyparamark, .abbyylineinfo {
     display: none;}
 .abbyycentered { text-align: center;}
-.abbyyleft { text-align: left;}
-.abbyyright { text-align: right;}
+.abbyyleft { }
+.abbyyright { }
