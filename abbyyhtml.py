@@ -435,6 +435,8 @@ def getpara(text,fmt,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_
         classname="abbyypara"
     elif (fmt["align"]=="Center"):
         classname="abbyypara abbyycenter"
+    elif (fmt["align"]=="Left"):
+        classname="abbyypara abbyyleft"
     elif (fmt["align"]=="Right"):
         classname="abbyypara abbyyright"
     else: classname="abbyypara"
