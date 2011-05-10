@@ -160,6 +160,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             para_t=0
             para_r=page_width
             para_b=page_height
+            parfmt=node.attribs
             leaf_para_count=leaf_para_count+1
             para_count=para_count+1
             curfmt=False
@@ -210,7 +211,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                         text=text+"</span>"
                         curfmt=False
                         curclass=False
-                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                    paratext=getpara(text,parfmt,book_id,
+                                     leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if (paratext): yield paratext
@@ -324,7 +326,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
                         text=text+"</span>"
                         curfmt=False
                         curclass=False
-                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                    paratext=getpara(text,parfmt,book_id,
+                                     leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if paratext: yield paratext
@@ -337,7 +340,8 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
            
             # At this point, we've accumulated all of the lines into _text_
             #   and create the paragraph element.
-            paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+            paratext=getpara(text,parfmt,book_id,
+                             leaf_count,para_count,leaf_para_count,
                              l,t,r,b,page_width,page_height,page_top)
             # print u"text=%s"%text
             # print u"para="+unicode(paratext)
@@ -422,12 +426,17 @@ class ParaStats:
         self.dev_rmargin=sqrt(sum_rmargin2/n)
         return None
         
-def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_width,page_height,page_top):
+def getpara(text,fmt,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_width,page_height,page_top):
     # At this point, we have a text block to render as a paragraph.  If it's a
     #   header or footer, we render it as a span (because cross-page
     #   merging may wrap it in a single paragraph and you can't have
     #   nested paragraphs).  Otherwise, it's just an HTML paragraph.
-    classname=getclassname("abbyypara",{"l": l,"t": t,"r": r,"b": b},
+    if (fmt["align"]=="Center"):
+        classname="abbyypara abbyycenter"
+    elif (fmt["align"]=="Right"):
+        classname="abbyypara abbyyright"
+    else: classname="abbyypara"
+    classname=getclassname(classname,{"l": l,"t": t,"r": r,"b": b},
                            page_width,page_height,page_top)
     if ((classname.find("abbyypagehead")>=0) or
         (classname.find("abbyypagefoot")>=0)):
@@ -470,7 +479,8 @@ def getcssname(format,curclass,classmap):
        if ("ff" in format):
        	  style=style+"font-family: "+getfontname(format["ff"])+";"
        if ("fs" in format):
-       	  style=style+"font-size: "+format["fs"][0:-1]+"px;"
+           size=float(format["fs"])/16
+           style=style+"font-size: "+size+"em;"
        if ("bold" in format):
        	  style=style+"font-weight: bold;"
        if ("italic" in format):
