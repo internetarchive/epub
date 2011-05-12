@@ -3,9 +3,8 @@ from gzip import GzipFile
 from zipfile import ZipFile
 from urllib2 import urlopen, HTTPError
 from httplib import HTTPConnection
-from boto.s3.connection import S3Connection
 
-import couchdb
+#import couchdb
 import abbyyhtml
 from abbyyhtml import pagemerge
 import bighead
@@ -49,7 +48,7 @@ wrapbody=True
 
 abbyy_css=open(os.path.join(os.path.dirname(__file__),"abbyy.css")).read()
 
-db=couchdb.client.Server(('http://%s:%s@ol-couch0:5984/'%(appauth.couchuser,appauth.couchpass)))['corrections']
+#db=couchdb.client.Server(('http://%s:%s@ol-couch0:5984/'%(appauth.couchuser,appauth.couchpass)))['corrections']
 
 def tryenv(var,dflt):
     if (os.environ.get(var)):
