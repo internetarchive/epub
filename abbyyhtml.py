@@ -160,7 +160,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             para_t=0
             para_r=page_width
             para_b=page_height
-            parfmt=node.attribs
+            parfmt=node.attrib
             leaf_para_count=leaf_para_count+1
             para_count=para_count+1
             curfmt=False
@@ -435,6 +435,10 @@ def getpara(text,fmt,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_
         classname="abbyypara"
     elif (fmt["align"]=="Center"):
         classname="abbyypara abbyycenter"
+    elif (fmt["align"]=="Left"):
+        classname="abbyypara abbyyleft"
+    elif (fmt["align"]=="Right"):
+        classname="abbyypara abbyyright"
     else: classname="abbyypara"
     classname=getclassname(classname,{"l": l,"t": t,"r": r,"b": b},
                            page_width,page_height,page_top)
