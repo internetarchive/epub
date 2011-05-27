@@ -31,6 +31,7 @@ class Book(object):
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
+        self.metadata = None
         self.olib = False
         self.imgstack_archive_fmt = None
         self.imgstack_image_fmt = None
