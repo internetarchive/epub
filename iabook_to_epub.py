@@ -199,6 +199,8 @@ def process_book(iabook, ebook):
                                      int(page.get('height')))
                         page_width, page_height = orig_page_size
                         
+                        # XXX bad aspect ratio!
+                        # XXX need fixed code to get requested size
                         req_width = int(max_width *
                                         (region_width / float(page_width)))
                         req_height = int(max_height *
