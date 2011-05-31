@@ -139,7 +139,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,
             elif (blocktype=='Picture'):
                 # We should generate a valid URL of some sort here
                 if imguri:
-                    imgsrc=imguri%(leaf_count,l,t,r,b)
+                    imgsrc=imguri%(leaf_count,l,t,r-l,b-t)
                 else:
                     imgsrc=""
                 yield ("<img title='%s/%d[%d,%d,%d,%d]' src='%s'/>"%
@@ -631,7 +631,7 @@ def makehtmlbody(abbyystream,olid,bookid,doc=False,
                  classmap={},scaninfo={}):
     if not doc: doc=bookid
     imguri=(("http://www.archive.org/download/%s/%s"%(bookid,bookid))+
-            "/page/leaf%d_l%d_t%d_r%d_b%d.jpg")
+            "/page/leaf%d_x%d_y%d_w%d_h%d.jpg")
     # Do the generation
     if not mergepages:
         for line in getblocks(abbyystream,olid,classmap,
