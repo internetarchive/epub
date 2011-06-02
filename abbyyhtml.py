@@ -60,7 +60,6 @@ def padnum(n,pad):
 
 def getblocks(f,book_id="BOOK",classmap=global_classmap,
               inline_blocks=True,wrap_words=True,
-              olid="OLdddddM",bookid="iarchiveorg003kahl",
               scaninfo=False,imguri=False):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
@@ -546,7 +545,6 @@ def pagemerge(f,xmlid,classmap,olid,bookid,
     #    add it to the open paragraph together with all of the waiting
     #    non-body elements which have accumulated.
     for line in getblocks(f,xmlid,classmap,
-                          olid=olid,bookid=bookid,
                           inline_blocks=True,
                           scaninfo=scaninfo,imguri=imguri):
         if (len(line)==0):
@@ -626,22 +624,21 @@ def pagemerge(f,xmlid,classmap,olid,bookid,
         pars.append(elt)
     return pars
         
-def makehtmlbody(abbyystream,olid,bookid,doc=False,
-                 mergepages=True,
-                 classmap={},scaninfo={}):
-    if not doc: doc=bookid
-    imguri=(("http://www.archive.org/download/%s/%s"%(bookid,bookid))+
+def makehtmlbody(abbyystream,bookid,itemid,doc=False,
+                 mergepages=True,classmap={},scaninfo={}):
+    if not doc: doc=itemid
+    imguri=(("http://www.archive.org/download/%s/%s"%(itemid,doc))+
             "/page/leaf%d_x%d_y%d_w%d_h%d.jpg")
     # Do the generation
     if not mergepages:
-        for line in getblocks(abbyystream,olid,classmap,
-                              olid=olid,bookid=bookid,inline_blocks=True,
+        for line in getblocks(abbyystream,bookid,classmap,
+                              inline_blocks=True,
                               scaninfo=scaninfo,imguri=imguri):
             if (len(line)==0):
                 pars
             else:
                 pars.append(line)
     else:
-        pars=pagemerge(abbyystream,olid,classmap,olid,bookid,
+        pars=pagemerge(abbyystream,bookid,classmap,
                        scaninfo=scaninfo,imguri=imguri)
     return pars
