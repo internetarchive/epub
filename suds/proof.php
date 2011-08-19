@@ -1,20 +1,19 @@
 <?php
 
-$olib_arg=$_GET['OLIB'];
-$leaf_arg=$_GET['LEAF'];
+$spec_arg=$_REQUEST['SPEC'];
+$leaf_arg=$_REQUEST['LEAF'];
 
 $contentType = 'text/html'; // default
 
 header('Content-type: ' . $contentType . ';charset=UTF-8');
 header('Access-Control-Allow-Origin: *'); // allow cross-origin requests
 
-if ((!($olib_arg))||(strlen($olib_arg)==0)) $olib_arg="OL2588416M";
+if ((!($spec_arg))||(strlen($spec_arg)==0)) $spec_arg="handofethelberta01hard";
 if ((!($leaf_arg))||(strlen($leaf_arg)==0)) $leaf_arg="42";
-					
 
-$olib = escapeshellarg($olib_arg);
+$spec = escapeshellarg($spec_arg);
 $leaf = escapeshellarg($leaf_arg);
 
-set_time_limit(120);
-passthru("python proof.py $olib $leaf 2>&1");
+set_time_limit(720);
+passthru("python ../correctform.py $spec $leaf ./cache/ 2>&1");
 ?>

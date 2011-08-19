@@ -1,6 +1,16 @@
+# -*- Mode: Python; Character-encoding: utf-8; -*-
 from lxml.etree import iterparse, tostring
+from urllib2 import urlopen, HTTPError
+from urlparse import urlparse
+from xml.dom.minidom import parse
+from os.path import dirname
 from math import sqrt
+from gzip import GzipFile
+from zipfile import ZipFile
 import re
+import string
+import StringIO
+import json
 
 ns = '{http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml}'
 page_tag = ns + 'page'
@@ -19,6 +29,12 @@ events=('start','end')
 edgethresh=0.1
 
 global_classmap={}
+
+def padnum(n,pad):
+    padded=str(n)
+    while (strlen(padding)<pad):
+        padded="0"+padded
+    return padded
 
 # An abbyy file consists of pages containing blocks
 # Non-text blocks (mostly figures or tables) are just dumped
@@ -42,7 +58,9 @@ global_classmap={}
 #  spans.
 
 
-def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_words=True,olid="OLdddddM",iaid="iarchiveorg003kahl"):
+def getblocks(f,book_id="BOOK",classmap=global_classmap,
+              inline_blocks=True,wrap_words=True,
+              scaninfo=False,imguri=False):
     # Count a bunch of things in order to generate identifying names, ids,
     # and informative titles
     leaf_count=-1
@@ -54,11 +72,13 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
     page_height=-1
     page_width=-1
     page_top=True
+    skip_page=False
     for event,node in iterparse(f,events):
         if ((node.tag == page_tag) and (event=='end')):
             # We process a page at a time and clear the pages
             #  information when we're done with it
             node.clear()
+            skip_page=False
             continue
         elif ((node.tag == page_tag) and (event=='start')):
             # We output a simple marker when pages start
@@ -69,8 +89,30 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             leaf_para_count=0
             leaf_line_count=0
             page_top=True
-            yield ("<a class='abbyyleafstart' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='%dx%d'>#n%d</a>"%
-                   (leaf_count,leaf_count,page_width,page_height,leaf_count))
+            if scaninfo:
+                info=scaninfo[leaf_count]
+            else:
+                info={}
+            if 'pageno' in info:
+                pagenum=info['pageno']
+            else:
+                pagenum=False
+            if 'ignore' in info:
+                leafclass='abbyyleafstart abbyyignored'
+                skip_page=True
+            else:
+                leafclass='abbyypagestart'
+            #print "leaf=%d, page=%s"%(leaf_count,pagenum)
+            if pagenum:
+                yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
+                       (leafclass,leaf_count,leaf_count,
+                        leaf_count,page_width,page_height,leaf_count))
+                yield ("<a class='abbyypagestart' name='abbyypage%s' id='abbyypage%s'>#p%s</a>"%
+                       (pagenum,pagenum,pagenum))
+            else:
+                yield ("<a class='%s' name='abbyyleaf%d' id='abbyyleaf%d' data-abbyy='n%d[%dx%d]'>#n%d</a>"%
+                       (leafclass,leaf_count,leaf_count,
+                        leaf_count,page_width,page_height,leaf_count))
             continue
         elif ((node.tag == block_tag) and (event=='start')):
             blockinfo=node.attrib
@@ -79,12 +121,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             r=int(blockinfo['r'])
             b=int(blockinfo['b'])
             block_count=block_count+1
-            # 'inline blocks' indicate block starts with self-contained
+            # 'inline blocks' has block starts encoded as self-contained
             #  anchor tags; otherwise blocks are implemented as DIVs which
             #  contain paragraphs.  This gets in the way of some logical
             #  paragraph recognition, so we avoid it by default
             if inline_blocks:
-                yield ("<a class='%s' name='abbyyblock%d' data-abbyy='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
+                yield ("<a class='%s' id='abbyyblock%d' data-abbyy='n%d/%dx%d+%d,%d'>#n%db%d</a>"%
                        ((getclassname("abbyyblock",blockinfo,page_width,page_height,page_top)),
                         block_count,leaf_count,r-l,b-t,l,t,leaf_count,block_count))
             else:
@@ -95,8 +137,12 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             if (blocktype=='Text'): continue
             elif (blocktype=='Picture'):
                 # We should generate a valid URL of some sort here
-                yield ("<img title='%s/%d[%d,%d,%d,%d]' src='http://www.archive.org/download/%s/page/%s_leaf%d_medium.jpg?l=%d&t=%d&r=%d&b=%d'/>"%
-                       (book_id,leaf_count,l,t,r,b,iaid,iaid,leaf_count,l,t,r,b))
+                if imguri:
+                    imgsrc=imguri%(leaf_count,l,t,r-l,b-t)
+                else:
+                    imgsrc=""
+                yield ("<img title='%s/%d[%d,%d,%d,%d]' src='%s'/>"%
+                       (book_id,leaf_count,l,t,r,b,imgsrc))
                 continue
             else: continue
         elif ((node.tag == block_tag) and (event=='end')):
@@ -113,6 +159,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
             para_t=0
             para_r=page_width
             para_b=page_height
+            parfmt=node.attrib
             leaf_para_count=leaf_para_count+1
             para_count=para_count+1
             curfmt=False
@@ -163,31 +210,26 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         text=text+"</span>"
                         curfmt=False
                         curclass=False
-                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                    paratext=getpara(text,parfmt,book_id,
+                                     leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if (paratext): yield paratext
-                # if ((line_no==0) and
-                #     (not hyphenated) and
-                #     (not (first_char.text.islower())) and
-                #     (text!='')):
-                #     yield "<p>%s</p>"%text
-                #     text=''
                 if (line_no>0) and (not hyphenated) and (text != ''):
-                    # if it's not hyphenated, add one
+                    # if it's not hyphenated, add one space
                     text=text+' '
                 # This is the classname for the line entry
                 #  getclassname adds information based on page position
                 #  it is where headers and footers get recognized
-                lineclass=getclassname(
-                    "abbyyline",lineinfo,page_width,page_height,page_top)
+                lineclass=getclassname("abbyyline",lineinfo,page_width,page_height,page_top)
                 # If a line is a header or footer, wrap the content within
                 #  an anchor.  Otherwise, just insert the line break information
-                anchor=("<a class='%s' NAME='%sn%di%d' data-abbyy='n%d/i%d/%dx%d+%d,%d' data-baseline='%d'"%
-                        (lineclass,book_id,
-                         leaf_count,leaf_line_count,leaf_count,leaf_line_count,
+                # print "lineclass='%s', lcount=%d"%(lineclass,line_count)
+                anchor=("<br class='abbyybreak'/><a class='%s' id='%s_n%di%d' data-abbyy='l%d/n%d/i%d/%dx%d+%d,%d' data-baseline='%d'><span class='lineinfo'>#n%di%d</span>"%
+                        (lineclass,book_id,leaf_count,leaf_line_count,
+                         line_count,leaf_count,leaf_line_count,
                          r-l,b-t,l,t,
-                         int(lineinfo['baseline'])))
+                         int(lineinfo['baseline']),leaf_count,leaf_line_count,))
                 closeanchor=""
                 if ((lineclass.find("abbyypagehead")>=0) or
                     (lineclass.find("abbyypagefoot")>=0)):
@@ -195,14 +237,14 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                     #  we don't have it's span broken by the anchor element
                     #  (which would be malformed markup)
                     if curfmt:
-                        text=text+"</span>"+anchor+">"+"<span class='"+curclass+"'>"
+                        text=text+"</span>"+anchor+"<span class='"+curclass+"'>"
                         closeanchor="</span></a>"
                     else:
-                        text=text+anchor+">"
+                        text=text+anchor
                         closeanchor="</a>"
-                # Insert the line break information
-                text=text+("<br class='abbyybreak'/><span class='abbyylineinfo' data-abbyy='n%d/i%d/%dx%d+%d,%d'>#n%di%d</span>"%
-                           (leaf_count,leaf_line_count,r-l,b-t,l,t,leaf_count,leaf_line_count))
+                else:
+                    text=text+anchor+"</a>"
+                    closeanchor=""
                 # Turn the formatting elements into spans, adding an
                 #  open/close pair whent it changes.
                 for formatting in line:
@@ -213,6 +255,7 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         if (curclass): text=text+"</span>"
                         curclass=classname
                         text=text+("<span class='%s'>"%classname)
+                    wordclass='abbyyword'
                     # This is where we get the line text and where we
                     # would put word level position information
                     if wrap_words:
@@ -225,45 +268,54 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         for c in formatting:
                             cinfo=c.attrib
                             isspace=c.text.isspace()
-                            if word:
-                                if isspace:
-                                    if (word.endswith("-")):
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>-"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word[:-1]))+c.text
-                                    else:
-                                        text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>"%
-                                                   (leaf_count,leaf_line_count,(r-l),(b-t),l,t,word))+c.text
-
+                            wordend=isspace or cinfo['wordStart']=='true'
+                            if word and wordend:
+                                if (word.endswith("-")):
+                                    text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>-"%
+                                               (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,word[:-1]))+c.text
+                                else:
+                                    text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d'>%s</span>"%
+                                               (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,word))+c.text
                                     word=False
-                                else:
-                                    word=word+c.text
-                                    cl=int(cinfo["t"])
-                                    ct=int(cinfo["t"])
-                                    cr=int(cinfo["r"])
-                                    cb=int(cinfo["b"])
-                                    if (ct<t): t=ct
-                                    if (cb>b): b=cb
-                                    # I'm not sure when these would ever happen, but
-                                    #  let's check them anyway
-                                    if (cl<l): l=cl
-                                    if (cr>r): r=cr
+                                    wordclass="abbyyword"
+                            if isspace:
+                                text=text+c.text
+                            elif word:
+                                word=word+c.text
+                                cl=int(cinfo["t"])
+                                ct=int(cinfo["t"])
+                                cr=int(cinfo["r"])
+                                cb=int(cinfo["b"])
+                                if (ct<t): t=ct
+                                if (cb>b): b=cb
+                                # I'm not sure when these would ever happen, but
+                                #  let's check them anyway
+                                if (cl<l): l=cl
+                                if (cr>r): r=cr
                             else:
-                                if isspace:
-                                    text=text+c.text
-                                else:
-                                    word=c.text
-                                    l=int(cinfo["l"])
-                                    t=int(cinfo["t"])
-                                    r=int(cinfo["r"])
-                                    b=int(cinfo["b"])
-                        if word:
-                            if (word.endswith("-")):
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
-                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word[:-1]))
-                            else:
-                                text=text+("<span class='abbyyword' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
-                                           (leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word))
-                            word=False
+                                word=c.text
+                                l=int(cinfo["l"])
+                                t=int(cinfo["t"])
+                                r=int(cinfo["r"])
+                                b=int(cinfo["b"])
+                            if  cinfo['wordStart']=='true':
+                                wordend=True
+                                wordclass='abbyyword'
+                                if cinfo['wordNumeric']=='true':
+                                    wordclass=wordclass+' abbyynumber'
+                                if cinfo['wordNormal']=='false':
+                                    wordclass=wordclass+' abbyynormal'
+                                if cinfo['wordFromDictionary']=='false':
+                                    wordclass=wordclass+' abbyyunknown'
+                        if not word:
+                            ignore='yes'
+                        elif (word.endswith("-")):
+                            text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>-"%
+                                       (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word[:-1]))
+                        else:
+                            text=text+("<span class='%s' data-abbyy='n%d/i%d/%dx%d+%d,%d[%d%%]'>%s</span>"%
+                                       (wordclass,leaf_count,leaf_line_count,(r-l),(b-t),l,t,confidence,word))
+                        word=False
                     else: text=text+''.join(c.text for c in formatting)
                 text=text+closeanchor
                 if (abs(rmargin-mean_rmargin)>dev_rmargin):
@@ -273,14 +325,11 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
                         text=text+"</span>"
                         curfmt=False
                         curclass=False
-                    paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+                    paratext=getpara(text,parfmt,book_id,
+                                     leaf_count,para_count,leaf_para_count,
                                      l,t,r,b,page_width,page_height,page_top)
                     text=''
                     if paratext: yield paratext
-                    
-                #if ((max_r-r)>(par_width*0.1)):
-                #    yield "<p>%s</p>"%text
-                #    text=''
 
             # Close out any active formatting
             if (curfmt):
@@ -290,8 +339,11 @@ def getblocks(f,book_id="BOOK",classmap=global_classmap,inline_blocks=True,wrap_
            
             # At this point, we've accumulated all of the lines into _text_
             #   and create the paragraph element.
-            paratext=getpara(text,book_id,leaf_count,para_count,leaf_para_count,
+            paratext=getpara(text,parfmt,book_id,
+                             leaf_count,para_count,leaf_para_count,
                              l,t,r,b,page_width,page_height,page_top)
+            # print u"text=%s"%text
+            # print u"para="+unicode(paratext)
             text=''
             if paratext:
                 yield paratext
@@ -373,12 +425,21 @@ class ParaStats:
         self.dev_rmargin=sqrt(sum_rmargin2/n)
         return None
         
-def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_width,page_height,page_top):
+def getpara(text,fmt,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_width,page_height,page_top):
     # At this point, we have a text block to render as a paragraph.  If it's a
     #   header or footer, we render it as a span (because cross-page
     #   merging may wrap it in a single paragraph and you can't have
     #   nested paragraphs).  Otherwise, it's just an HTML paragraph.
-    classname=getclassname("abbyypara",{"l": l,"t": t,"r": r,"b": b},
+    if not "align" in fmt:
+        classname="abbyypara"
+    elif (fmt["align"]=="Center"):
+        classname="abbyypara abbyycenter"
+    elif (fmt["align"]=="Left"):
+        classname="abbyypara abbyyleft"
+    elif (fmt["align"]=="Right"):
+        classname="abbyypara abbyyright"
+    else: classname="abbyypara"
+    classname=getclassname(classname,{"l": l,"t": t,"r": r,"b": b},
                            page_width,page_height,page_top)
     if ((classname.find("abbyypagehead")>=0) or
         (classname.find("abbyypagefoot")>=0)):
@@ -387,20 +448,18 @@ def getpara(text,book_id,leaf_count,para_count,leaf_para_count,l,t,r,b,page_widt
     else:
         tagname="p"
         newline="\n"
-        stripped=text.strip()
-        curfmt=False
-        curclass=False
-        if len(stripped) == 0:
-            return False
-        else:
-            # It might be cool to do some abstraction of the embedded style
-            # information into paragraph level class information
-            return ("<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>#n%dp%d</a>%s</%s>%s"%
-                    (tagname,classname,
-                     book_id,para_count,
-                     leaf_count,leaf_para_count,r-l,b-t,l,t,
-                     leaf_count,leaf_para_count,leaf_count,leaf_para_count,
-                     stripped,tagname,newline))
+    stripped=text.strip()
+    if len(stripped) == 0:
+        return False
+    else:
+        # It might be cool to do some abstraction of the embedded style
+        # information into paragraph level class information
+        return (u"<%s class='%s' id='%s_%d' data-abbyy='n%d/p%d/%dx%d+%d,%d'><a class='abbyyparmark' name='n%dp%d'>¶</a>%s</%s>%s"%
+                (tagname,classname,
+                 book_id,para_count,
+                 leaf_count,leaf_para_count,r-l,b-t,l,t,
+                 leaf_count,leaf_para_count,
+                 stripped,tagname,newline))
 
 # This is all stuff for synthesizing CSS class names from formatting
 #  attributes
@@ -423,7 +482,8 @@ def getcssname(format,curclass,classmap):
        if ("ff" in format):
        	  style=style+"font-family: "+getfontname(format["ff"])+";"
        if ("fs" in format):
-       	  style=style+"font-size: "+format["fs"][0:-1]+"px;"
+           size=float(format["fs"])/16
+           style=style+"font-size: "+str(size)+"em;"
        if ("bold" in format):
        	  style=style+"font-weight: bold;"
        if ("italic" in format):
@@ -463,4 +523,122 @@ def getclassname(base,attrib,width,height,pagetop):
     #    return base+" abbyycentered"
     return base
 
+# Merging pageinfo
+
+def pagemerge(f,xmlid,classmap,olid,bookid,
+              inline_blocks=True,scaninfo={},imguri=False):
+    # All the strings to be output (not strictly paragraphs, though)
+    pars=[]
+    # The current open paragraph
+    openpar=False
+    # The non-body elements processed since the open body paragraph
+    waiting=[]
+    # Whether the current paragraph ends with a hyphen
+    openhyphen=False
+    # If we're doing pagemerge, we read a stream of blocks,
+    #    potentially merging blocks which cross page boundaries.  All
+    #    the content blocks are paragraph <p> blocks, and the
+    #    algorithm works by keeping the last paragraph block in
+    #    _openpar_ and accumulating non paragraph blocks in the
+    #    _waiting_ array. 
+    #  When we get a paragraph that starts with a lowercase letter, we
+    #    add it to the open paragraph together with all of the waiting
+    #    non-body elements which have accumulated.
+    for line in getblocks(f,xmlid,classmap,
+                          inline_blocks=True,
+                          scaninfo=scaninfo,imguri=imguri):
+        if (len(line)==0):
+            pars
+        elif (line.startswith("<p")):
+            # We don't merge centered paragraphs
+            if (line.find("abbyycentered")>0):
+                if (openpar):
+                    pars.append(openpar)
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    # and start with a new open paragraph
+                    pars.append(line)
+                    openpar=False
+                else:
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    pars.append(line)
+            elif (openpar):
+                # We check if the first letter is lowercase by finding
+                # the first post-markup letter and the first
+                # post-markup lowercase letter and seeing if they're
+                # in the same place.  Note that paragraphs whose text
+                # starts with punctuation will not pass this test
+                # (which I think is the right thing)
+                firstletter=re.search("(?m)>(\s|'|\")*[a-zA-z]",line)
+                firstlower=re.search("(?m)>(\s|'|\")*[a-z]",line)
+                if ((not firstletter or not firstlower) or
+                    ((firstletter.start()) != (firstlower.start()))):
+                    # Not a continuation, so push the open paragraph
+                    pars.append(openpar)
+                    # add any intervening elements
+                    for elt in waiting:
+                        pars.append(elt)
+                    waiting=[]
+                    # and start with a new open paragraph
+                    openpar=line
+                else:
+                    # This paragraph continues the previous one, so
+                    #   we append it to openpar, with waiting elements
+                    #   added to the middle
+                    if openhyphen:
+                        # Replace the closing hyphen (and the closing
+                        # </p> tag) with an abbyydroppedhyphen span
+                        par_end=openhyphen.start()
+                        openpar=openpar[0:par_end]+"<span class='abbyydroppedhyphen'>-</span>"
+                    else:
+                        # Strip off the closing tag from the open par
+                        search_end=re.search("(?m)</p>",openpar)
+                        if search_end:
+                            openpar=openpar[0:(search_end.start())]+" "
+                        else: 
+                            openpar=openpar+" "
+                    for elt in waiting:
+                        openpar=openpar+elt
+                    waiting=[]
+                    textstart=line.find(">")
+                    openpar=openpar+line[textstart+1:]
+            else:
+                # This is the first paragraph
+                openpar=line
+                for elt in waiting:
+                    pars.append(elt)
+                waiting=[]
+            # Check if the current open paragraph ends with a hyphen
+            if (openpar):
+                openhyphen=re.search("(?m)-\s*</p>",openpar)
+            else:
+                openhyphen=False
+        else:
+            waiting.append(line)
+    if openpar:
+        pars.append(openpar)
+    for elt in waiting:
+        pars.append(elt)
+    return pars
         
+def makehtmlbody(abbyystream,bookid,itemid,doc=False,
+                 mergepages=True,classmap={},scaninfo={}):
+    if not doc: doc=itemid
+    imguri=(("http://www.archive.org/download/%s/%s"%(itemid,doc))+
+            "/page/leaf%d_x%d_y%d_w%d_h%d.jpg")
+    # Do the generation
+    if not mergepages:
+        for line in getblocks(abbyystream,bookid,classmap,
+                              inline_blocks=True,
+                              scaninfo=scaninfo,imguri=imguri):
+            if (len(line)==0):
+                pars
+            else:
+                pars.append(line)
+    else:
+        pars=pagemerge(abbyystream,bookid,classmap,
+                       scaninfo=scaninfo,imguri=imguri)
+    return pars

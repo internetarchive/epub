@@ -30,9 +30,8 @@ function gotoPage(n)
     if (!(n)) n=pageno;
     if (!(n)) n=parseInt(document.body.getAttribute("data-startpage"));
     var pagestring=n.toString();
-    while (pagestring.length<4) pagestring="0"+pagestring;
     var img_elt=document.getElementById("PAGEIMAGE");
-    img_elt.src=img_template.replace("%%%%",pagestring);
+    img_elt.src=img_template.replace("%",pagestring);
     var current=copy_array(document.getElementsByClassName("displayed"));
     var i=0; var lim=current.length;
     i=0; while (i<lim) {
@@ -131,6 +130,20 @@ function toggleClass(elt,classname)
     else if (current)
 	elt.className=current+" "+classname;
     else elt.className=classname;
+}
+
+function dropClass(elt,classname)
+{
+    var rx=new RegExp("\\b"+classname+"\\b","g");
+    var current=elt.className;
+    if (!(current)) return;
+    else if (current===classname) {
+	elt.className=null;
+	return;}
+    else if ((current)&&(current.search(rx)>=0)) {
+	elt.className=current.replace(rx,"").replace(/\s+/," ").trim();
+	return;}
+    else return;
 }
 
 function leaf_keypress(evt)
@@ -262,6 +275,10 @@ function save_edit()
 		    before=before+node.innerHTML;}
 		else if (node.nodeType===1)
 		    before=before+node.nodeValue;}}
+	var scan=editing;
+	while (scan) {
+	  if (scan.id) break;
+	  else scan=scan.parentNode;}
 	edit_record={before:before,
 		     after:new_content,
 		     abbyy: abbyy,
@@ -269,6 +286,7 @@ function save_edit()
 		     olib: olib,
 		     user:"somebody",
 		     date:now};
+	if (scan) edit_record.passage=scan.id
 	edit_list.push(edit_record);
 	replacement.innerHTML=new_content;
 	editing.parentNode.insertBefore(replacement,editing);
@@ -288,7 +306,9 @@ function save_edit()
 		replacement.parentNode.insertBefore(wrapper,replacement.nextSibling);
 	    else replacement.parentNode.appendChild(wrapper);}
 	else editing.className=editing.className.replace(/ editing$/," replaced");
-	replacement.className=replacement.className.replace(/ editing$/," edited");}
+	replacement.className=replacement.className.replace(/ editing$/," edited");
+	dropClass(replacement,"abbyyweird");
+	dropClass(replacement,"abbyyunknown");}
     editing=false;
     extended=[];
     editor=false;
@@ -344,5 +364,18 @@ function editor_keydown(evt)
 	if (evt.preventDefault) evt.preventDefault();
 	else evt.returnValue=false;
 	evt.cancelBubble=true;}
+}
+
+function onsave_submit(evt)
+{
+  evt=evt||event;
+  var textcell=document.getElementById("PAGETEXT");
+  var content=textcell.innerHTML;
+  var style=document.getElementById('ABBYYSTYLE');
+  var content_elt=document.getElementById("SAVECONTENT");
+  var doc="<html>\n<head>/\n<style>\n"+
+    style.innerText+"\n</style>\n</head><body class='abbyytext'>"+
+    content+"</body>\n"
+  content_elt.value=doc;
 }
 

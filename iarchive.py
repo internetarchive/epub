@@ -6,6 +6,9 @@ import re
 import gzip
 import os
 import zipfile
+import json
+from urllib2 import urlopen, HTTPError
+from httplib import HTTPConnection
 from subprocess import Popen, PIPE
 
 try:
@@ -28,6 +31,8 @@ class Book(object):
         if not os.path.exists(book_path):
             raise Exception('Can\'t find book path "' + book_path + '"')
         self.scandata = None
+        self.metadata = None
+        self.olib = False
         self.imgstack_archive_fmt = None
         self.imgstack_image_fmt = None
         self.imgstack_name = None
@@ -94,8 +99,7 @@ class Book(object):
                 self.scandata = objectify.fromstring(scandata_str)
                 self.scandata_pages = self.scandata.pageData.page
             else:
-                self.scandata = objectify.parse(self.
-                                                get_scandata_path()).getroot()
+                self.scandata = objectify.parse(self.get_scandata_path()).getroot()
                 self.scandata_pages = self.scandata.xpath('/book/pageData/page')
             self.leaves = {}
             for page in self.scandata_pages:
@@ -143,6 +147,17 @@ class Book(object):
             bookdata = scandata.bookData
         return bookdata
 
+    def get_olib(self):
+        if (self.olib is False):
+            try:
+                f=urlopen('http://www.openlibrary.org/ia/%s'%self.book_id)
+                self.olib=json.load(f)
+            except:
+                self.olib=None
+            return self.olib
+        else:
+            return self.olib
+
     def get_scandata_ns(self):
         scandata = self.get_scandata()
         bookData = scandata.find('bookData')
@@ -155,6 +170,8 @@ class Book(object):
         return int(self.get_page_scandata(i).get('leafNum'))
 
     def get_metadata(self):
+        if (self.metadata):
+            return self.metadata
         # metadata is by book_id, not by doc
         md_path = os.path.join(self.book_path, self.book_id + '_meta.xml')
         md = objectify.parse(md_path).getroot()
@@ -165,6 +182,7 @@ class Book(object):
             else:
                 result_text = el.text
             result.append({ 'tag':el.tag, 'text':result_text })
+        self.metadata=result
         return result
 
     def get_toc(self):
@@ -200,6 +218,12 @@ class Book(object):
         raise 'No djvu.xml file found'
 
 
+    def get_html(self):
+        html_path = os.path.join(self.book_path, self.doc + '_abbyy.html')
+        if os.path.exists(html_path):
+            return open(html_path, 'r')
+        raise 'No abbyy.html file found'
+
     def get_pdfxml_xml(self):
         pdfxml_xml = os.path.join(self.book_path, self.doc + '_pdfxml.xml')
         if os.path.exists(pdfxml_xml):
@@ -208,11 +232,40 @@ class Book(object):
 
     # get python string with image data - from .jp2 image or tif in zip
     # finds appropriate leaf number for supplied page index
-    def get_page_image(self, i, requested_size, orig_page_size=None,
+    def get_page_image(self, i, requested_size, # (w, h)
+                       orig_page_size=None,
                        quality=60,
                        region=None, # ((l,t)(r,b))
                        out_img_type='jpg',
                        kdu_reduce=2):
+
+        if False:
+            # Use mang's book page image crop API instead of doing it ourselves
+            if region is not None:
+                (l, t), (r, b) = region
+
+            # w, h = requested_size
+            # print 'getting image:'
+            # print 'i %s  leafno %s  req_size (%s, %s)' % (i, leafno, w, h)
+            # if region is not None:
+            #     print 'region (l%s,t%s),(r%s,b%s)' % (l, t, r, b)
+            # print
+
+            if region is not None:
+                f = urlopen('http://www-testflip.archive.org/download/%s/page/'
+                            'n%s_x%s_y%s_w%s_h%s_s%s.jpg' % (self.book_id, i,
+                                                             l, t, r-l, b-t,
+                                                             kdu_reduce))
+            else:
+                f = urlopen('http://www-testflip.archive.org/download/%s/page/'
+                            'n%s_s%s.jpg' % (self.book_id, i, kdu_reduce))
+                # Also possibly needed: resize output to requested_size
+                # (or ask mang for same)
+                # he suggests: specify _w and _h (but not _x, _y) to
+                # get a scaled image that's a bit bigger than that
+                # size.  Works just for whole pages.
+            return f.read()
+
         leafno = self.get_leafno_for_page(i)
         doc_basename = os.path.basename(self.doc)
 

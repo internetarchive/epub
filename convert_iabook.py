@@ -175,7 +175,7 @@ def main(argv):
             output = os.popen('java -Xms128m -Xmx256m -jar '
                               + zedval + ' ' + opf_file)
         else:
-            epubcheck = os.path.join(sys.path[0], 'epubcheck-1.0.3.jar')
+            epubcheck = os.path.join(sys.path[0], 'epubcheck/epubcheck-1.1.jar')
             output = os.popen('java -jar ' + epubcheck + ' ' + out_name)
         print output.read()
 
