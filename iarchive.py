@@ -322,7 +322,7 @@ def image_from_zip(zipf, image_path,
                             + crop
                             + scale
                             + cvt_to_out)
-            result = output.read
+            result = output.read()
         else:
             raise Exception('unrecognized input img type')
 
