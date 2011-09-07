@@ -166,7 +166,7 @@ class Book(object):
 
     def add_pagetarget(self, name, value, type='normal'):
         self.total_page_count += 1
-        if str(value).isdigit() and value > self.max_page_number:
+        if value.isdigit() and value > self.max_page_number:
             self.max_page_number = value
         pagenum_id, pagenum_el = self.add_tag('pagenum', name,
                               attrs={ 'page':type },
@@ -174,7 +174,7 @@ class Book(object):
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
                                          { 'id':pagenum_id,
-                                           'value':str(value),
+                                           'value':value,
                                            'type':type,
                                            'playOrder':str(self.nav_number) })
         navlabel_el = etree.SubElement(pagetarget_el, 'navLabel')

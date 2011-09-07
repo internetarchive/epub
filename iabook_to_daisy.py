@@ -123,14 +123,16 @@ for the blind and other persons with disabilities.
         pageno = None
         if page_scandata is not None:
             pageno = page_scandata.find(scandata_ns + 'pageNumber')
+            if pageno:
+                pageno = pageno.text
         if pageno:
-            if contents is not None and str(pageno) in contents:
+            if contents is not None and pageno in contents:
                 if pushed_navpoint:
                     ebook.pop_navpoint()
-                ebook.push_navpoint('level', 'h', contents[str(pageno)])
+                ebook.push_navpoint('level', 'h', contents[pageno])
                 pushed_navpoint = True
             part_str = 'part' + str(part_number).zfill(4)
-            ebook.add_pagetarget(str(pageno), pageno)
+            ebook.add_pagetarget(pageno, pageno)
 
 
         def include_page(page_scandata):

@@ -78,8 +78,10 @@ def process_book(iabook, ebook):
         pageno = None
         if page_scandata is not None:
             pageno = page_scandata.find(scandata_ns + 'pageNumber')
+            if pageno:
+                pageno = pageno.text
         if pageno:
-            if contents is not None and str(pageno) in contents:
+            if contents is not None and pageno in contents:
                 ebook.flush_els()
                 if not pushed_chapters:
                     cdiv = E.div({ 'class':'newnav', 'id':'chapters' })
@@ -90,12 +92,12 @@ def process_book(iabook, ebook):
                 toc_item_number += 1
                 cdiv = E.div({ 'class':'newnav', 'id':id })
                 href = ebook.add_el(cdiv) + '#' + id
-                ebook.add_navpoint(contents[str(pageno)], href)
+                ebook.add_navpoint(contents[pageno], href)
 
-            id = 'page-' + str(pageno)
+            id = 'page-' + pageno
             pdiv = E.div({ 'class':'newpage', 'id':id })
             href = ebook.add_el(pdiv) + '#' + id
-            ebook.add_pagetarget(str(pageno), pageno, href)
+            ebook.add_pagetarget(pageno, pageno, href)
 
         def include_page(page_scandata):
             if page_scandata is None:

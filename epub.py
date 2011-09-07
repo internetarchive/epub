@@ -181,7 +181,7 @@ class Book(object):
         pagetarget_el = etree.SubElement(self.ncx_pagelist_el,
                                          'pageTarget',
                                          { 'id':pagetarget_id,
-                                           'value':str(value),
+                                           'value':value,
                                            'type':type,
                                            'playOrder':str(self.nav_number) })
         navlabel_el = etree.SubElement(pagetarget_el, 'navLabel')
