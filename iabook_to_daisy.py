@@ -99,7 +99,6 @@ for the blind and other persons with disabilities.
     if contents is None:
         ebook.push_navpoint('level', 'h', 'Book')
 
-    i = 0
     part_number = 0
     cover_number = 0
     pushed_navpoint = False
@@ -114,121 +113,121 @@ for the blind and other persons with disabilities.
             break
     # True if no title found, else False now, True later.
     before_title_page = found_title
-    for event, page in context:
-        if alt_booktext is not None:
-            ebook.add_tag('p', alt_booktext)
-            break
-            
-        page_scandata = iabook.get_page_scandata(i)
-        pageno = None
-        if page_scandata is not None:
-            pageno = page_scandata.find(scandata_ns + 'pageNumber')
+    for i, (event, page) in enumerate(context):
+        # wrap in try/finally to ensure page.clear() is called
+        try:
+            if alt_booktext is not None:
+                ebook.add_tag('p', alt_booktext)
+                break
+
+            page_scandata = iabook.get_page_scandata(i)
+            pageno = None
+            if page_scandata is not None:
+                pageno = page_scandata.find(scandata_ns + 'pageNumber')
+                if pageno:
+                    pageno = pageno.text
             if pageno:
-                pageno = pageno.text
-        if pageno:
-            if contents is not None and pageno in contents:
-                if pushed_navpoint:
-                    ebook.pop_navpoint()
-                ebook.push_navpoint('level', 'h', contents[pageno])
-                pushed_navpoint = True
-            part_str = 'part' + str(part_number).zfill(4)
-            ebook.add_pagetarget(pageno, pageno)
+                if contents is not None and pageno in contents:
+                    if pushed_navpoint:
+                        ebook.pop_navpoint()
+                    ebook.push_navpoint('level', 'h', contents[pageno])
+                    pushed_navpoint = True
+                part_str = 'part' + str(part_number).zfill(4)
+                ebook.add_pagetarget(pageno, pageno)
 
 
-        def include_page(page_scandata):
-            if page_scandata is None:
-                return False
-            add = page_scandata.find(scandata_ns + 'addToAccessFormats')
-            if add is None:
-                add = page_scandata.addToAccessFormats
-            if add is not None and add.text == 'true':
-                return True
-            else:
-                return False
+            def include_page(page_scandata):
+                if page_scandata is None:
+                    return False
+                add = page_scandata.find(scandata_ns + 'addToAccessFormats')
+                if add is None:
+                    add = page_scandata.addToAccessFormats
+                if add is not None and add.text == 'true':
+                    return True
+                else:
+                    return False
 
-        if not include_page(page_scandata):
-            i += 1
-            continue
+            if not include_page(page_scandata):
+                continue
 
-        page_type = page_scandata.pageType.text.lower()
-        if page_type == 'cover':
-            pass
-
-        elif page_type == 'title' or page_type == 'title page':
-            before_title_page = False
-            pass
-
-        elif page_type == 'copyright':
-            pass
-
-        elif page_type == 'contents':
-            pass
-
-        elif page_type == 'normal':
-            if before_title_page:
+            page_type = page_scandata.pageType.text.lower()
+            if page_type == 'cover':
                 pass
-                # XXX consider skipping if blank + no words?
-                # make page image
-#                 (id, filename) = make_html_page_image(i, iabook, ebook)
-            else:
-                first_par = True
-                saw_pageno_header_footer = False
 
-                for block in page:
-                    if block.get('blockType') == 'Text':
-                        pass
-                    else:
-                        pass
-                    for el in block:
-                        if el.tag == aby_ns+'region':
-                            for rect in el:
-                                pass
-                        elif el.tag == aby_ns+'text':
-                            for par in el:
-                                # skip if its the first line and it could be a header
-                                if first_par and common.par_is_pageno_header_footer(par):
-                                    saw_pageno_header_footer = True
-                                    first_par = False
-                                    continue
-                                first_par = False
+            elif page_type == 'title' or page_type == 'title page':
+                before_title_page = False
+                pass
 
-                                # skip if it's the last par and it could be a header
-                                if (not saw_pageno_header_footer
-                                    and block == page[-1]
-                                    and el == block[-1]
-                                    and par == el[-1]
-                                    and common.par_is_pageno_header_footer(par)):
-                                    saw_pageno_header_footer = True
-                                    continue
-                                        
-                                lines = []
-                                prev_line = ''
-                                for line in par:
-                                    for fmt in line:
-                                        fmt_text = etree.tostring(fmt,
-                                                                  method='text',
-                                                                  encoding=unicode)
-                                        if len(fmt_text) > 0:
-                                            if prev_line[-1:] == '-':
-                                                if fmt[0].get('wordStart') == 'false':
-                                                    # ? and wordFromDictionary = true ?
-                                                    lines.append(prev_line[:-1])
-                                                else:
-                                                    lines.append(prev_line)
-                                            else:
-                                                lines.append(prev_line)
-                                                lines.append(' ')
-                                            prev_line = fmt_text
-                                lines.append(prev_line)
-                                ebook.add_tag('p', ''.join(lines))
-                        elif (el.tag == aby_ns+'row'):
+            elif page_type == 'copyright':
+                pass
+
+            elif page_type == 'contents':
+                pass
+
+            elif page_type == 'normal':
+                if before_title_page:
+                    pass
+                    # XXX consider skipping if blank + no words?
+                    # make page image
+    #                 (id, filename) = make_html_page_image(i, iabook, ebook)
+                else:
+                    first_par = True
+                    saw_pageno_header_footer = False
+
+                    for block in page:
+                        if block.get('blockType') == 'Text':
                             pass
                         else:
-                            print('unexpected tag type' + el.tag)
-                            sys.exit(-1)
+                            pass
+                        for el in block:
+                            if el.tag == aby_ns+'region':
+                                for rect in el:
+                                    pass
+                            elif el.tag == aby_ns+'text':
+                                for par in el:
+                                    # skip if its the first line and it could be a header
+                                    if first_par and common.par_is_pageno_header_footer(par):
+                                        saw_pageno_header_footer = True
+                                        first_par = False
+                                        continue
+                                    first_par = False
 
-        page.clear()
-        i += 1
+                                    # skip if it's the last par and it could be a header
+                                    if (not saw_pageno_header_footer
+                                        and block == page[-1]
+                                        and el == block[-1]
+                                        and par == el[-1]
+                                        and common.par_is_pageno_header_footer(par)):
+                                        saw_pageno_header_footer = True
+                                        continue
+
+                                    lines = []
+                                    prev_line = ''
+                                    for line in par:
+                                        for fmt in line:
+                                            fmt_text = etree.tostring(fmt,
+                                                                      method='text',
+                                                                      encoding=unicode)
+                                            if len(fmt_text) > 0:
+                                                if prev_line[-1:] == '-':
+                                                    if fmt[0].get('wordStart') == 'false':
+                                                        # ? and wordFromDictionary = true ?
+                                                        lines.append(prev_line[:-1])
+                                                    else:
+                                                        lines.append(prev_line)
+                                                else:
+                                                    lines.append(prev_line)
+                                                    lines.append(' ')
+                                                prev_line = fmt_text
+                                    lines.append(prev_line)
+                                    ebook.add_tag('p', ''.join(lines))
+                            elif (el.tag == aby_ns+'row'):
+                                pass
+                            else:
+                                print('unexpected tag type' + el.tag)
+                                sys.exit(-1)
+        finally:
+            page.clear()
 
     if pushed_navpoint:
         ebook.pop_navpoint()
