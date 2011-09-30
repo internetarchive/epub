@@ -84,16 +84,26 @@ def main(argv):
                         oldtoc = toc
                         toc = {}
                         for tocitem in oldtoc:
-                            toc[tocitem['pagenum']] = '%s - %s' % (tocitem['label'],
-                                                                   tocitem['title'])
+                            chapterstr = None
+                            if 'pagenum' in tocitem:
+                                if 'label' in tocitem and 'title' in tocitem:
+                                    chapterstr = '%s - %s' % (tocitem['label'],
+                                                              tocitem['title'])
+                                elif 'label' in tocitem:
+                                    chapterstr = tocitem['label']
+                                elif 'title' in tocitem:
+                                    chapterstr = tocitem['title']
+                                if chapterstr is not None:
+                                    toc[tocitem['pagenum']] = chapterstr
+
                     except TypeError:
                         toc = None
 
                     except KeyError:
                         # there must be a better way to detect an array...
                         toc = None
-        if not found_output_opt:
-            make_epub = True
+    if not found_output_opt:
+        make_epub = True
     if len(args) == 0:
         book_id = iarchive.infer_book_id()
         if book_id is None:
